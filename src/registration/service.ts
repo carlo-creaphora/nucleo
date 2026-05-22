@@ -8,6 +8,7 @@ import {
 } from "../contracts/registration.js";
 import type { UploadedDocument } from "../contracts/diagnosis.js";
 import type { RegistrationEngine } from "./engine.js";
+import { extractDocumentText } from "./document-extractor.js";
 import type { NucleoStore } from "../storage/store.js";
 
 export class RegistrationService {
@@ -60,25 +61,22 @@ export class RegistrationService {
 
   async uploadDocuments(rawInput: unknown) {
     const input = registrationDocumentUploadSchema.parse(rawInput);
-    const documents: UploadedDocument[] = input.documents.map((document) => {
-      const text = document.text?.trim() ?? "";
-      const summary = document.summary?.trim() || summarizeText(text);
+    const documents: UploadedDocument[] = await Promise.all(
+      input.documents.map(async (document) => {
+        const extraction = await extractDocumentText(document);
 
-      return {
-        id: `doc_${randomUUID()}`,
-        name: document.name.trim(),
-        mimeType: document.mimeType?.trim() || undefined,
-        sizeBytes: document.sizeBytes,
-        sourceUrl: document.sourceUrl,
-        extractionStatus: text
-          ? "EXTRACTED"
-          : summary
-            ? "TEXT_PROVIDED"
-            : "UNSUPPORTED",
-        summary: summary || undefined,
-        extractedText: text || undefined,
-      };
-    });
+        return {
+          id: `doc_${randomUUID()}`,
+          name: document.name.trim(),
+          mimeType: document.mimeType?.trim() || undefined,
+          sizeBytes: document.sizeBytes,
+          sourceUrl: document.sourceUrl,
+          extractionStatus: extraction.status,
+          summary: extraction.summary,
+          extractedText: extraction.text || undefined,
+        };
+      }),
+    );
 
     const now = new Date().toISOString();
     await this.store.saveAuditEvent({
@@ -217,9 +215,4 @@ function slug(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-}
-
-function summarizeText(text: string) {
-  const clean = text.trim().replace(/\s+/g, " ");
-  return clean.length > 360 ? `${clean.slice(0, 357)}...` : clean;
 }

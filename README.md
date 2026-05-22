@@ -10,6 +10,7 @@ Las primeras fases funcionales implementadas son Registro y Diagnostico:
 
 - API de Registro en `/api/registration`.
 - Output contractual de Registro: contexto para Diagnostico, informacion de categoria y marco competitivo.
+- Carga de documentos de demo con extraccion de texto para TXT, MD, CSV, JSON, HTML, PDF con texto, DOCX y XLSX.
 - API HTTP en `/api/diagnosis/*`.
 - Prompt y reglas limpias basadas en `contracts/phase-io.md`.
 - Schema estricto para los 10 outputs contratados.

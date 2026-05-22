@@ -16,7 +16,9 @@ Registro no diagnostica, no propone ideas y no evalua competidores todavia.
 
 ## POST `/registration/documents`
 
-Recibe documentos del demo como texto extraido, resumen, URL o archivo no soportado. Devuelve documentos normalizados con:
+Recibe documentos del demo como texto extraido, resumen, URL, o `dataBase64` para extraccion backend. Soporta texto simple, CSV, JSON, Markdown, HTML, PDF con texto seleccionable, DOCX y XLSX. No hace OCR ni lectura de imagenes/PDFs escaneados.
+
+Devuelve documentos normalizados con:
 
 - `id`
 - `name`

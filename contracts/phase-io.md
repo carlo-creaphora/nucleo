@@ -62,6 +62,7 @@ Output:
 - Vinculo entre perfil, licencia, empresa y memoria compartida de empresa.
 - Readiness de Registro: indica si el contexto esta listo para Diagnostico, que bloquea y que queda como advertencia.
 - Documentos cargados con estado de extraccion: extraido, texto provisto, no soportado o vacio.
+- Extraccion documental demo: texto simple, CSV, JSON, Markdown, HTML, PDF con texto seleccionable, DOCX y XLSX. OCR, imagenes y PDFs escaneados quedan fuera de demo.
 - Datos normalizados para paises, canales, empresa, categoria, competidores y perfil.
 - Marco competitivo preparado para Senales/Benchmark: criterios, ejes de comparacion, preguntas de senal y brechas de evidencia.
 

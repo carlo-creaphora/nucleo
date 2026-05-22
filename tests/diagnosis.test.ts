@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import * as XLSX from "xlsx";
 import { DiagnosisService } from "../src/diagnosis/service.js";
 import { DiagnosisClosureError } from "../src/diagnosis/service.js";
 import { HeuristicDiagnosisEngine } from "../src/diagnosis/engine.js";
@@ -105,6 +106,53 @@ describe("Diagnostico", () => {
 
     expect(result.documents[0]?.id).toMatch(/^doc_/);
     expect(result.documents[0]?.extractionStatus).toBe("EXTRACTED");
+  });
+
+  it("extrae texto basico de archivos XLSX para Registro", async () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.json_to_sheet([
+      {
+        hallazgo: "Los decisores piden evidencia financiera antes de aprobar.",
+        metrica: "conversion demo-cierre",
+      },
+    ]);
+    XLSX.utils.book_append_sheet(workbook, sheet, "Aprendizajes");
+    const dataBase64 = XLSX.write(workbook, {
+      type: "base64",
+      bookType: "xlsx",
+    });
+
+    const result = await registrationService.uploadDocuments({
+      cycleId: "cycle-docs-xlsx",
+      documents: [
+        {
+          name: "aprendizajes.xlsx",
+          mimeType:
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          sizeBytes: Buffer.from(dataBase64, "base64").byteLength,
+          dataBase64,
+        },
+      ],
+    });
+
+    expect(result.documents[0]?.extractionStatus).toBe("EXTRACTED");
+    expect(result.documents[0]?.extractedText).toContain("decisores");
+  });
+
+  it("marca como no soportado un binario sin extractor de demo", async () => {
+    const result = await registrationService.uploadDocuments({
+      cycleId: "cycle-docs-image",
+      documents: [
+        {
+          name: "foto.png",
+          mimeType: "image/png",
+          sizeBytes: 10,
+          dataBase64: Buffer.from("fake-image").toString("base64"),
+        },
+      ],
+    });
+
+    expect(result.documents[0]?.extractionStatus).toBe("UNSUPPORTED");
   });
 
   it("respeta el maximo de 15 preguntas y cierra diagnostico", async () => {

@@ -76,6 +76,7 @@ export const registrationDocumentUploadSchema = z.object({
         sizeBytes: z.number().int().min(0).optional(),
         sourceUrl: z.string().url().optional(),
         text: z.string().optional(),
+        dataBase64: z.string().optional(),
         summary: z.string().optional(),
       }),
     )

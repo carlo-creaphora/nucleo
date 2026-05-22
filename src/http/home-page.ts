@@ -374,7 +374,7 @@ export function renderHomePage() {
               <label>Competidor 3<input name="competitor3" /></label>
               <label>Web competidor 3<input name="competitor3Web" type="url" /></label>
               <label class="full">Notas de categoría<textarea name="categoryNotes"></textarea></label>
-              <label class="full">Cargar archivos<input id="document-files" name="documentFiles" type="file" multiple /></label>
+              <label class="full">Cargar archivos<input id="document-files" name="documentFiles" type="file" multiple accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" /></label>
               <div id="document-list" class="document-list"></div>
               <label class="full">Documentos o notas cargadas<textarea name="documents" placeholder="Pega aquí resumen de documentos, contexto interno o enlaces relevantes."></textarea></label>
             </form>
@@ -613,28 +613,47 @@ export function renderHomePage() {
       function readFileForUpload(file) {
         return new Promise((resolve) => {
           const reader = new FileReader();
-          reader.onload = () => resolve({
-            name: file.name,
-            mimeType: file.type || "application/octet-stream",
-            sizeBytes: file.size,
-            text: typeof reader.result === "string" ? reader.result : ""
-          });
-          reader.onerror = () => resolve({
+          const baseDocument = {
             name: file.name,
             mimeType: file.type || "application/octet-stream",
             sizeBytes: file.size
+          };
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              resolve({ ...baseDocument, text: reader.result });
+              return;
+            }
+
+            resolve({
+              ...baseDocument,
+              dataBase64: arrayBufferToBase64(reader.result)
+            });
+          };
+          reader.onerror = () => resolve({
+            ...baseDocument,
+            summary: "Archivo cargado, pero no se pudo leer desde el navegador."
           });
           if (/text|json|csv|markdown|xml|html|javascript|plain/i.test(file.type) || /\\.(txt|md|csv|json|xml|html)$/i.test(file.name)) {
             reader.readAsText(file);
+          } else if (/pdf|wordprocessingml|spreadsheetml|excel/i.test(file.type) || /\\.(pdf|docx|xlsx|xls)$/i.test(file.name)) {
+            reader.readAsArrayBuffer(file);
           } else {
             resolve({
-              name: file.name,
-              mimeType: file.type || "application/octet-stream",
-              sizeBytes: file.size,
+              ...baseDocument,
               summary: "Archivo cargado. Extraccion automatica no disponible para este tipo en el demo."
             });
           }
         });
+      }
+
+      function arrayBufferToBase64(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = "";
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        return btoa(binary);
       }
 
       function renderDocumentList() {
