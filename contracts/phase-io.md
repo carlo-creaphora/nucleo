@@ -133,6 +133,15 @@ Output:
 - Supuesto a cuestionar.
 - Brief para ideacion.
 
+Regla de aclaracion del resultado:
+
+- El perfil puede pedir aclarar campos especificos del resultado sin reiniciar el diagnostico.
+- Los campos aclarables son: sintomas, causas, tensiones, metricas, restricciones y que no conviene atacar todavia.
+- Al aclarar un campo, la plataforma debe volver a activar el dialogo solo para recoger evidencia o correccion sobre ese campo.
+- La respuesta del perfil se guarda como correccion de seccion, no como conclusion automatica.
+- La IA debe reinterpretar el diagnostico completo con esa nueva evidencia y mantener los mismos 10 campos de output.
+- La reinterpretacion no debe limitarse a editar el campo aclarado si la nueva evidencia afecta reto, causas, tensiones, metricas, restricciones o brief.
+
 ## Senales
 
 Input: pendiente de definir.

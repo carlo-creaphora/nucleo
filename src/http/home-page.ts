@@ -236,9 +236,15 @@ export function renderHomePage() {
         background: rgba(255,255,255,0.76);
         padding: 12px;
       }
+      .result-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
       .result-item strong {
         display: block;
-        margin-bottom: 6px;
         font-size: 13px;
       }
       .result-item div, .result-item ul {
@@ -248,6 +254,18 @@ export function renderHomePage() {
         font-size: 14px;
       }
       .result-item ul { padding-left: 18px; }
+      .clarify-btn {
+        min-height: 28px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: white;
+        color: var(--ink);
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .clarify-btn:disabled { opacity: 0.42; cursor: not-allowed; }
       .loading {
         display: none;
         color: var(--muted);
@@ -383,8 +401,19 @@ export function renderHomePage() {
         registration: null,
         messages: [],
         diagnosis: null,
+        correctedSections: [],
+        clarificationTarget: null,
         activeStep: "registration",
         cycleId: "cycle-" + Date.now()
+      };
+
+      const clarifiableSections = {
+        symptoms: "Síntomas",
+        causes: "Causas",
+        tensions: "Tensiones",
+        metrics: "Métricas",
+        restrictions: "Restricciones",
+        notWorthAttackingYet: "Qué no conviene atacar todavía"
       };
 
       const $ = (id) => document.getElementById(id);
@@ -444,6 +473,11 @@ export function renderHomePage() {
       });
       $("send-message").addEventListener("click", sendMessage);
       $("complete-diagnosis").addEventListener("click", completeDiagnosis);
+      $("result").addEventListener("click", (event) => {
+        const button = event.target.closest("[data-clarify-section]");
+        if (!button) return;
+        startClarification(button.dataset.clarifySection);
+      });
       form.addEventListener("input", persistDraft);
 
       function setStep(step) {
@@ -508,7 +542,60 @@ export function renderHomePage() {
         if (!content || !state.registration) return;
         textarea.value = "";
         addMessage("user", content);
+        if (state.clarificationTarget && state.diagnosis) {
+          await reinterpretDiagnosis(content);
+          return;
+        }
         await requestQuestion();
+      }
+
+      function startClarification(section) {
+        if (!state.diagnosis || !clarifiableSections[section]) return;
+        state.clarificationTarget = {
+          section,
+          label: clarifiableSections[section]
+        };
+        addMessage(
+          "assistant",
+          "Aclara " + clarifiableSections[section] + " con evidencia concreta. No lo formules para defender la lectura anterior; escribe lo que obliga a corregir el diagnóstico."
+        );
+        updateClarifyButtons();
+        $("user-message").focus();
+        persistDraft();
+      }
+
+      async function reinterpretDiagnosis(clarification) {
+        const target = state.clarificationTarget;
+        if (!target || !state.diagnosis) return;
+
+        state.correctedSections.push({
+          section: target.section,
+          clarification
+        });
+        state.clarificationTarget = null;
+        setLoading(true);
+        setError("");
+        try {
+          const response = await fetch("/api/diagnosis/reinterpret", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              input: buildPayload(),
+              previousDiagnosis: state.diagnosis
+            })
+          });
+          const data = await parseResponse(response);
+          renderDiagnosis(data.diagnosis);
+          addMessage("assistant", "Reinterpreté el diagnóstico usando la aclaración de " + target.label + ".");
+        } catch (error) {
+          state.correctedSections.pop();
+          state.clarificationTarget = target;
+          setError(error.message || "No se pudo reinterpretar el diagnóstico.");
+        } finally {
+          setLoading(false);
+          updateClarifyButtons();
+          persistDraft();
+        }
       }
 
       async function requestQuestion() {
@@ -564,7 +651,7 @@ export function renderHomePage() {
           dialogMessages: state.messages.map((item) => ({ role: item.role, content: item.content })),
           userClarifications: [],
           previousCycleLearnings: [],
-          correctedSections: []
+          correctedSections: state.correctedSections
         };
       }
 
@@ -581,24 +668,36 @@ export function renderHomePage() {
       function renderDiagnosis(diagnosis) {
         state.diagnosis = diagnosis;
         const items = [
-          ["Reto recomendado", diagnosis.recommendedChallenge],
-          ["Por qué es más correcto", diagnosis.whyThisChallenge],
-          ["Síntomas", diagnosis.symptoms],
-          ["Causas", diagnosis.causes],
-          ["Tensiones", diagnosis.tensions],
-          ["Métricas", diagnosis.metrics],
-          ["Restricciones", diagnosis.restrictions],
-          ["Qué no conviene atacar todavía", diagnosis.notWorthAttackingYet],
-          ["Supuesto a cuestionar", diagnosis.assumptionToQuestion],
-          ["Brief para ideación", diagnosis.ideationBrief]
+          ["recommendedChallenge", "Reto recomendado", diagnosis.recommendedChallenge],
+          ["whyThisChallenge", "Por qué es más correcto", diagnosis.whyThisChallenge],
+          ["symptoms", "Síntomas", diagnosis.symptoms],
+          ["causes", "Causas", diagnosis.causes],
+          ["tensions", "Tensiones", diagnosis.tensions],
+          ["metrics", "Métricas", diagnosis.metrics],
+          ["restrictions", "Restricciones", diagnosis.restrictions],
+          ["notWorthAttackingYet", "Qué no conviene atacar todavía", diagnosis.notWorthAttackingYet],
+          ["assumptionToQuestion", "Supuesto a cuestionar", diagnosis.assumptionToQuestion],
+          ["ideationBrief", "Brief para ideación", diagnosis.ideationBrief]
         ];
         $("result").innerHTML = "";
-        for (const [label, value] of items) {
+        for (const [key, label, value] of items) {
           const box = document.createElement("div");
           box.className = "result-item";
+          const header = document.createElement("div");
+          header.className = "result-title";
           const title = document.createElement("strong");
           title.textContent = label;
-          box.appendChild(title);
+          header.appendChild(title);
+          if (clarifiableSections[key]) {
+            const clarifyButton = document.createElement("button");
+            clarifyButton.className = "clarify-btn";
+            clarifyButton.type = "button";
+            clarifyButton.dataset.clarifySection = key;
+            clarifyButton.textContent = "Aclarar";
+            clarifyButton.disabled = Boolean(state.clarificationTarget);
+            header.appendChild(clarifyButton);
+          }
+          box.appendChild(header);
           if (Array.isArray(value)) {
             const ul = document.createElement("ul");
             for (const item of value.length ? value : ["Sin dato declarado"]) {
@@ -631,6 +730,8 @@ export function renderHomePage() {
           registration: state.registration,
           messages: state.messages,
           diagnosis: state.diagnosis,
+          correctedSections: state.correctedSections,
+          clarificationTarget: state.clarificationTarget,
           formDraft
         }));
       }
@@ -645,6 +746,8 @@ export function renderHomePage() {
           if (draft.registration) state.registration = draft.registration;
           if (Array.isArray(draft.messages)) state.messages = draft.messages;
           if (draft.diagnosis) state.diagnosis = draft.diagnosis;
+          if (Array.isArray(draft.correctedSections)) state.correctedSections = draft.correctedSections;
+          if (draft.clarificationTarget) state.clarificationTarget = draft.clarificationTarget;
           if (draft.activeStep) state.activeStep = draft.activeStep;
 
           if (draft.formDraft) {
@@ -677,6 +780,13 @@ export function renderHomePage() {
         loading.classList.toggle("active", active);
         $("send-message").disabled = active;
         $("complete-diagnosis").disabled = active;
+        updateClarifyButtons(active);
+      }
+
+      function updateClarifyButtons(forceDisabled = false) {
+        document.querySelectorAll("[data-clarify-section]").forEach((button) => {
+          button.disabled = forceDisabled || Boolean(state.clarificationTarget);
+        });
       }
 
       function setError(message) {
