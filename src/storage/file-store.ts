@@ -155,7 +155,7 @@ export class FileStore implements NucleoStore {
 export function createStore() {
   const databaseUrl = process.env.DATABASE_URL?.trim();
 
-  if (databaseUrl) {
+  if (databaseUrl && /^postgres(ql)?:\/\//i.test(databaseUrl)) {
     return new PostgresStore(databaseUrl);
   }
 
