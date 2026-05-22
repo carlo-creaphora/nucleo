@@ -70,9 +70,48 @@ No debe hacer:
 
 ## Diagnostico
 
-Input: pendiente de definir.
+Proposito: reinterpretar lo que declara el perfil y encontrar el reto real, no solo el problema que el usuario cree tener.
 
-Output: pendiente de definir.
+Desde esta fase comienza la funcion de IA. La IA debe hacer las preguntas correctas segun la empresa, la categoria, la memoria disponible y lo que el usuario declare como problema o reto.
+
+Reglas:
+
+- No aceptar la lectura inicial del usuario como diagnostico final.
+- Tratar el problema declarado como hipotesis de entrada.
+- Hacer preguntas adaptativas segun las respuestas, no un cuestionario fijo.
+- Usar maximo 15 preguntas de contexto antes de cerrar o declarar datos faltantes.
+- Modificar la ruta de preguntas segun el problema, reto, aclaraciones o preguntas directas del usuario.
+- Si el usuario corrige una seccion, la IA debe reinterpretar esa parte y recomponer el diagnostico.
+- Si no hay evidencia suficiente, debe declararlo en vez de inventar certeza.
+- El diagnostico debe entregar criterio experto: el reto real que conviene trabajar, no una repeticion del sintoma.
+
+Input:
+
+- Perfil/licencia.
+- Datos de empresa.
+- Datos de categoria.
+- Competidores.
+- Ubicacion/paises.
+- Notas de categoria.
+- Documentos cargados por el perfil.
+- Mensajes del dialogo de diagnostico.
+- Aclaraciones del usuario o preguntas directas durante el dialogo.
+- Memoria compartida de la empresa, si existe.
+- Aprendizajes de ciclos anteriores.
+- Secciones que el usuario corrija o aclare.
+
+Output:
+
+- Reto recomendado.
+- Por que ese reto es mas correcto que la lectura inicial.
+- Sintomas.
+- Causas.
+- Tensiones.
+- Metricas.
+- Restricciones.
+- Que no conviene atacar todavia.
+- Supuesto a cuestionar.
+- Brief para ideacion.
 
 ## Senales
 
