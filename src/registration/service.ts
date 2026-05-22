@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
+  type RegistrationInput,
+  type RegistrationOutput,
   type RegistrationRecord,
   registrationDocumentUploadSchema,
   registrationInputSchema,
@@ -19,7 +21,10 @@ export class RegistrationService {
       registrationInputSchema.parse(rawInput),
     );
     const existing = await this.store.getRegistrationByCycle(input.cycleId);
-    const output = await this.engine.prepare(input);
+    const output = finalizeRegistrationOutput(
+      input,
+      await this.engine.prepare(input),
+    );
     const now = new Date().toISOString();
     const record: RegistrationRecord = {
       id: existing?.id ?? input.registrationId ?? `reg_${randomUUID()}`,
@@ -152,6 +157,53 @@ export class RegistrationService {
       })),
     };
   }
+}
+
+function finalizeRegistrationOutput(
+  input: RegistrationInput,
+  output: RegistrationOutput,
+): RegistrationOutput {
+  const blockingIssues = [
+    input.profileLicense.name ? "" : "perfil sin nombre",
+    input.profileLicense.role ? "" : "cargo del perfil faltante",
+    input.profileLicense.area ? "" : "area del perfil faltante",
+    input.profileLicense.email ? "" : "mail del perfil faltante",
+    input.company.name ? "" : "empresa sin nombre",
+    input.company.sectorCategory ? "" : "sector/categoria faltante",
+    input.company.sellsTo ? "" : "actor comprador no declarado",
+    input.company.revenueModel ? "" : "modelo de cobro no declarado",
+  ].filter(Boolean);
+  const warnings = [
+    ...output.readiness.warnings,
+    input.category.competitors.length === 3
+      ? ""
+      : "menos de tres competidores declarados",
+    input.category.averageTicket ? "" : "ticket promedio no declarado",
+    typeof input.category.averageSalesCycleDays === "number"
+      ? ""
+      : "ciclo de venta no declarado",
+    input.uploadedDocuments.length > 0 || input.category.notes
+      ? ""
+      : "sin notas o documentos de categoria",
+    ...output.readiness.blockingIssues.filter(
+      (issue) => !blockingIssues.includes(issue),
+    ),
+  ].filter(Boolean);
+
+  return {
+    ...output,
+    contextForDiagnosis: {
+      profileLicense: input.profileLicense,
+      company: input.company,
+      category: input.category,
+      uploadedDocuments: input.uploadedDocuments,
+    },
+    readiness: {
+      isReadyForDiagnosis: blockingIssues.length === 0,
+      blockingIssues,
+      warnings: [...new Set(warnings)],
+    },
+  };
 }
 
 function normalizeText(value: string) {
