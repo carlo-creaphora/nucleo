@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   type DiagnosisInput,
   type DiagnosisOutput,
+  type CriticalMissingPiece,
   diagnosisInputSchema,
 } from "../contracts/diagnosis.js";
 import { type IdeationInput, ideationInputSchema } from "../contracts/ideation.js";
@@ -9,7 +10,6 @@ import type { DiagnosisEngine } from "./engine.js";
 import {
   MAX_DIAGNOSIS_QUESTIONS,
   countUserDiagnosisTurns,
-  detectCriticalMissingPieces,
 } from "./prompt.js";
 import type { NucleoStore, StoredDiagnosisCycle } from "../storage/store.js";
 
@@ -18,7 +18,7 @@ export class DiagnosisClosureError extends Error {
 
   constructor(
     message: string,
-    readonly criticalMissing: ReturnType<typeof detectCriticalMissingPieces>,
+    readonly criticalMissing: CriticalMissingPiece[],
   ) {
     super(message);
     this.name = "DiagnosisClosureError";
@@ -37,6 +37,18 @@ export class DiagnosisService {
     const userTurns = countUserDiagnosisTurns(input);
 
     if (userTurns >= MAX_DIAGNOSIS_QUESTIONS) {
+      const closure = await this.engine.assessClosure(input);
+      if (!closure.canClose) {
+        await this.persist(input);
+
+        return {
+          maxQuestionsReached: true,
+          question: null,
+          diagnosis: null,
+          criticalMissing: closure.missing,
+        };
+      }
+
       const diagnosis = await this.engine.completeDiagnosis(input);
       await this.persist(input, diagnosis, "max_questions");
 
@@ -44,7 +56,7 @@ export class DiagnosisService {
         maxQuestionsReached: true,
         question: null,
         diagnosis,
-        criticalMissing: detectCriticalMissingPieces(input),
+        criticalMissing: [],
       };
     }
 
@@ -55,20 +67,20 @@ export class DiagnosisService {
       maxQuestionsReached: false,
       question,
       diagnosis: null,
-      criticalMissing: detectCriticalMissingPieces(input),
+      criticalMissing: [],
     };
   }
 
   async complete(rawInput: unknown) {
     const input = await this.enrichInput(diagnosisInputSchema.parse(rawInput));
     await this.ensureRegistrationReady(input);
-    this.ensureCanClose(input);
+    await this.ensureCanClose(input);
     const diagnosis = await this.engine.completeDiagnosis(input);
     await this.persist(input, diagnosis, "complete");
 
     return {
       diagnosis,
-      criticalMissing: detectCriticalMissingPieces(input),
+      criticalMissing: [],
     };
   }
 
@@ -84,12 +96,13 @@ export class DiagnosisService {
       input,
       previousDiagnosis,
     );
-    await this.persist(input, diagnosis, "reinterpret");
+    const closure = await this.engine.assessClosure(input);
+    await this.persist(input, diagnosis, "reinterpret", closure.missing);
 
     return {
       diagnosis,
       changeSummary: summarizeDiagnosisChanges(previousDiagnosis, diagnosis),
-      criticalMissing: detectCriticalMissingPieces(input),
+      criticalMissing: closure.missing,
     };
   }
 
@@ -181,6 +194,7 @@ export class DiagnosisService {
     input: DiagnosisInput,
     diagnosis?: DiagnosisOutput,
     reason?: "complete" | "max_questions" | "reinterpret",
+    criticalMissing: CriticalMissingPiece[] = [],
   ) {
     const now = new Date().toISOString();
     const existing = await this.store.getDiagnosisCycle(input.cycleId);
@@ -227,7 +241,7 @@ export class DiagnosisService {
         metadata: {
           version: versionNumber,
           correctedSections: input.correctedSections.map((item) => item.section),
-          criticalMissing: detectCriticalMissingPieces(input),
+          criticalMissing,
         },
         createdAt: now,
       });
@@ -273,14 +287,13 @@ export class DiagnosisService {
     };
   }
 
-  private ensureCanClose(input: DiagnosisInput) {
-    const missing = detectCriticalMissingPieces(input);
-    const userTurns = countUserDiagnosisTurns(input);
+  private async ensureCanClose(input: DiagnosisInput) {
+    const closure = await this.engine.assessClosure(input);
 
-    if (missing.length > 0 && userTurns < MAX_DIAGNOSIS_QUESTIONS) {
+    if (!closure.canClose) {
       throw new DiagnosisClosureError(
         "Diagnostico no puede cerrar: faltan piezas criticas.",
-        missing,
+        closure.missing,
       );
     }
   }

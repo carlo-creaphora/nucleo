@@ -3,20 +3,25 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import type { z } from "zod";
 import {
   type DiagnosisInput,
+  type DiagnosisClosureAssessmentOutput,
   type DiagnosisOutput,
   type DiagnosisQuestionOutput,
+  diagnosisClosureAssessmentOutputSchema,
   diagnosisOutputSchema,
   diagnosisQuestionOutputSchema,
 } from "../contracts/diagnosis.js";
 import {
+  buildClosureAssessmentInstruction,
   buildCompletionInstruction,
   buildDiagnosisSystemPrompt,
   buildQuestionInstruction,
   buildReinterpretInstruction,
+  detectCriticalMissingPieces,
 } from "./prompt.js";
 
 export type DiagnosisEngine = {
   generateQuestion(input: DiagnosisInput): Promise<DiagnosisQuestionOutput>;
+  assessClosure(input: DiagnosisInput): Promise<DiagnosisClosureAssessmentOutput>;
   completeDiagnosis(input: DiagnosisInput): Promise<DiagnosisOutput>;
   reinterpretDiagnosis(
     input: DiagnosisInput,
@@ -50,6 +55,14 @@ export class OpenAiDiagnosisEngine implements DiagnosisEngine {
       name: "diagnosis_question",
       schema: diagnosisQuestionOutputSchema,
       payload: buildQuestionInstruction(input),
+    });
+  }
+
+  assessClosure(input: DiagnosisInput) {
+    return this.runStructured({
+      name: "diagnosis_closure_assessment",
+      schema: diagnosisClosureAssessmentOutputSchema,
+      payload: buildClosureAssessmentInstruction(input),
     });
   }
 
@@ -229,6 +242,16 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
     };
   }
 
+  async assessClosure(
+    input: DiagnosisInput,
+  ): Promise<DiagnosisClosureAssessmentOutput> {
+    const missing = detectCriticalMissingPieces(input);
+    return {
+      canClose: missing.length === 0,
+      missing,
+    };
+  }
+
   async completeDiagnosis(input: DiagnosisInput): Promise<DiagnosisOutput> {
     return buildHeuristicDiagnosis(input);
   }
@@ -244,6 +267,10 @@ class MissingOpenAiDiagnosisEngine implements DiagnosisEngine {
   }
 
   async completeDiagnosis(): Promise<DiagnosisOutput> {
+    throw missingOpenAiError("Diagnostico");
+  }
+
+  async assessClosure(): Promise<DiagnosisClosureAssessmentOutput> {
     throw missingOpenAiError("Diagnostico");
   }
 

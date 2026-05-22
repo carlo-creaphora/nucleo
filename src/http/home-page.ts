@@ -480,6 +480,7 @@ export function renderHomePage() {
         messages: [],
         diagnosis: null,
         signals: null,
+        criticalMissing: [],
         correctedSections: [],
         clarificationTarget: null,
         activeStep: "registration",
@@ -596,7 +597,7 @@ export function renderHomePage() {
         $("step-diagnosis").classList.toggle("active", step === "diagnosis");
         $("step-signals").classList.toggle("active", step === "signals");
         $("step-registration").classList.toggle("done", Boolean(state.registration));
-        $("step-diagnosis").classList.toggle("done", Boolean(state.diagnosis));
+        $("step-diagnosis").classList.toggle("done", Boolean(state.diagnosis) && canAdvanceToSignals());
         $("step-signals").classList.toggle("done", Boolean(state.signals));
         persistDraft();
       }
@@ -776,7 +777,11 @@ export function renderHomePage() {
           const data = await parseResponse(response);
           renderCriticalMissing(data.criticalMissing || []);
           renderDiagnosis(data.diagnosis);
-          addMessage("assistant", "Reinterpreté el diagnóstico usando la aclaración de " + target.label + ". " + (data.changeSummary?.summary || ""));
+          if (canAdvanceToSignals()) {
+            addMessage("assistant", "Reinterpreté el diagnóstico usando la aclaración de " + target.label + ". " + (data.changeSummary?.summary || ""));
+          } else {
+            addMessage("assistant", "Reinterpreté el diagnóstico, pero no queda cerrado. Responde en el chat las piezas críticas que faltan antes de pasar a Señales.");
+          }
         } catch (error) {
           state.correctedSections.pop();
           state.clarificationTarget = target;
@@ -801,9 +806,15 @@ export function renderHomePage() {
           renderCriticalMissing(data.criticalMissing || []);
           if (data.diagnosis) {
             renderDiagnosis(data.diagnosis);
-            addMessage("assistant", "Ya tengo suficiente contexto. Cerré el diagnóstico y dejé el resultado a la derecha.");
+            if (canAdvanceToSignals()) {
+              addMessage("assistant", "Ya tengo suficiente contexto. Cerré el diagnóstico y dejé el resultado a la derecha.");
+            } else {
+              addMessage("assistant", "No cierro el diagnóstico todavía. Responde en el chat las piezas críticas que faltan.");
+            }
           } else if (data.question) {
             addMessage("assistant", data.question.question);
+          } else if ((data.criticalMissing || []).length > 0) {
+            addMessage("assistant", "No cierro el diagnóstico todavía. Responde en el chat las piezas críticas que faltan.");
           }
         } catch (error) {
           setError(error.message || "No se pudo consultar la IA.");
@@ -828,9 +839,16 @@ export function renderHomePage() {
           const data = await parseResponse(response);
           renderCriticalMissing(data.criticalMissing || []);
           renderDiagnosis(data.diagnosis);
-          addMessage("assistant", "Diagnóstico cerrado. Revisa el reto recomendado y el brief para ideación.");
+          if (canAdvanceToSignals()) {
+            addMessage("assistant", "Diagnóstico cerrado. Revisa el reto recomendado y el brief para ideación.");
+          } else {
+            addMessage("assistant", "No cierro el diagnóstico todavía. Responde en el chat las piezas críticas que faltan.");
+          }
         } catch (error) {
           setError(error.message || "No se pudo cerrar el diagnóstico.");
+          if (!canAdvanceToSignals()) {
+            addMessage("assistant", "Responde esas piezas críticas en el chat y vuelve a cerrar el diagnóstico.");
+          }
         } finally {
           setLoading(false);
         }
@@ -839,6 +857,10 @@ export function renderHomePage() {
       async function generateSignals() {
         if (!state.diagnosis) {
           setError("Cierra el diagnóstico antes de consultar señales.");
+          return;
+        }
+        if (!canAdvanceToSignals()) {
+          setError("Antes de consultar Señales, responde las piezas críticas pendientes y vuelve a cerrar el diagnóstico.");
           return;
         }
         setLoading(true);
@@ -940,7 +962,7 @@ export function renderHomePage() {
           }
           $("result").appendChild(box);
         }
-        $("confirm-diagnosis-signals").disabled = !state.diagnosis || Boolean(state.clarificationTarget);
+        $("confirm-diagnosis-signals").disabled = !state.diagnosis || !canAdvanceToSignals() || Boolean(state.clarificationTarget);
         persistDraft();
       }
 
@@ -1027,13 +1049,16 @@ export function renderHomePage() {
 
       function renderCriticalMissing(items) {
         const box = $("critical-missing");
+        state.criticalMissing = items || [];
         if (!items || items.length === 0) {
           box.innerHTML = "";
           box.classList.remove("active");
+          updateClarifyButtons();
           return;
         }
         box.innerHTML = "<strong>Faltan piezas críticas antes de cerrar</strong><ul>" + items.map((item) => "<li>" + item.key + ": " + item.reason + "</li>").join("") + "</ul>";
         box.classList.add("active");
+        updateClarifyButtons();
       }
 
       function persistDraft() {
@@ -1053,6 +1078,7 @@ export function renderHomePage() {
           messages: state.messages,
           diagnosis: state.diagnosis,
           signals: state.signals,
+          criticalMissing: state.criticalMissing,
           correctedSections: state.correctedSections,
           clarificationTarget: state.clarificationTarget,
           formDraft
@@ -1072,6 +1098,7 @@ export function renderHomePage() {
           if (Array.isArray(draft.messages)) state.messages = draft.messages;
           if (draft.diagnosis) state.diagnosis = draft.diagnosis;
           if (draft.signals) state.signals = draft.signals;
+          if (Array.isArray(draft.criticalMissing)) state.criticalMissing = draft.criticalMissing;
           if (Array.isArray(draft.correctedSections)) state.correctedSections = draft.correctedSections;
           if (draft.clarificationTarget) state.clarificationTarget = draft.clarificationTarget;
           if (draft.activeStep) state.activeStep = draft.activeStep;
@@ -1090,6 +1117,7 @@ export function renderHomePage() {
             $("messages").appendChild(node);
           }
           if (state.diagnosis) renderDiagnosis(state.diagnosis);
+          renderCriticalMissing(state.criticalMissing || []);
           if (state.signals) renderSignals(state.signals);
           renderDocumentList();
           setStep(state.activeStep || (state.signals ? "signals" : state.registration ? "diagnosis" : "registration"));
@@ -1112,7 +1140,7 @@ export function renderHomePage() {
         $("signals-loading").classList.toggle("active", active);
         $("send-message").disabled = active;
         $("complete-diagnosis").disabled = active;
-        $("confirm-diagnosis-signals").disabled = active || !state.diagnosis || Boolean(state.clarificationTarget);
+        $("confirm-diagnosis-signals").disabled = active || !state.diagnosis || !canAdvanceToSignals() || Boolean(state.clarificationTarget);
         updateClarifyButtons(active);
       }
 
@@ -1120,7 +1148,11 @@ export function renderHomePage() {
         document.querySelectorAll("[data-clarify-section]").forEach((button) => {
           button.disabled = forceDisabled || Boolean(state.clarificationTarget);
         });
-        $("confirm-diagnosis-signals").disabled = forceDisabled || !state.diagnosis || Boolean(state.clarificationTarget);
+        $("confirm-diagnosis-signals").disabled = forceDisabled || !state.diagnosis || !canAdvanceToSignals() || Boolean(state.clarificationTarget);
+      }
+
+      function canAdvanceToSignals() {
+        return !state.criticalMissing || state.criticalMissing.length === 0;
       }
 
       function setError(message) {

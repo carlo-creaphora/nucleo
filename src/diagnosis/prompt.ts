@@ -2,6 +2,39 @@ import type { DiagnosisInput, DiagnosisOutput } from "../contracts/diagnosis.js"
 
 export const MAX_DIAGNOSIS_QUESTIONS = 15;
 
+export const CRITICAL_DIAGNOSIS_PIECES = [
+  {
+    key: "metrica",
+    description:
+      "Metrica o senal observable que muestra por que el reto importa.",
+  },
+  {
+    key: "restriccion",
+    description:
+      "Limite real de presupuesto, operacion, regulacion, marca, tecnologia, talento u otro borde no negociable.",
+  },
+  {
+    key: "intentos previos",
+    description:
+      "Que ya se intento y que aprendizaje dejo, incluso si fallo.",
+  },
+  {
+    key: "tension interna",
+    description:
+      "Choque entre areas, criterios, incentivos, paises, prioridades o formas de operar.",
+  },
+  {
+    key: "decision trabada",
+    description:
+      "Decision concreta que el diagnostico debe ayudar a tomar o destrabar.",
+  },
+  {
+    key: "cambio esperado",
+    description:
+      "Cambio observable que permitiria reconocer avance despues del diagnostico.",
+  },
+] as const;
+
 export const DIAGNOSIS_RULES = [
   "No aceptar la etiqueta inicial del usuario como diagnostico final.",
   "Tratar lo que dice el usuario como hipotesis de entrada, no como conclusion.",
@@ -51,38 +84,40 @@ export function detectCriticalMissingPieces(input: DiagnosisInput) {
     .join(" ");
   const checks = [
     {
-      key: "metrica",
+      key: "metrica" as const,
       missing: !/m[eé]trica|indicador|venta|ingreso|margen|tiempo|costo|riesgo|calidad|retenci[oó]n|conversion|conversi[oó]n/i.test(userText),
       reason: "Sin metrica o senal, el reto puede quedarse en percepcion.",
     },
     {
-      key: "restriccion",
+      key: "restriccion" as const,
       missing: !/restric|no podemos|presupuesto|legal|regulaci[oó]n|operaci[oó]n|marca|talento|tecnolog/i.test(userText),
       reason: "Sin restriccion, Ideacion puede proponer algo no ejecutable.",
     },
     {
-      key: "intentos previos",
+      key: "intentos previos" as const,
       missing: !/intent|probamos|hicimos|ya se hizo|funcion[oó]|fall[oó]|no cambio|no funcion/i.test(userText),
       reason: "Sin intentos previos, se pueden repetir soluciones obvias.",
     },
     {
-      key: "tension interna",
+      key: "tension interna" as const,
       missing: !/pero|aunque|sin embargo|tensi[oó]n|conflicto|fricci[oó]n|desacuerdo|prioridad/i.test(userText),
       reason: "Sin tension, el diagnostico puede confundir sintoma con mecanismo.",
     },
     {
-      key: "decision trabada",
+      key: "decision trabada" as const,
       missing: !/decisi[oó]n|decidir|priorizar|destrabar|aprobar|invertir|definir/i.test(userText),
       reason: "Sin decision, el cierre no habilita accion concreta.",
     },
     {
-      key: "cambio esperado",
+      key: "cambio esperado" as const,
       missing: !/esperamos|deber[ií]a cambiar|queremos que|resultado esperado|cambio esperado|lograr|cambiar/i.test(userText),
       reason: "Sin cambio esperado, no hay forma clara de reconocer avance.",
     },
   ];
 
-  return checks.filter((check) => check.missing);
+  return checks
+    .filter((check) => check.missing)
+    .map(({ key, reason }) => ({ key, reason }));
 }
 
 export function buildDiagnosisSystemPrompt() {
@@ -97,8 +132,10 @@ export function buildDiagnosisSystemPrompt() {
     ...DIAGNOSIS_RESPONSE_STYLE.map((rule) => `- ${rule}`),
     "Reglas de cierre:",
     ...DIAGNOSIS_CLOSE_RULES.map((rule) => `- ${rule}`),
-    "Complementos para orientar preguntas, sin convertirlos en cuestionario fijo:",
-    ...DIAGNOSIS_QUESTION_COMPLEMENTS.map((item) => `- ${item}`),
+    "Piezas criticas que deben estar cubiertas por evidencia explicita o inferencia razonable desde el contexto:",
+    ...CRITICAL_DIAGNOSIS_PIECES.map(
+      (item) => `- ${item.key}: ${item.description}`,
+    ),
   ].join("\n");
 }
 
@@ -116,9 +153,18 @@ export function buildQuestionInstruction(input: DiagnosisInput) {
       userTurns >= MAX_DIAGNOSIS_QUESTIONS
         ? "Ya se alcanzo el maximo de preguntas. No hagas otra pregunta; marca shouldCloseDiagnosis=true y senala que piezas criticas faltan si aplica."
         : "Haz una sola pregunta adaptativa que nazca de lo ya respondido y ataque el punto mas incierto del diagnostico. Usa los complementos solo si ayudan a completar contexto critico.",
-    questionComplements: DIAGNOSIS_QUESTION_COMPLEMENTS,
+    criticalPieces: CRITICAL_DIAGNOSIS_PIECES,
     closeRules: DIAGNOSIS_CLOSE_RULES,
-    criticalMissing: detectCriticalMissingPieces(input),
+    input,
+  };
+}
+
+export function buildClosureAssessmentInstruction(input: DiagnosisInput) {
+  return {
+    task: "Evalua si Diagnostico puede cerrar.",
+    instruction:
+      "Determina si las piezas criticas estan cubiertas por evidencia explicita o por inferencia razonable desde Registro, documentos, dialogo y aclaraciones. No uses coincidencia de palabras. No marques faltante una pieza si el contenido existe con otra redaccion. Si falta algo, devuelve solo las piezas que bloquean pasar a Senales.",
+    criticalPieces: CRITICAL_DIAGNOSIS_PIECES,
     input,
   };
 }
@@ -140,7 +186,7 @@ export function buildCompletionInstruction(input: DiagnosisInput) {
       "assumptionToQuestion",
       "ideationBrief",
     ],
-    criticalMissing: detectCriticalMissingPieces(input),
+    criticalPieces: CRITICAL_DIAGNOSIS_PIECES,
     input,
   };
 }
@@ -155,7 +201,7 @@ export function buildReinterpretInstruction(
       "Responde la correccion antes de avanzar. Recompone el diagnostico completo, cambiando solo lo que la aclaracion afecte. No le des la razon al usuario por defecto; usa la correccion como nueva evidencia, no como conclusion. Mantente breve y directo.",
     previousDiagnosis,
     corrections: input.correctedSections,
-    criticalMissing: detectCriticalMissingPieces(input),
+    criticalPieces: CRITICAL_DIAGNOSIS_PIECES,
     input,
   };
 }

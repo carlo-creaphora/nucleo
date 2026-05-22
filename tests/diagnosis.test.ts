@@ -163,7 +163,7 @@ describe("Diagnostico", () => {
     expect(result.documents[0]?.extractionStatus).toBe("UNSUPPORTED");
   });
 
-  it("respeta el maximo de 15 preguntas y cierra diagnostico", async () => {
+  it("respeta el maximo de 15 preguntas pero no cierra si faltan piezas criticas", async () => {
     const dialogMessages = Array.from({ length: 15 }, (_, index) => ({
       role: "user" as const,
       content: `Respuesta de contexto ${index + 1}`,
@@ -174,7 +174,8 @@ describe("Diagnostico", () => {
 
     expect(result.maxQuestionsReached).toBe(true);
     expect(result.question).toBeNull();
-    expect(result.diagnosis?.recommendedChallenge).toBeTruthy();
+    expect(result.diagnosis).toBeNull();
+    expect(result.criticalMissing.length).toBeGreaterThan(0);
   });
 
   it("usa intentos previos, tensiones, decision trabada y cambio esperado como complementos de pregunta", async () => {

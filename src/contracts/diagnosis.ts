@@ -107,6 +107,25 @@ export const diagnosisQuestionOutputSchema = z.object({
   shouldCloseDiagnosis: z.boolean(),
 });
 
+export const criticalDiagnosisPieceKeySchema = z.enum([
+  "metrica",
+  "restriccion",
+  "intentos previos",
+  "tension interna",
+  "decision trabada",
+  "cambio esperado",
+]);
+
+export const criticalMissingPieceSchema = z.object({
+  key: criticalDiagnosisPieceKeySchema,
+  reason: z.string().min(12),
+});
+
+export const diagnosisClosureAssessmentOutputSchema = z.object({
+  canClose: z.boolean(),
+  missing: z.array(criticalMissingPieceSchema).default([]),
+});
+
 export const diagnosisOutputSchema = z.object({
   recommendedChallenge: z.string().min(12),
   whyThisChallenge: z.string().min(12),
@@ -125,5 +144,9 @@ export type DiagnosisOutput = z.infer<typeof diagnosisOutputSchema>;
 export type UploadedDocument = z.infer<typeof uploadedDocumentSchema>;
 export type DiagnosisQuestionOutput = z.infer<
   typeof diagnosisQuestionOutputSchema
+>;
+export type CriticalMissingPiece = z.infer<typeof criticalMissingPieceSchema>;
+export type DiagnosisClosureAssessmentOutput = z.infer<
+  typeof diagnosisClosureAssessmentOutputSchema
 >;
 export type DiagnosisCorrection = z.infer<typeof diagnosisCorrectionSchema>;
