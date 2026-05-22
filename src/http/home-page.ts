@@ -875,7 +875,7 @@ export function renderHomePage() {
           state.signals = data.signals.output;
           renderSignals(state.signals);
           setStep("signals");
-          addMessage("assistant", "Señales consultadas. Revisa social listening, tendencias, competidores, gaps e insights antes de idear.");
+          addMessage("assistant", "Señales consultadas. Revisa los 2 gaps y 2 insights para pasar a ideación.");
         } catch (error) {
           setSignalsError(error.message || "No se pudo consultar Señales.");
           setStep("signals");
@@ -969,11 +969,11 @@ export function renderHomePage() {
       function renderSignals(signals) {
         state.signals = signals;
         const sections = [
-          ["analisisSocialListening", "Análisis social listening", signals.analisisSocialListening],
-          ["analisisTendencias", "Análisis tendencias", signals.analisisTendencias],
-          ["analisisCompetidores", "Análisis competidores", signals.analisisCompetidores],
           ["gaps", "Gaps", signals.gaps],
           ["insights", "Insights", signals.insights],
+          ["analisisSocialListening", "Social listening usado", signals.analisisSocialListening],
+          ["analisisTendencias", "Tendencias usadas", signals.analisisTendencias],
+          ["analisisCompetidores", "Competidores usados", signals.analisisCompetidores],
           ["memoriaEmpresa", "Memoria empresa", signals.memoriaEmpresa]
         ];
         $("signals-result").innerHTML = "";
@@ -985,9 +985,9 @@ export function renderHomePage() {
           box.appendChild(title);
 
           if (key === "gaps") {
-            box.appendChild(renderBulletList(value.map((item) => item.title + ": " + item.summary + " Implicación: " + item.implicationForIdeation)));
+            box.appendChild(renderBulletList(value.map((item, index) => "Gap " + (index + 1) + " · " + item.title + " [" + item.evidenceBase + "]: " + item.summary + " Implicación: " + item.implicationForIdeation)));
           } else if (key === "insights") {
-            box.appendChild(renderBulletList(value.map((item) => item.title + ": " + item.actionableTruth + " Prompt: " + item.ideationPrompt)));
+            box.appendChild(renderBulletList(value.map((item, index) => "Insight " + (index + 1) + " · " + item.title + " [" + item.evidenceBase + "]: " + item.actionableTruth + " Prompt: " + item.ideationPrompt)));
           } else if (key === "memoriaEmpresa") {
             const memoryItems = [
               ...(value.companyPatterns || []).map((item) => "Patrón: " + item),

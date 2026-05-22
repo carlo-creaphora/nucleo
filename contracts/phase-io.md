@@ -182,11 +182,9 @@ Input:
 
 Output visible:
 
-- Analisis y resumen de social listening.
-- Analisis y resumen de tendencias.
-- Analisis y resumen de competidores.
-- Gaps.
-- Insights.
+- 2 gaps priorizados para Ideacion.
+- 2 insights priorizados para Ideacion.
+- Analisis de soporte por social listening, tendencias y competidores.
 - Aprendizajes o memoria de otros ciclos/perfiles asociados a la empresa, si existen.
 
 Output interno:
@@ -207,15 +205,19 @@ Reglas:
 - Una tendencia positiva no es gap por si sola.
 - Un gap exige contradiccion o friccion no resuelta.
 - Un insight debe ser una verdad accionable, no un resumen.
+- La sintesis final debe entregar exactamente 2 gaps y exactamente 2 insights.
+- Si la evidencia es debil, no bloquear Ideacion: marcar `evidenceBase` como `indirecta`.
 - Competidores deben analizar promesa visible versus friccion evidenciada.
 - No convertir todo en oportunidad optimista.
 - Si el mercado contradice al usuario o debilita el Diagnostico, decirlo.
 
 Metodo:
 
-- Primero ejecutar busquedas reales y explicitas por lente.
-- Despues analizar con IA solo sobre la evidencia encontrada.
-- Si no hay evidencia defendible para un lente, declararlo como vacio en vez de rellenar.
+- Ejecutar 3 busquedas reales y explicitas por lente: social listening, tendencias y competidores.
+- Cada busqueda debe ser agresiva y orientada a fricciones, contradicciones y senales negativas.
+- Extraer maximo 5 evidencias textuales por lente.
+- Rankear evidencias por utilidad para Ideacion: contradiccion con diagnostico, friccion negativa, impacto en compra/adopcion/ejecucion, competidor/categoria y tension interna.
+- Sintetizar exactamente 2 gaps y 2 insights desde las evidencias priorizadas.
 
 ## Ideacion
 

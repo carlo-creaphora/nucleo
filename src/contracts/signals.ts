@@ -11,6 +11,11 @@ export const signalLensSchema = z.enum([
 ]);
 
 export const signalConfidenceSchema = z.enum(["HIGH", "MEDIUM", "LOW"]);
+export const signalEvidenceBaseSchema = z.enum([
+  "fuerte",
+  "media",
+  "indirecta",
+]);
 
 export const signalEvidenceSchema = z.object({
   id: z.string().min(1),
@@ -21,6 +26,9 @@ export const signalEvidenceSchema = z.object({
   sourceUrl: z.string().min(1).optional(),
   sourceDate: z.string().optional(),
   query: z.string().optional(),
+  frictionType: z.string().min(3),
+  relationToDiagnosis: z.string().min(8),
+  usefulnessForIdeation: z.string().min(8),
   isNegative: z.boolean(),
   confidence: signalConfidenceSchema,
 });
@@ -48,6 +56,7 @@ export const signalGapSchema = z.object({
   summary: z.string().min(20),
   contradiction: z.string().min(12),
   evidenceIds: z.array(z.string().min(1)).min(1),
+  evidenceBase: signalEvidenceBaseSchema,
   implicationForIdeation: z.string().min(12),
 });
 
@@ -56,6 +65,7 @@ export const signalInsightSchema = z.object({
   summary: z.string().min(20),
   actionableTruth: z.string().min(12),
   evidenceIds: z.array(z.string().min(1)).min(1),
+  evidenceBase: signalEvidenceBaseSchema,
   ideationPrompt: z.string().min(12),
 });
 
@@ -78,8 +88,8 @@ export const signalsOutputSchema = z.object({
   analisisSocialListening: signalsAnalysisSectionSchema,
   analisisTendencias: signalsAnalysisSectionSchema,
   analisisCompetidores: signalsAnalysisSectionSchema,
-  gaps: z.array(signalGapSchema).min(1).max(6),
-  insights: z.array(signalInsightSchema).min(1).max(6),
+  gaps: z.array(signalGapSchema).length(2),
+  insights: z.array(signalInsightSchema).length(2),
   memoriaEmpresa: signalsMemorySchema,
   internal: z.object({
     fuentesConsultadas: z.array(z.string()).default([]),
@@ -92,8 +102,8 @@ export const signalsSynthesisForAiSchema = z.object({
   analisisSocialListening: signalsAnalysisSectionForAiSchema,
   analisisTendencias: signalsAnalysisSectionForAiSchema,
   analisisCompetidores: signalsAnalysisSectionForAiSchema,
-  gaps: z.array(signalGapSchema).min(1).max(6),
-  insights: z.array(signalInsightSchema).min(1).max(6),
+  gaps: z.array(signalGapSchema).length(2),
+  insights: z.array(signalInsightSchema).length(2),
 });
 
 export const signalsRecordSchema = z.object({

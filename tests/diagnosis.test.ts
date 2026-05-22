@@ -349,7 +349,7 @@ describe("Diagnostico", () => {
     ).toBe(3);
   });
 
-  it("genera Senales con outputs visibles e internos trazables", async () => {
+  it("genera Senales con exactamente 2 gaps y 2 insights", async () => {
     const input = buildInput({ cycleId: "cycle-signals" });
     await registerInput(input);
     await service.complete(input);
@@ -362,8 +362,10 @@ describe("Diagnostico", () => {
     expect(result.signals.output.analisisSocialListening.summary).toBeTruthy();
     expect(result.signals.output.analisisTendencias.summary).toBeTruthy();
     expect(result.signals.output.analisisCompetidores.summary).toBeTruthy();
-    expect(result.signals.output.gaps.length).toBeGreaterThan(0);
-    expect(result.signals.output.insights.length).toBeGreaterThan(0);
+    expect(result.signals.output.gaps).toHaveLength(2);
+    expect(result.signals.output.insights).toHaveLength(2);
+    expect(result.signals.output.gaps[0]?.evidenceBase).toBeTruthy();
+    expect(result.signals.output.insights[0]?.evidenceBase).toBeTruthy();
     expect(result.signals.output.memoriaEmpresa.companyPatterns).toBeDefined();
     expect(result.signals.output.internal.senalesBase.length).toBeGreaterThan(0);
     expect(stored?.cycleId).toBe(input.cycleId);

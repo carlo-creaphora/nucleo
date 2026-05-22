@@ -107,15 +107,17 @@ Cuando `OPENAI_API_KEY` esta configurada, ejecuta busqueda web real por lentes s
 
 Luego sintetiza solo sobre la evidencia encontrada. Devuelve:
 
+- exactamente 2 `gaps`
+- exactamente 2 `insights`
 - `analisisSocialListening`
 - `analisisTendencias`
 - `analisisCompetidores`
-- `gaps`
-- `insights`
 - `memoriaEmpresa`
 - `internal.fuentesConsultadas`
 - `internal.senalesBase`
 - `internal.vaciosDeEvidencia`
+
+Cada gap e insight incluye `evidenceBase`: `fuerte`, `media` o `indirecta`.
 
 ## GET `/signals/cycles/:cycleId`
 

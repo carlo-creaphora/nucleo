@@ -22,7 +22,7 @@ Las primeras fases funcionales implementadas son Registro, Diagnostico y Senales
 - Handoff formal hacia Ideacion en `/api/diagnosis/cycles/:cycleId/ideation-input`.
 - API de Senales en `/api/signals/cycles/:cycleId/generate`.
 - Senales consulta busqueda web real por social listening, tendencias y competidores cuando `OPENAI_API_KEY` esta configurada.
-- Senales entrega analisis de social listening, tendencias, competidores, gaps, insights y memoria de empresa.
+- Senales entrega exactamente 2 gaps y 2 insights priorizados para Ideacion, con analisis de soporte por lente.
 - Senales guarda internamente fuentes consultadas, senales base y vacios de evidencia para trazabilidad.
 - Pruebas automatizadas.
 
