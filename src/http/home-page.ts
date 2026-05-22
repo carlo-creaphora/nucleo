@@ -474,7 +474,7 @@ export function renderHomePage() {
       $("send-message").addEventListener("click", sendMessage);
       $("complete-diagnosis").addEventListener("click", completeDiagnosis);
       $("result").addEventListener("click", (event) => {
-        const button = event.target.closest("[data-clarify-section]");
+        const button = event.target?.closest?.("[data-clarify-section]");
         if (!button) return;
         startClarification(button.dataset.clarifySection);
       });
