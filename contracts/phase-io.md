@@ -78,12 +78,17 @@ Reglas:
 
 - No aceptar la lectura inicial del usuario como diagnostico final.
 - Tratar el problema declarado como hipotesis de entrada.
+- Separar sintoma visible, lectura declarada, mecanismo causal probable y reto estrategico.
+- Si falta evidencia, bajar confianza o preguntar; no inventar.
 - Hacer preguntas adaptativas segun las respuestas, no un cuestionario fijo.
+- No repetir preguntas ya respondidas.
 - Usar maximo 15 preguntas de contexto antes de cerrar o declarar datos faltantes.
 - Modificar la ruta de preguntas segun el problema, reto, aclaraciones o preguntas directas del usuario.
+- Si el usuario corrige algo, responder esa correccion antes de avanzar.
 - Si el usuario corrige una seccion, la IA debe reinterpretar esa parte y recomponer el diagnostico.
-- Si no hay evidencia suficiente, debe declararlo en vez de inventar certeza.
+- El diagnostico debe producir una recomendacion experta, no una descripcion complaciente.
 - El diagnostico debe entregar criterio experto: el reto real que conviene trabajar, no una repeticion del sintoma.
+- El brief debe dejar lista la ideacion y bloquear ideas genericas.
 
 Input:
 
