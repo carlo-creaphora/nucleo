@@ -238,6 +238,20 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
   }
 }
 
+class MissingOpenAiDiagnosisEngine implements DiagnosisEngine {
+  async generateQuestion(): Promise<DiagnosisQuestionOutput> {
+    throw missingOpenAiError("Diagnostico");
+  }
+
+  async completeDiagnosis(): Promise<DiagnosisOutput> {
+    throw missingOpenAiError("Diagnostico");
+  }
+
+  async reinterpretDiagnosis(): Promise<DiagnosisOutput> {
+    throw missingOpenAiError("Diagnostico");
+  }
+}
+
 function buildHeuristicDiagnosis(input: DiagnosisInput): DiagnosisOutput {
   const declaredProblem =
     input.dialogMessages.find((message) => message.role === "user")?.content ??
@@ -279,12 +293,22 @@ export function createDiagnosisEngine() {
   const useFake = process.env.NUCLEO_FAKE_AI === "true";
   const apiKey = process.env.OPENAI_API_KEY?.trim();
 
-  if (useFake || !apiKey) {
+  if (useFake) {
     return new HeuristicDiagnosisEngine();
+  }
+
+  if (!apiKey) {
+    return new MissingOpenAiDiagnosisEngine();
   }
 
   return new OpenAiDiagnosisEngine({
     apiKey,
     model: process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini",
   });
+}
+
+function missingOpenAiError(stage: string) {
+  return new Error(
+    `OPENAI_API_KEY es requerido para ${stage}; el demo y produccion no usan respuestas heuristicas.`,
+  );
 }

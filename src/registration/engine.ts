@@ -165,11 +165,23 @@ export class HeuristicRegistrationEngine implements RegistrationEngine {
   }
 }
 
+class MissingOpenAiRegistrationEngine implements RegistrationEngine {
+  async prepare(): Promise<RegistrationOutput> {
+    throw new Error(
+      "OPENAI_API_KEY es requerido para Registro; el demo y produccion no usan respuestas heuristicas.",
+    );
+  }
+}
+
 export function createRegistrationEngine() {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
 
-  if (process.env.NUCLEO_FAKE_AI === "true" || !apiKey) {
+  if (process.env.NUCLEO_FAKE_AI === "true") {
     return new HeuristicRegistrationEngine();
+  }
+
+  if (!apiKey) {
+    return new MissingOpenAiRegistrationEngine();
   }
 
   return new OpenAiRegistrationEngine({

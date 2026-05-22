@@ -9,12 +9,19 @@ import { RegistrationService } from "../src/registration/service.js";
 import { diagnosisOutputSchema } from "../src/contracts/diagnosis.js";
 import { createStore } from "../src/storage/file-store.js";
 import { renderHomePage } from "../src/http/home-page.js";
+import { createSignalsEngine } from "../src/signals/engine.js";
+import { SignalsService } from "../src/signals/service.js";
 
 const store = createStore();
 const service = new DiagnosisService(createDiagnosisEngine(), store);
 const registrationService = new RegistrationService(
   createRegistrationEngine(),
   store,
+);
+const signalsService = new SignalsService(
+  createSignalsEngine(),
+  store,
+  service,
 );
 
 export const config = {
@@ -50,6 +57,7 @@ export default async function handler(
         ok: true,
         service: "nucleo",
         diagnosis: "ready",
+        signals: "ready",
         databaseId: process.env.NUCLEO_DB_ID ?? "local-file",
       });
     }
@@ -156,6 +164,48 @@ export default async function handler(
       }
 
       return sendJson(response, 200, { ideationInput });
+    }
+
+    const signalsInputMatch =
+      /^\/api\/signals\/cycles\/([^/]+)\/input$/.exec(url.pathname);
+
+    if (method === "GET" && signalsInputMatch) {
+      const signalsInput = await signalsService.buildInput(
+        decodeURIComponent(signalsInputMatch[1]!),
+      );
+
+      if (!signalsInput) {
+        return sendJson(response, 404, { error: "signals_input_not_ready" });
+      }
+
+      return sendJson(response, 200, { signalsInput });
+    }
+
+    const signalsGenerateMatch =
+      /^\/api\/signals\/cycles\/([^/]+)\/generate$/.exec(url.pathname);
+
+    if (method === "POST" && signalsGenerateMatch) {
+      const result = await signalsService.generate(
+        decodeURIComponent(signalsGenerateMatch[1]!),
+      );
+
+      return sendJson(response, 200, result);
+    }
+
+    const signalsMatch = /^\/api\/signals\/cycles\/([^/]+)$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && signalsMatch) {
+      const signals = await signalsService.get(
+        decodeURIComponent(signalsMatch[1]!),
+      );
+
+      if (!signals) {
+        return sendJson(response, 404, { error: "signals_not_found" });
+      }
+
+      return sendJson(response, 200, { signals });
     }
 
     const companyCyclesMatch =

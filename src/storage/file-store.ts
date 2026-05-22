@@ -8,12 +8,14 @@ import type {
   StoredDiagnosisCycle,
   StoredDiagnosisVersion,
   NucleoStore,
+  StoredSignalsRun,
 } from "./store.js";
 
 type StoreFile = {
   registrations: RegistrationRecord[];
   diagnosisCycles: StoredDiagnosisCycle[];
   diagnosisVersions: StoredDiagnosisVersion[];
+  signalsRuns: StoredSignalsRun[];
   auditEvents: AuditEvent[];
 };
 
@@ -21,6 +23,7 @@ const emptyStore: StoreFile = {
   registrations: [],
   diagnosisCycles: [],
   diagnosisVersions: [],
+  signalsRuns: [],
   auditEvents: [],
 };
 
@@ -104,6 +107,26 @@ export class FileStore implements NucleoStore {
       .sort((left, right) => left.version - right.version);
   }
 
+  async saveSignalsRun(run: StoredSignalsRun) {
+    const data = await this.read();
+    const index = data.signalsRuns.findIndex(
+      (item) => item.cycleId === run.cycleId,
+    );
+
+    if (index >= 0) {
+      data.signalsRuns[index] = run;
+    } else {
+      data.signalsRuns.push(run);
+    }
+
+    await this.write(data);
+  }
+
+  async getSignalsRun(cycleId: string) {
+    const data = await this.read();
+    return data.signalsRuns.find((run) => run.cycleId === cycleId) ?? null;
+  }
+
   async saveAuditEvent(event: AuditEvent) {
     const data = await this.read();
     data.auditEvents.push(event);
@@ -126,6 +149,7 @@ export class FileStore implements NucleoStore {
         registrations: data.registrations ?? [],
         diagnosisCycles: data.diagnosisCycles ?? [],
         diagnosisVersions: data.diagnosisVersions ?? [],
+        signalsRuns: data.signalsRuns ?? [],
         auditEvents: data.auditEvents ?? [],
       };
     } catch (error) {
@@ -139,6 +163,7 @@ export class FileStore implements NucleoStore {
             registrations: [],
             diagnosisCycles: [],
             diagnosisVersions: [],
+            signalsRuns: [],
             auditEvents: [],
           };
       }

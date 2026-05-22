@@ -9,12 +9,15 @@ import { HeuristicDiagnosisEngine } from "../src/diagnosis/engine.js";
 import { buildDiagnosisSystemPrompt } from "../src/diagnosis/prompt.js";
 import { RegistrationService } from "../src/registration/service.js";
 import { HeuristicRegistrationEngine } from "../src/registration/engine.js";
+import { SignalsService } from "../src/signals/service.js";
+import { HeuristicSignalsEngine } from "../src/signals/engine.js";
 import { FileStore } from "../src/storage/file-store.js";
 import type { DiagnosisInput } from "../src/contracts/diagnosis.js";
 
 let tempDir: string;
 let service: DiagnosisService;
 let registrationService: RegistrationService;
+let signalsService: SignalsService;
 let store: FileStore;
 
 beforeEach(async () => {
@@ -24,6 +27,11 @@ beforeEach(async () => {
   registrationService = new RegistrationService(
     new HeuristicRegistrationEngine(),
     store,
+  );
+  signalsService = new SignalsService(
+    new HeuristicSignalsEngine(),
+    store,
+    service,
   );
 });
 
@@ -320,6 +328,55 @@ describe("Diagnostico", () => {
     expect(ideationInput?.diagnosticInput.detonators.length).toBeGreaterThan(0);
     expect(ideationInput?.registration?.contextForDiagnosis.company.name).toBe(
       input.company.name,
+    );
+  });
+
+  it("construye input formal de Senales desde Registro y Diagnostico cerrado", async () => {
+    const input = buildInput({ cycleId: "cycle-signals-input" });
+    await registerInput(input);
+    await service.complete(input);
+
+    const signalsInput = await signalsService.buildInput(input.cycleId);
+
+    expect(signalsInput.searchDepth).toBe("standard");
+    expect(signalsInput.registration.contextForDiagnosis.company.name).toBe(
+      input.company.name,
+    );
+    expect(signalsInput.ideationInput.selectedChallenge).toBeTruthy();
+    expect(
+      signalsInput.registration.contextForDiagnosis.category.competitors.length,
+    ).toBe(3);
+  });
+
+  it("genera Senales con outputs visibles e internos trazables", async () => {
+    const input = buildInput({ cycleId: "cycle-signals" });
+    await registerInput(input);
+    await service.complete(input);
+
+    const result = await signalsService.generate(input.cycleId);
+    const stored = await signalsService.get(input.cycleId);
+    const events = await service.listAudit(input.cycleId);
+
+    expect(result.signals.output.searchDepth).toBe("standard");
+    expect(result.signals.output.analisisSocialListening.summary).toBeTruthy();
+    expect(result.signals.output.analisisTendencias.summary).toBeTruthy();
+    expect(result.signals.output.analisisCompetidores.summary).toBeTruthy();
+    expect(result.signals.output.gaps.length).toBeGreaterThan(0);
+    expect(result.signals.output.insights.length).toBeGreaterThan(0);
+    expect(result.signals.output.memoriaEmpresa.companyPatterns).toBeDefined();
+    expect(result.signals.output.internal.senalesBase.length).toBeGreaterThan(0);
+    expect(stored?.cycleId).toBe(input.cycleId);
+    expect(events.some((event) => event.action === "SIGNALS_GENERATED")).toBe(
+      true,
+    );
+  });
+
+  it("bloquea Senales si Diagnostico no esta cerrado", async () => {
+    const input = buildInput({ cycleId: "cycle-signals-blocked" });
+    await registerInput(input);
+
+    await expect(signalsService.generate(input.cycleId)).rejects.toThrow(
+      "Senales requiere Diagnostico cerrado",
     );
   });
 

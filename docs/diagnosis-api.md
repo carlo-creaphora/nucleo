@@ -91,6 +91,36 @@ Devuelve el handoff formal hacia Ideacion:
 - registro asociado si existe
 - memoria derivada de ciclos previos de la misma empresa
 
+## GET `/signals/cycles/:cycleId/input`
+
+Devuelve el input formal que usara Senales. Requiere Registro completo y Diagnostico cerrado.
+
+## POST `/signals/cycles/:cycleId/generate`
+
+Genera Senales con profundidad `standard`.
+
+Cuando `OPENAI_API_KEY` esta configurada, ejecuta busqueda web real por lentes separados:
+
+- social listening
+- tendencias
+- competidores
+
+Luego sintetiza solo sobre la evidencia encontrada. Devuelve:
+
+- `analisisSocialListening`
+- `analisisTendencias`
+- `analisisCompetidores`
+- `gaps`
+- `insights`
+- `memoriaEmpresa`
+- `internal.fuentesConsultadas`
+- `internal.senalesBase`
+- `internal.vaciosDeEvidencia`
+
+## GET `/signals/cycles/:cycleId`
+
+Consulta el ultimo resultado de Senales guardado para el ciclo.
+
 ## GET `/companies/:companyId/diagnosis-cycles`
 
 Lista ciclos de diagnostico de una empresa para alimentar memoria compartida sin mezclar empresas.

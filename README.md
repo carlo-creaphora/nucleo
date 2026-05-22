@@ -4,9 +4,9 @@ Repositorio limpio para definir y construir Nucleo desde cero.
 
 Este repo no importa codigo, modelos, endpoints, documentos ni reglas del proyecto anterior. La fuente de verdad inicial es el contrato de input/output por fase.
 
-## Registro Y Diagnostico
+## Registro, Diagnostico Y Senales
 
-Las primeras fases funcionales implementadas son Registro y Diagnostico:
+Las primeras fases funcionales implementadas son Registro, Diagnostico y Senales:
 
 - API de Registro en `/api/registration`.
 - Output contractual de Registro: contexto para Diagnostico, informacion de categoria y marco competitivo.
@@ -20,6 +20,10 @@ Las primeras fases funcionales implementadas son Registro y Diagnostico:
 - Versionado de diagnosticos y auditoria por ciclo.
 - Memoria demo derivada de ciclos previos de la misma empresa.
 - Handoff formal hacia Ideacion en `/api/diagnosis/cycles/:cycleId/ideation-input`.
+- API de Senales en `/api/signals/cycles/:cycleId/generate`.
+- Senales consulta busqueda web real por social listening, tendencias y competidores cuando `OPENAI_API_KEY` esta configurada.
+- Senales entrega analisis de social listening, tendencias, competidores, gaps, insights y memoria de empresa.
+- Senales guarda internamente fuentes consultadas, senales base y vacios de evidencia para trazabilidad.
 - Pruebas automatizadas.
 
 ## Desarrollo

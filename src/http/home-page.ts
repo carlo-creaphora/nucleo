@@ -303,8 +303,30 @@ export function renderHomePage() {
         font-size: 13px;
         line-height: 1.45;
       }
+      .signals-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.7fr);
+        gap: 16px;
+      }
+      .signal-stack {
+        display: grid;
+        gap: 12px;
+      }
+      .source-list {
+        display: grid;
+        gap: 8px;
+        max-height: 420px;
+        overflow: auto;
+      }
+      .source-list a {
+        display: block;
+        color: var(--ink);
+        font-size: 13px;
+        line-height: 1.35;
+        word-break: break-word;
+      }
       @media (max-width: 920px) {
-        .layout, .chat-layout, .grid { grid-template-columns: 1fr; }
+        .layout, .chat-layout, .signals-layout, .grid { grid-template-columns: 1fr; }
         .sidebar { position: static; }
         .section-head { display: block; }
         .composer { grid-template-columns: 1fr; }
@@ -317,7 +339,7 @@ export function renderHomePage() {
       <header class="topbar">
         <div class="brand">
           <h1>Núcleo</h1>
-          <span>Registro + Diagnóstico</span>
+          <span>Registro + Diagnóstico + Señales</span>
         </div>
         <div class="status">IA real en producción</div>
       </header>
@@ -332,7 +354,11 @@ export function renderHomePage() {
             <span class="num">2</span>
             <span><strong>Diagnóstico</strong><span>Preguntas IA y reto real</span></span>
           </button>
-          <p class="sidebar-note">Este demo usa la API pública de Núcleo. Registro prepara el contexto y Diagnóstico reinterpreta el problema declarado.</p>
+          <button id="step-signals" class="step" type="button">
+            <span class="num">3</span>
+            <span><strong>Señales</strong><span>Social listening, tendencias y competidores</span></span>
+          </button>
+          <p class="sidebar-note">Este demo usa la API pública de Núcleo. Registro prepara contexto, Diagnóstico reinterpreta el reto y Señales consulta fuentes públicas reales.</p>
         </aside>
 
         <section class="workspace">
@@ -409,6 +435,34 @@ export function renderHomePage() {
                 <div id="result" class="result">
                   <p style="color: var(--muted); line-height: 1.6;">Cuando cierres el diagnóstico, aquí aparecerán los 10 outputs contratados.</p>
                 </div>
+                <div class="actions">
+                  <button id="confirm-diagnosis-signals" class="btn primary" type="button" disabled>Confirmar y consultar señales</button>
+                </div>
+              </aside>
+            </div>
+          </div>
+
+          <div id="signals-section" class="section">
+            <div class="section-head">
+              <div>
+                <h2>Señales públicas</h2>
+                <p>Consulta social listening, tendencias y competidores con búsqueda web real. La síntesis solo debe trabajar sobre evidencia encontrada.</p>
+              </div>
+              <span id="signals-loading" class="loading">Buscando...</span>
+            </div>
+            <div class="signals-layout">
+              <div class="panel">
+                <h3 style="margin:0 0 12px;">Análisis</h3>
+                <div id="signals-result" class="result">
+                  <p style="color: var(--muted); line-height: 1.6;">Confirma el diagnóstico para ejecutar Señales.</p>
+                </div>
+                <div id="signals-error" class="error"></div>
+              </div>
+              <aside class="panel">
+                <h3 style="margin:0 0 12px;">Fuentes y vacíos</h3>
+                <div id="signals-sources" class="source-list">
+                  <p style="color: var(--muted); line-height: 1.6;">Aquí aparecerán las fuentes consultadas y vacíos de evidencia.</p>
+                </div>
               </aside>
             </div>
           </div>
@@ -425,6 +479,7 @@ export function renderHomePage() {
         uploadedDocuments: [],
         messages: [],
         diagnosis: null,
+        signals: null,
         correctedSections: [],
         clarificationTarget: null,
         activeStep: "registration",
@@ -518,8 +573,12 @@ export function renderHomePage() {
       $("step-diagnosis").addEventListener("click", () => {
         if (state.registration) setStep("diagnosis");
       });
+      $("step-signals").addEventListener("click", () => {
+        if (state.diagnosis || state.signals) setStep("signals");
+      });
       $("send-message").addEventListener("click", sendMessage);
       $("complete-diagnosis").addEventListener("click", completeDiagnosis);
+      $("confirm-diagnosis-signals").addEventListener("click", generateSignals);
       $("document-files").addEventListener("change", uploadSelectedDocuments);
       $("result").addEventListener("click", (event) => {
         const button = event.target?.closest?.("[data-clarify-section]");
@@ -532,9 +591,13 @@ export function renderHomePage() {
         state.activeStep = step;
         $("registration-section").classList.toggle("active", step === "registration");
         $("diagnosis-section").classList.toggle("active", step === "diagnosis");
+        $("signals-section").classList.toggle("active", step === "signals");
         $("step-registration").classList.toggle("active", step === "registration");
         $("step-diagnosis").classList.toggle("active", step === "diagnosis");
+        $("step-signals").classList.toggle("active", step === "signals");
         $("step-registration").classList.toggle("done", Boolean(state.registration));
+        $("step-diagnosis").classList.toggle("done", Boolean(state.diagnosis));
+        $("step-signals").classList.toggle("done", Boolean(state.signals));
         persistDraft();
       }
 
@@ -773,6 +836,33 @@ export function renderHomePage() {
         }
       }
 
+      async function generateSignals() {
+        if (!state.diagnosis) {
+          setError("Cierra el diagnóstico antes de consultar señales.");
+          return;
+        }
+        setLoading(true);
+        setError("");
+        setSignalsError("");
+        try {
+          const response = await fetch("/api/signals/cycles/" + encodeURIComponent(state.cycleId) + "/generate", {
+            method: "POST",
+            headers: { "content-type": "application/json" }
+          });
+          const data = await parseResponse(response);
+          state.signals = data.signals.output;
+          renderSignals(state.signals);
+          setStep("signals");
+          addMessage("assistant", "Señales consultadas. Revisa social listening, tendencias, competidores, gaps e insights antes de idear.");
+        } catch (error) {
+          setSignalsError(error.message || "No se pudo consultar Señales.");
+          setStep("signals");
+        } finally {
+          setLoading(false);
+          persistDraft();
+        }
+      }
+
       function buildPayload() {
         return {
           cycleId: state.cycleId,
@@ -795,7 +885,15 @@ export function renderHomePage() {
       }
 
       function renderDiagnosis(diagnosis) {
+        const previousDiagnosis = state.diagnosis ? JSON.stringify(state.diagnosis) : "";
+        const nextDiagnosis = JSON.stringify(diagnosis);
         state.diagnosis = diagnosis;
+        if (previousDiagnosis && previousDiagnosis !== nextDiagnosis) {
+          state.signals = null;
+          $("signals-result").innerHTML = "";
+          $("signals-sources").innerHTML = "";
+          setSignalsError("");
+        }
         const items = [
           ["recommendedChallenge", "Reto recomendado", diagnosis.recommendedChallenge],
           ["whyThisChallenge", "Por qué es más correcto", diagnosis.whyThisChallenge],
@@ -842,7 +940,89 @@ export function renderHomePage() {
           }
           $("result").appendChild(box);
         }
+        $("confirm-diagnosis-signals").disabled = !state.diagnosis || Boolean(state.clarificationTarget);
         persistDraft();
+      }
+
+      function renderSignals(signals) {
+        state.signals = signals;
+        const sections = [
+          ["analisisSocialListening", "Análisis social listening", signals.analisisSocialListening],
+          ["analisisTendencias", "Análisis tendencias", signals.analisisTendencias],
+          ["analisisCompetidores", "Análisis competidores", signals.analisisCompetidores],
+          ["gaps", "Gaps", signals.gaps],
+          ["insights", "Insights", signals.insights],
+          ["memoriaEmpresa", "Memoria empresa", signals.memoriaEmpresa]
+        ];
+        $("signals-result").innerHTML = "";
+        for (const [key, label, value] of sections) {
+          const box = document.createElement("div");
+          box.className = "result-item";
+          const title = document.createElement("strong");
+          title.textContent = label;
+          box.appendChild(title);
+
+          if (key === "gaps") {
+            box.appendChild(renderBulletList(value.map((item) => item.title + ": " + item.summary + " Implicación: " + item.implicationForIdeation)));
+          } else if (key === "insights") {
+            box.appendChild(renderBulletList(value.map((item) => item.title + ": " + item.actionableTruth + " Prompt: " + item.ideationPrompt)));
+          } else if (key === "memoriaEmpresa") {
+            const memoryItems = [
+              ...(value.companyPatterns || []).map((item) => "Patrón: " + item),
+              ...(value.previousLearnings || []).map((item) => "Aprendizaje: " + item),
+              ...(value.avoidRepeating || []).map((item) => "Evitar repetir: " + item)
+            ];
+            box.appendChild(renderBulletList(memoryItems.length ? memoryItems : ["Sin memoria previa de empresa."]));
+          } else {
+            const summary = document.createElement("div");
+            summary.textContent = value.summary;
+            box.appendChild(summary);
+            box.appendChild(renderBulletList([...(value.findings || []), ...(value.limitations || []).map((item) => "Límite: " + item)]));
+          }
+          $("signals-result").appendChild(box);
+        }
+        renderSignalsSources(signals);
+        persistDraft();
+      }
+
+      function renderSignalsSources(signals) {
+        const internal = signals.internal || {};
+        const sources = internal.fuentesConsultadas || [];
+        const gaps = internal.vaciosDeEvidencia || [];
+        $("signals-sources").innerHTML = "";
+        if (!sources.length && !gaps.length) {
+          $("signals-sources").textContent = "Sin fuentes o vacíos registrados.";
+          return;
+        }
+        for (const source of sources) {
+          const link = document.createElement(source.startsWith("http") ? "a" : "div");
+          link.textContent = source;
+          if (source.startsWith("http")) {
+            link.href = source;
+            link.target = "_blank";
+            link.rel = "noreferrer";
+          }
+          $("signals-sources").appendChild(link);
+        }
+        if (gaps.length) {
+          const box = document.createElement("div");
+          box.className = "result-item";
+          const title = document.createElement("strong");
+          title.textContent = "Vacíos de evidencia";
+          box.appendChild(title);
+          box.appendChild(renderBulletList(gaps));
+          $("signals-sources").appendChild(box);
+        }
+      }
+
+      function renderBulletList(items) {
+        const ul = document.createElement("ul");
+        for (const item of items) {
+          const li = document.createElement("li");
+          li.textContent = item;
+          ul.appendChild(li);
+        }
+        return ul;
       }
 
       function renderCriticalMissing(items) {
@@ -872,6 +1052,7 @@ export function renderHomePage() {
           uploadedDocuments: state.uploadedDocuments,
           messages: state.messages,
           diagnosis: state.diagnosis,
+          signals: state.signals,
           correctedSections: state.correctedSections,
           clarificationTarget: state.clarificationTarget,
           formDraft
@@ -890,6 +1071,7 @@ export function renderHomePage() {
           if (Array.isArray(draft.uploadedDocuments)) state.uploadedDocuments = draft.uploadedDocuments;
           if (Array.isArray(draft.messages)) state.messages = draft.messages;
           if (draft.diagnosis) state.diagnosis = draft.diagnosis;
+          if (draft.signals) state.signals = draft.signals;
           if (Array.isArray(draft.correctedSections)) state.correctedSections = draft.correctedSections;
           if (draft.clarificationTarget) state.clarificationTarget = draft.clarificationTarget;
           if (draft.activeStep) state.activeStep = draft.activeStep;
@@ -908,8 +1090,9 @@ export function renderHomePage() {
             $("messages").appendChild(node);
           }
           if (state.diagnosis) renderDiagnosis(state.diagnosis);
+          if (state.signals) renderSignals(state.signals);
           renderDocumentList();
-          setStep(state.activeStep || (state.registration ? "diagnosis" : "registration"));
+          setStep(state.activeStep || (state.signals ? "signals" : state.registration ? "diagnosis" : "registration"));
         } catch {
           localStorage.removeItem(storageKey);
         }
@@ -926,8 +1109,10 @@ export function renderHomePage() {
 
       function setLoading(active) {
         loading.classList.toggle("active", active);
+        $("signals-loading").classList.toggle("active", active);
         $("send-message").disabled = active;
         $("complete-diagnosis").disabled = active;
+        $("confirm-diagnosis-signals").disabled = active || !state.diagnosis || Boolean(state.clarificationTarget);
         updateClarifyButtons(active);
       }
 
@@ -935,11 +1120,17 @@ export function renderHomePage() {
         document.querySelectorAll("[data-clarify-section]").forEach((button) => {
           button.disabled = forceDisabled || Boolean(state.clarificationTarget);
         });
+        $("confirm-diagnosis-signals").disabled = forceDisabled || !state.diagnosis || Boolean(state.clarificationTarget);
       }
 
       function setError(message) {
         errorBox.textContent = message;
         errorBox.classList.toggle("active", Boolean(message));
+      }
+
+      function setSignalsError(message) {
+        $("signals-error").textContent = message;
+        $("signals-error").classList.toggle("active", Boolean(message));
       }
 
       function slug(value) {

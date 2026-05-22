@@ -9,6 +9,9 @@ import { createRegistrationEngine } from "../registration/engine.js";
 import { RegistrationService } from "../registration/service.js";
 import { diagnosisOutputSchema } from "../contracts/diagnosis.js";
 import { createStore } from "../storage/file-store.js";
+import { createSignalsEngine } from "../signals/engine.js";
+import { SignalsService } from "../signals/service.js";
+import { renderHomePage } from "./home-page.js";
 
 export function createApp() {
   const app = new Hono();
@@ -18,12 +21,20 @@ export function createApp() {
     createRegistrationEngine(),
     store,
   );
+  const signalsService = new SignalsService(
+    createSignalsEngine(),
+    store,
+    service,
+  );
+
+  app.get("/", (context) => context.html(renderHomePage()));
 
   app.get("/api/health", (context) =>
     context.json({
       ok: true,
       service: "nucleo",
       diagnosis: "ready",
+      signals: "ready",
       databaseId: process.env.NUCLEO_DB_ID ?? "local-file",
     }),
   );
@@ -110,6 +121,29 @@ export function createApp() {
     }
 
     return context.json({ ideationInput });
+  });
+
+  app.get("/api/signals/cycles/:cycleId/input", async (context) => {
+    const signalsInput = await signalsService.buildInput(
+      context.req.param("cycleId"),
+    );
+
+    return context.json({ signalsInput });
+  });
+
+  app.post("/api/signals/cycles/:cycleId/generate", async (context) => {
+    const result = await signalsService.generate(context.req.param("cycleId"));
+    return context.json(result);
+  });
+
+  app.get("/api/signals/cycles/:cycleId", async (context) => {
+    const signals = await signalsService.get(context.req.param("cycleId"));
+
+    if (!signals) {
+      return context.json({ error: "signals_not_found" }, 404);
+    }
+
+    return context.json({ signals });
   });
 
   app.get("/api/companies/:companyId/diagnosis-cycles", async (context) => {

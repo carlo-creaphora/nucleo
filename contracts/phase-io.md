@@ -153,9 +153,69 @@ Regla de aclaracion del resultado:
 
 ## Senales
 
-Input: pendiente de definir.
+Proposito: consultar senales publicas reales para contrastar Registro y Diagnostico contra mercado, categoria y competidores. Senales no diagnostica de nuevo y no propone ideas; convierte evidencia externa en gaps e insights usables para Ideacion.
 
-Output: pendiente de definir.
+Input:
+
+- Registro completo:
+  - perfil/licencia
+  - empresa
+  - categoria
+  - competidores declarados
+  - paises/regiones
+  - canales
+  - documentos extraidos
+- Diagnostico cerrado:
+  - reto recomendado
+  - sintomas
+  - causas
+  - tensiones
+  - metricas
+  - restricciones
+  - que no conviene atacar todavia
+  - supuesto a cuestionar
+  - brief para ideacion
+- Handoff desde Diagnostico.
+- Memoria de empresa si existe.
+- Fuentes publicas consultables.
+- Profundidad de busqueda: `standard`.
+
+Output visible:
+
+- Analisis y resumen de social listening.
+- Analisis y resumen de tendencias.
+- Analisis y resumen de competidores.
+- Gaps.
+- Insights.
+- Aprendizajes o memoria de otros ciclos/perfiles asociados a la empresa, si existen.
+
+Output interno:
+
+- Fuentes consultadas.
+- Senales base con lente, fuente, URL si existe y nivel de confianza.
+- Vacios de evidencia.
+
+Reglas:
+
+- Usar busqueda web real.
+- Separar social listening, tendencias y competidores.
+- Priorizar fuentes primarias, reguladores, asociaciones, reportes fechados y sitios oficiales.
+- Social listening solo cuenta si hay voz textual de usuarios, clientes u operadores.
+- Blogs, prensa corporativa y SEO no cuentan como social listening.
+- Buscar primero senales negativas: quejas, fricciones, miedos, reclamos, abandono, ratings bajos, costos ocultos y promesas incumplidas.
+- No inventar datos, fuentes, URLs, competidores ni comportamientos.
+- Una tendencia positiva no es gap por si sola.
+- Un gap exige contradiccion o friccion no resuelta.
+- Un insight debe ser una verdad accionable, no un resumen.
+- Competidores deben analizar promesa visible versus friccion evidenciada.
+- No convertir todo en oportunidad optimista.
+- Si el mercado contradice al usuario o debilita el Diagnostico, decirlo.
+
+Metodo:
+
+- Primero ejecutar busquedas reales y explicitas por lente.
+- Despues analizar con IA solo sobre la evidencia encontrada.
+- Si no hay evidencia defendible para un lente, declararlo como vacio en vez de rellenar.
 
 ## Ideacion
 
