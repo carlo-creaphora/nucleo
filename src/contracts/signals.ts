@@ -25,11 +25,22 @@ export const signalEvidenceSchema = z.object({
   confidence: signalConfidenceSchema,
 });
 
+export const signalEvidenceForAiSchema = signalEvidenceSchema.omit({
+  id: true,
+});
+
 export const signalsAnalysisSectionSchema = z.object({
   summary: z.string().min(20),
   findings: z.array(z.string().min(1)).default([]),
   evidenceIds: z.array(z.string().min(1)).default([]),
   limitations: z.array(z.string()).default([]),
+});
+
+export const signalsAnalysisSectionForAiSchema = z.object({
+  summary: z.string().min(20),
+  findings: z.array(z.string().min(1)),
+  evidenceIds: z.array(z.string().min(1)),
+  limitations: z.array(z.string()),
 });
 
 export const signalGapSchema = z.object({
@@ -75,6 +86,14 @@ export const signalsOutputSchema = z.object({
     senalesBase: z.array(signalEvidenceSchema).default([]),
     vaciosDeEvidencia: z.array(z.string()).default([]),
   }),
+});
+
+export const signalsSynthesisForAiSchema = z.object({
+  analisisSocialListening: signalsAnalysisSectionForAiSchema,
+  analisisTendencias: signalsAnalysisSectionForAiSchema,
+  analisisCompetidores: signalsAnalysisSectionForAiSchema,
+  gaps: z.array(signalGapSchema).min(1).max(6),
+  insights: z.array(signalInsightSchema).min(1).max(6),
 });
 
 export const signalsRecordSchema = z.object({

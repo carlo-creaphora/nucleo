@@ -7,19 +7,13 @@ import {
   type SignalLens,
   type SignalsInput,
   type SignalsOutput,
-  signalEvidenceSchema,
+  signalEvidenceForAiSchema,
+  signalsSynthesisForAiSchema,
   signalsOutputSchema,
 } from "../contracts/signals.js";
 
 const evidenceResponseSchema = z.object({
-  signals: z.array(signalEvidenceSchema.omit({ id: true })).max(6),
-});
-
-const synthesisSchema = signalsOutputSchema.omit({
-  generatedAt: true,
-  searchDepth: true,
-  memoriaEmpresa: true,
-  internal: true,
+  signals: z.array(signalEvidenceForAiSchema).max(6),
 });
 
 type EvidenceWithoutId = z.infer<typeof evidenceResponseSchema>["signals"][number];
@@ -141,7 +135,10 @@ export class OpenAiSignalsEngine implements SignalsEngine {
           ),
         },
       ],
-      response_format: zodResponseFormat(synthesisSchema, "signals_synthesis"),
+      response_format: zodResponseFormat(
+        signalsSynthesisForAiSchema,
+        "signals_synthesis",
+      ),
     });
 
     const parsed = completion.choices[0]?.message.parsed;
