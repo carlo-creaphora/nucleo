@@ -18,6 +18,10 @@ export default async function handler(
     const url = new URL(request.url ?? "/", "https://nucleo.local");
     const method = request.method ?? "GET";
 
+    if (method === "GET" && url.pathname === "/") {
+      return sendHtml(response, 200, renderHomePage());
+    }
+
     if (method === "GET" && url.pathname === "/api/health") {
       return sendJson(response, 200, {
         ok: true,
@@ -116,3 +120,67 @@ function sendJson(
   response.end(JSON.stringify(body));
 }
 
+function sendHtml(response: ServerResponse, status: number, body: string) {
+  response.statusCode = status;
+  response.setHeader("content-type", "text/html; charset=utf-8");
+  response.end(body);
+}
+
+function renderHomePage() {
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nucleo</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f7f4ee;
+        color: #171717;
+      }
+      main {
+        max-width: 840px;
+        margin: 0 auto;
+        padding: 64px 24px;
+      }
+      h1 {
+        font-size: 48px;
+        line-height: 1;
+        margin: 0 0 16px;
+      }
+      p {
+        font-size: 18px;
+        line-height: 1.6;
+        color: #4b4b4b;
+      }
+      code {
+        background: #e9e2d6;
+        border-radius: 6px;
+        padding: 3px 6px;
+      }
+      ul {
+        padding-left: 20px;
+        line-height: 1.9;
+      }
+      a {
+        color: #111;
+        font-weight: 650;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Nucleo</h1>
+      <p>API publica activa. La primera fase funcional implementada es Diagnostico con IA real en produccion.</p>
+      <ul>
+        <li><a href="/api/health"><code>GET /api/health</code></a></li>
+        <li><code>POST /api/diagnosis/question</code></li>
+        <li><code>POST /api/diagnosis/complete</code></li>
+        <li><code>POST /api/diagnosis/reinterpret</code></li>
+      </ul>
+    </main>
+  </body>
+</html>`;
+}
