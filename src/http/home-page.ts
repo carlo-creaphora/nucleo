@@ -377,9 +377,13 @@ export function renderHomePage() {
     </main>
 
     <script>
+      const storageKey = "nucleo-current-cycle-v1";
+
       const state = {
         registration: null,
         messages: [],
+        diagnosis: null,
+        activeStep: "registration",
         cycleId: "cycle-" + Date.now()
       };
 
@@ -387,6 +391,8 @@ export function renderHomePage() {
       const form = $("registration-form");
       const loading = $("loading");
       const errorBox = $("error");
+
+      restoreDraft();
 
       $("fill-demo").addEventListener("click", () => {
         const data = {
@@ -419,6 +425,7 @@ export function renderHomePage() {
         for (const [key, value] of Object.entries(data)) {
           if (form.elements[key]) form.elements[key].value = value;
         }
+        persistDraft();
       });
 
       $("start-diagnosis").addEventListener("click", () => {
@@ -428,6 +435,7 @@ export function renderHomePage() {
         if (state.messages.length === 0) {
           addMessage("assistant", "Cuéntame el reto como lo dirías en una reunión. Necesito entender qué está pasando antes de buscar ideas.");
         }
+        persistDraft();
       });
 
       $("step-registration").addEventListener("click", () => setStep("registration"));
@@ -436,13 +444,16 @@ export function renderHomePage() {
       });
       $("send-message").addEventListener("click", sendMessage);
       $("complete-diagnosis").addEventListener("click", completeDiagnosis);
+      form.addEventListener("input", persistDraft);
 
       function setStep(step) {
+        state.activeStep = step;
         $("registration-section").classList.toggle("active", step === "registration");
         $("diagnosis-section").classList.toggle("active", step === "diagnosis");
         $("step-registration").classList.toggle("active", step === "registration");
         $("step-diagnosis").classList.toggle("active", step === "diagnosis");
         $("step-registration").classList.toggle("done", Boolean(state.registration));
+        persistDraft();
       }
 
       function readRegistration() {
@@ -564,9 +575,11 @@ export function renderHomePage() {
         node.textContent = content;
         $("messages").appendChild(node);
         $("messages").scrollTop = $("messages").scrollHeight;
+        persistDraft();
       }
 
       function renderDiagnosis(diagnosis) {
+        state.diagnosis = diagnosis;
         const items = [
           ["Reto recomendado", diagnosis.recommendedChallenge],
           ["Por qué es más correcto", diagnosis.whyThisChallenge],
@@ -601,6 +614,57 @@ export function renderHomePage() {
           }
           $("result").appendChild(box);
         }
+        persistDraft();
+      }
+
+      function persistDraft() {
+        const formDraft = {};
+        if (form) {
+          for (const element of Array.from(form.elements)) {
+            if (element.name) formDraft[element.name] = element.value;
+          }
+        }
+
+        localStorage.setItem(storageKey, JSON.stringify({
+          cycleId: state.cycleId,
+          activeStep: state.activeStep,
+          registration: state.registration,
+          messages: state.messages,
+          diagnosis: state.diagnosis,
+          formDraft
+        }));
+      }
+
+      function restoreDraft() {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return;
+
+        try {
+          const draft = JSON.parse(raw);
+          if (draft.cycleId) state.cycleId = draft.cycleId;
+          if (draft.registration) state.registration = draft.registration;
+          if (Array.isArray(draft.messages)) state.messages = draft.messages;
+          if (draft.diagnosis) state.diagnosis = draft.diagnosis;
+          if (draft.activeStep) state.activeStep = draft.activeStep;
+
+          if (draft.formDraft) {
+            for (const [key, value] of Object.entries(draft.formDraft)) {
+              if (form.elements[key]) form.elements[key].value = value;
+            }
+          }
+
+          $("messages").innerHTML = "";
+          for (const message of state.messages) {
+            const node = document.createElement("div");
+            node.className = "msg " + message.role;
+            node.textContent = message.content;
+            $("messages").appendChild(node);
+          }
+          if (state.diagnosis) renderDiagnosis(state.diagnosis);
+          setStep(state.activeStep || (state.registration ? "diagnosis" : "registration"));
+        } catch {
+          localStorage.removeItem(storageKey);
+        }
       }
 
       async function parseResponse(response) {
@@ -627,4 +691,3 @@ export function renderHomePage() {
   </body>
 </html>`;
 }
-
