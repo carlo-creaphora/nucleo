@@ -1,13 +1,10 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { get, put } from "@vercel/blob";
 import type { RegistrationRecord } from "../contracts/registration.js";
-import { BlobStore } from "./blob-store.js";
-import { PostgresStore } from "./postgres-store.js";
 import type {
   AuditEvent,
+  NucleoStore,
   StoredDiagnosisCycle,
   StoredDiagnosisVersion,
-  NucleoStore,
 } from "./store.js";
 
 type StoreFile = {
@@ -24,8 +21,8 @@ const emptyStore: StoreFile = {
   auditEvents: [],
 };
 
-export class FileStore implements NucleoStore {
-  constructor(private readonly path: string) {}
+export class BlobStore implements NucleoStore {
+  constructor(private readonly pathname = "nucleo/demo-store.json") {}
 
   async saveRegistration(registration: RegistrationRecord) {
     const data = await this.read();
@@ -33,11 +30,8 @@ export class FileStore implements NucleoStore {
       (item) => item.id === registration.id,
     );
 
-    if (index >= 0) {
-      data.registrations[index] = registration;
-    } else {
-      data.registrations.push(registration);
-    }
+    if (index >= 0) data.registrations[index] = registration;
+    else data.registrations.push(registration);
 
     await this.write(data);
   }
@@ -63,23 +57,20 @@ export class FileStore implements NucleoStore {
       (item) => item.cycleId === cycle.cycleId,
     );
 
-    if (index >= 0) {
-      data.diagnosisCycles[index] = cycle;
-    } else {
-      data.diagnosisCycles.push(cycle);
-    }
+    if (index >= 0) data.diagnosisCycles[index] = cycle;
+    else data.diagnosisCycles.push(cycle);
 
     await this.write(data);
   }
 
   async getDiagnosisCycle(cycleId: string) {
     const data = await this.read();
-    return data.diagnosisCycles.find((cycle) => cycle.cycleId === cycleId) ?? null;
+    return data.diagnosisCycles.find((item) => item.cycleId === cycleId) ?? null;
   }
 
   async listCompanyDiagnosisCycles(companyId: string) {
     const data = await this.read();
-    return data.diagnosisCycles.filter((cycle) => cycle.companyId === companyId);
+    return data.diagnosisCycles.filter((item) => item.companyId === companyId);
   }
 
   async saveDiagnosisVersion(version: StoredDiagnosisVersion) {
@@ -88,11 +79,8 @@ export class FileStore implements NucleoStore {
       (item) => item.id === version.id,
     );
 
-    if (index >= 0) {
-      data.diagnosisVersions[index] = version;
-    } else {
-      data.diagnosisVersions.push(version);
-    }
+    if (index >= 0) data.diagnosisVersions[index] = version;
+    else data.diagnosisVersions.push(version);
 
     await this.write(data);
   }
@@ -119,7 +107,16 @@ export class FileStore implements NucleoStore {
 
   private async read(): Promise<StoreFile> {
     try {
-      const raw = await readFile(this.path, "utf8");
+      const result = await get(this.pathname, {
+        access: "private",
+        useCache: false,
+      });
+
+      if (!result || result.statusCode !== 200 || !result.stream) {
+        return { ...emptyStore };
+      }
+
+      const raw = await new Response(result.stream).text();
       const data = JSON.parse(raw) as Partial<StoreFile>;
 
       return {
@@ -131,16 +128,9 @@ export class FileStore implements NucleoStore {
     } catch (error) {
       if (
         error instanceof Error &&
-        "code" in error &&
-        error.code === "ENOENT"
+        /not found|BlobNotFound|404/i.test(error.message)
       ) {
-          return {
-            ...emptyStore,
-            registrations: [],
-            diagnosisCycles: [],
-            diagnosisVersions: [],
-            auditEvents: [],
-          };
+        return { ...emptyStore };
       }
 
       throw error;
@@ -148,22 +138,11 @@ export class FileStore implements NucleoStore {
   }
 
   private async write(data: StoreFile) {
-    await mkdir(dirname(this.path), { recursive: true });
-    await writeFile(this.path, JSON.stringify(data, null, 2));
+    await put(this.pathname, JSON.stringify(data, null, 2), {
+      access: "private",
+      allowOverwrite: true,
+      contentType: "application/json",
+      cacheControlMaxAge: 60,
+    });
   }
-}
-
-export function createStore() {
-  const databaseUrl = process.env.DATABASE_URL?.trim();
-
-  if (databaseUrl && /^postgres(ql)?:\/\//i.test(databaseUrl)) {
-    return new PostgresStore(databaseUrl);
-  }
-
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    return new BlobStore(process.env.NUCLEO_BLOB_PATH || "nucleo/demo-store.json");
-  }
-
-  const defaultPath = process.env.VERCEL ? "/tmp/nucleo.json" : ".data/nucleo.json";
-  return new FileStore(process.env.NUCLEO_DATA_PATH || defaultPath);
 }
