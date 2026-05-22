@@ -1,4 +1,3 @@
-import { PDFParse } from "pdf-parse";
 import * as mammoth from "mammoth";
 import * as XLSX from "xlsx";
 
@@ -104,6 +103,7 @@ async function extractByKind(kind: string, buffer: Buffer) {
 }
 
 async function extractPdf(buffer: Buffer) {
+  const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
 
   try {
