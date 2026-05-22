@@ -18,7 +18,7 @@ export const signalEvidenceSchema = z.object({
   title: z.string().min(8),
   observedText: z.string().min(12),
   sourceLabel: z.string().min(3),
-  sourceUrl: z.string().url().optional(),
+  sourceUrl: z.string().min(1).optional(),
   sourceDate: z.string().optional(),
   query: z.string().optional(),
   isNegative: z.boolean(),
