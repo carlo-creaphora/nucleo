@@ -19,11 +19,23 @@ export default async function handler(
     const url = new URL(request.url ?? "/", "https://nucleo.local");
     const method = request.method ?? "GET";
 
-    if (method === "GET" && url.pathname === "/") {
+    if ((method === "GET" || method === "HEAD") && url.pathname === "/") {
+      if (method === "HEAD") {
+        response.statusCode = 200;
+        response.setHeader("content-type", "text/html; charset=utf-8");
+        return response.end();
+      }
+
       return sendHtml(response, 200, renderHomePage());
     }
 
-    if (method === "GET" && url.pathname === "/api/health") {
+    if ((method === "GET" || method === "HEAD") && url.pathname === "/api/health") {
+      if (method === "HEAD") {
+        response.statusCode = 200;
+        response.setHeader("content-type", "application/json");
+        return response.end();
+      }
+
       return sendJson(response, 200, {
         ok: true,
         service: "nucleo",
