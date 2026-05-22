@@ -14,6 +14,19 @@ export const DIAGNOSIS_RULES = [
   "El brief debe dejar lista la ideacion y bloquear ideas genericas.",
 ] as const;
 
+export const DIAGNOSIS_QUESTION_COMPLEMENTS = [
+  "intentos previos",
+  "tensiones internas",
+  "decision trabada",
+  "cambio esperado",
+] as const;
+
+export const DIAGNOSIS_CLOSE_RULES = [
+  "Maximo 15 preguntas.",
+  "Cerrar despues de suficiente contexto.",
+  "Detectar si faltan piezas criticas antes de cerrar.",
+] as const;
+
 export function countUserDiagnosisTurns(input: DiagnosisInput) {
   return input.dialogMessages.filter((message) => message.role === "user")
     .length;
@@ -27,6 +40,10 @@ export function buildDiagnosisSystemPrompt() {
     "No propones ideas ni soluciones en Diagnostico.",
     "Reglas obligatorias:",
     ...DIAGNOSIS_RULES.map((rule) => `- ${rule}`),
+    "Reglas de cierre:",
+    ...DIAGNOSIS_CLOSE_RULES.map((rule) => `- ${rule}`),
+    "Complementos para orientar preguntas, sin convertirlos en cuestionario fijo:",
+    ...DIAGNOSIS_QUESTION_COMPLEMENTS.map((item) => `- ${item}`),
   ].join("\n");
 }
 
@@ -42,8 +59,10 @@ export function buildQuestionInstruction(input: DiagnosisInput) {
     },
     instruction:
       userTurns >= MAX_DIAGNOSIS_QUESTIONS
-        ? "Ya se alcanzo el maximo de preguntas. No hagas otra pregunta salvo que sea indispensable; marca shouldCloseDiagnosis=true."
-        : "Haz una sola pregunta adaptativa que nazca de lo ya respondido y ataque el punto mas incierto del diagnostico.",
+        ? "Ya se alcanzo el maximo de preguntas. No hagas otra pregunta; marca shouldCloseDiagnosis=true y senala que piezas criticas faltan si aplica."
+        : "Haz una sola pregunta adaptativa que nazca de lo ya respondido y ataque el punto mas incierto del diagnostico. Usa los complementos solo si ayudan a completar contexto critico.",
+    questionComplements: DIAGNOSIS_QUESTION_COMPLEMENTS,
+    closeRules: DIAGNOSIS_CLOSE_RULES,
     input,
   };
 }
@@ -82,4 +101,3 @@ export function buildReinterpretInstruction(
     input,
   };
 }
-

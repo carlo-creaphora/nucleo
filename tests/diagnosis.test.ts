@@ -70,6 +70,58 @@ describe("Diagnostico", () => {
     expect(result.diagnosis?.recommendedChallenge).toBeTruthy();
   });
 
+  it("usa intentos previos, tensiones, decision trabada y cambio esperado como complementos de pregunta", async () => {
+    const first = await service.nextQuestion(
+      buildInput({
+        dialogMessages: [
+          {
+            role: "user",
+            content:
+              "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta y no podemos bajar precio.",
+          },
+        ],
+      }),
+    );
+    const second = await service.nextQuestion(
+      buildInput({
+        dialogMessages: [
+          {
+            role: "user",
+            content:
+              "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta, no podemos bajar precio, ya probamos webinars y no funcionaron.",
+          },
+        ],
+      }),
+    );
+    const third = await service.nextQuestion(
+      buildInput({
+        dialogMessages: [
+          {
+            role: "user",
+            content:
+              "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta, no podemos bajar precio, ya probamos webinars y no funcionaron. Hay tension entre comercial y operaciones.",
+          },
+        ],
+      }),
+    );
+    const fourth = await service.nextQuestion(
+      buildInput({
+        dialogMessages: [
+          {
+            role: "user",
+            content:
+              "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta, no podemos bajar precio, ya probamos webinars y no funcionaron. Hay tension entre comercial y operaciones. Esta trabada la decision de cambiar la oferta.",
+          },
+        ],
+      }),
+    );
+
+    expect(first.question?.nextFocus).toBe("intentos previos");
+    expect(second.question?.nextFocus).toBe("tensiones internas");
+    expect(third.question?.nextFocus).toBe("decision trabada");
+    expect(fourth.question?.nextFocus).toBe("cambio esperado");
+  });
+
   it("reinterpreta una seccion corregida por el usuario", async () => {
     const input = buildInput({
       correctedSections: [

@@ -83,12 +83,21 @@ Reglas:
 - Hacer preguntas adaptativas segun las respuestas, no un cuestionario fijo.
 - No repetir preguntas ya respondidas.
 - Usar maximo 15 preguntas de contexto antes de cerrar o declarar datos faltantes.
+- Cerrar despues de suficiente contexto.
+- Detectar si faltan piezas criticas antes de cerrar.
 - Modificar la ruta de preguntas segun el problema, reto, aclaraciones o preguntas directas del usuario.
 - Si el usuario corrige algo, responder esa correccion antes de avanzar.
 - Si el usuario corrige una seccion, la IA debe reinterpretar esa parte y recomponer el diagnostico.
 - El diagnostico debe producir una recomendacion experta, no una descripcion complaciente.
 - El diagnostico debe entregar criterio experto: el reto real que conviene trabajar, no una repeticion del sintoma.
 - El brief debe dejar lista la ideacion y bloquear ideas genericas.
+
+Complemento para preguntas:
+
+- Intentos previos.
+- Tensiones internas.
+- Decision trabada.
+- Cambio esperado.
 
 Input:
 

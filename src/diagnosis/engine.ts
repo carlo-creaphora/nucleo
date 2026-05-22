@@ -118,6 +118,15 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
     const hasAttempt = /intent|probamos|hicimos|ya se hizo|funcion[oó]|fall[oó]/i.test(
       userText,
     );
+    const hasTension = /pero|aunque|sin embargo|tensi[oó]n|conflicto|fricci[oó]n|diferencia|desacuerdo/i.test(
+      userText,
+    );
+    const hasBlockedDecision = /decisi[oó]n|decidir|priorizar|destrabar|aprobar|invertir|definir/i.test(
+      userText,
+    );
+    const hasExpectedChange = /esperamos|deber[ií]a cambiar|queremos que|resultado esperado|cambio esperado|lograr/i.test(
+      userText,
+    );
 
     if (!hasMetric) {
       return {
@@ -154,6 +163,56 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
         suggestedAngles: ["campanas", "procesos", "capacitacion", "cambios comerciales"],
         coveredFacts: ["metrica prioritaria", "restricciones"],
         nextFocus: "intentos previos",
+        shouldCloseDiagnosis: false,
+      };
+    }
+
+    if (!hasTension) {
+      return {
+        question:
+          "Donde esta la tension interna del caso: que areas, criterios o prioridades chocan cuando intentan resolverlo?",
+        whyItMatters:
+          "Las tensiones internas ayudan a distinguir el reto real de una solucion superficial.",
+        suggestedAngles: ["comercial vs operacion", "rapidez vs calidad", "crecimiento vs margen"],
+        coveredFacts: ["metrica prioritaria", "restricciones", "intentos previos"],
+        nextFocus: "tensiones internas",
+        shouldCloseDiagnosis: false,
+      };
+    }
+
+    if (!hasBlockedDecision) {
+      return {
+        question:
+          "Que decision concreta esta trabada hasta que entiendan mejor este reto?",
+        whyItMatters:
+          "El diagnostico debe habilitar una decision, no solo describir el problema.",
+        suggestedAngles: ["priorizar inversion", "cambiar oferta", "ajustar canal", "redisenar operacion"],
+        coveredFacts: [
+          "metrica prioritaria",
+          "restricciones",
+          "intentos previos",
+          "tensiones internas",
+        ],
+        nextFocus: "decision trabada",
+        shouldCloseDiagnosis: false,
+      };
+    }
+
+    if (!hasExpectedChange) {
+      return {
+        question:
+          "Si el diagnostico fuera correcto, que deberia cambiar en comportamiento, resultado o decision en las proximas semanas?",
+        whyItMatters:
+          "El cambio esperado evita cerrar un diagnostico que no se pueda reconocer en la practica.",
+        suggestedAngles: ["conducta del cliente", "decision del equipo", "senal comercial", "resultado operativo"],
+        coveredFacts: [
+          "metrica prioritaria",
+          "restricciones",
+          "intentos previos",
+          "tensiones internas",
+          "decision trabada",
+        ],
+        nextFocus: "cambio esperado",
         shouldCloseDiagnosis: false,
       };
     }
