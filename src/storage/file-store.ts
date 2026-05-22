@@ -62,6 +62,6 @@ export class FileStore implements NucleoStore {
 }
 
 export function createStore() {
-  return new FileStore(process.env.NUCLEO_DATA_PATH || ".data/nucleo.json");
+  const defaultPath = process.env.VERCEL ? "/tmp/nucleo.json" : ".data/nucleo.json";
+  return new FileStore(process.env.NUCLEO_DATA_PATH || defaultPath);
 }
-
