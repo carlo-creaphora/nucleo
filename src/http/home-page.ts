@@ -399,6 +399,7 @@ export function renderHomePage() {
 
       const state = {
         registration: null,
+        registrationRecord: null,
         messages: [],
         diagnosis: null,
         correctedSections: [],
@@ -457,14 +458,33 @@ export function renderHomePage() {
         persistDraft();
       });
 
-      $("start-diagnosis").addEventListener("click", () => {
+      $("start-diagnosis").addEventListener("click", async () => {
         if (!form.reportValidity()) return;
-        state.registration = readRegistration();
-        setStep("diagnosis");
-        if (state.messages.length === 0) {
-          addMessage("assistant", "Cuéntame el reto como lo dirías en una reunión. Necesito entender qué está pasando antes de buscar ideas.");
+        setLoading(true);
+        setError("");
+        try {
+          const registrationPayload = {
+            cycleId: state.cycleId,
+            ...readRegistration()
+          };
+          const response = await fetch("/api/registration", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(registrationPayload)
+          });
+          const data = await parseResponse(response);
+          state.registrationRecord = data.registration;
+          state.registration = data.registration.output.contextForDiagnosis;
+          setStep("diagnosis");
+          if (state.messages.length === 0) {
+            addMessage("assistant", "Cuéntame el reto como lo dirías en una reunión. Necesito entender qué está pasando antes de buscar ideas.");
+          }
+          persistDraft();
+        } catch (error) {
+          setError(error.message || "No se pudo guardar Registro.");
+        } finally {
+          setLoading(false);
         }
-        persistDraft();
       });
 
       $("step-registration").addEventListener("click", () => setStep("registration"));
@@ -728,6 +748,7 @@ export function renderHomePage() {
           cycleId: state.cycleId,
           activeStep: state.activeStep,
           registration: state.registration,
+          registrationRecord: state.registrationRecord,
           messages: state.messages,
           diagnosis: state.diagnosis,
           correctedSections: state.correctedSections,
@@ -744,6 +765,7 @@ export function renderHomePage() {
           const draft = JSON.parse(raw);
           if (draft.cycleId) state.cycleId = draft.cycleId;
           if (draft.registration) state.registration = draft.registration;
+          if (draft.registrationRecord) state.registrationRecord = draft.registrationRecord;
           if (Array.isArray(draft.messages)) state.messages = draft.messages;
           if (draft.diagnosis) state.diagnosis = draft.diagnosis;
           if (Array.isArray(draft.correctedSections)) state.correctedSections = draft.correctedSections;

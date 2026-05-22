@@ -1,11 +1,18 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createDiagnosisEngine } from "../src/diagnosis/engine.js";
 import { DiagnosisService } from "../src/diagnosis/service.js";
+import { createRegistrationEngine } from "../src/registration/engine.js";
+import { RegistrationService } from "../src/registration/service.js";
 import { diagnosisOutputSchema } from "../src/contracts/diagnosis.js";
 import { createStore } from "../src/storage/file-store.js";
 import { renderHomePage } from "../src/http/home-page.js";
 
-const service = new DiagnosisService(createDiagnosisEngine(), createStore());
+const store = createStore();
+const service = new DiagnosisService(createDiagnosisEngine(), store);
+const registrationService = new RegistrationService(
+  createRegistrationEngine(),
+  store,
+);
 
 export const config = {
   runtime: "nodejs",
@@ -40,7 +47,29 @@ export default async function handler(
         ok: true,
         service: "nucleo",
         diagnosis: "ready",
+        databaseId: process.env.NUCLEO_DB_ID ?? "local-file",
       });
+    }
+
+    if (method === "POST" && url.pathname === "/api/registration") {
+      const body = await readJson(request);
+      return sendJson(response, 200, await registrationService.create(body));
+    }
+
+    const registrationMatch = /^\/api\/registration\/([^/]+)$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && registrationMatch) {
+      const registration = await registrationService.get(
+        decodeURIComponent(registrationMatch[1]!),
+      );
+
+      if (!registration) {
+        return sendJson(response, 404, { error: "registration_not_found" });
+      }
+
+      return sendJson(response, 200, { registration });
     }
 
     if (method === "POST" && url.pathname === "/api/diagnosis/question") {
@@ -80,6 +109,47 @@ export default async function handler(
       return sendJson(response, 200, { cycle });
     }
 
+    const cycleVersionsMatch = /^\/api\/diagnosis\/cycles\/([^/]+)\/versions$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && cycleVersionsMatch) {
+      const versions = await service.listVersions(
+        decodeURIComponent(cycleVersionsMatch[1]!),
+      );
+
+      return sendJson(response, 200, { versions });
+    }
+
+    const cycleAuditMatch = /^\/api\/diagnosis\/cycles\/([^/]+)\/audit$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && cycleAuditMatch) {
+      const events = await service.listAudit(
+        decodeURIComponent(cycleAuditMatch[1]!),
+      );
+
+      return sendJson(response, 200, { events });
+    }
+
+    const ideationInputMatch =
+      /^\/api\/diagnosis\/cycles\/([^/]+)\/ideation-input$/.exec(
+        url.pathname,
+      );
+
+    if (method === "GET" && ideationInputMatch) {
+      const ideationInput = await service.buildIdeationInput(
+        decodeURIComponent(ideationInputMatch[1]!),
+      );
+
+      if (!ideationInput) {
+        return sendJson(response, 404, { error: "ideation_input_not_ready" });
+      }
+
+      return sendJson(response, 200, { ideationInput });
+    }
+
     const companyCyclesMatch =
       /^\/api\/companies\/([^/]+)\/diagnosis-cycles$/.exec(url.pathname);
 
@@ -89,6 +159,17 @@ export default async function handler(
       );
 
       return sendJson(response, 200, { cycles });
+    }
+
+    const companyRegistrationsMatch =
+      /^\/api\/companies\/([^/]+)\/registrations$/.exec(url.pathname);
+
+    if (method === "GET" && companyRegistrationsMatch) {
+      const registrations = await registrationService.listCompany(
+        decodeURIComponent(companyRegistrationsMatch[1]!),
+      );
+
+      return sendJson(response, 200, { registrations });
     }
 
     return sendJson(response, 404, { error: "not_found" });

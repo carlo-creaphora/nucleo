@@ -44,6 +44,47 @@ export function countUserDiagnosisTurns(input: DiagnosisInput) {
     .length;
 }
 
+export function detectCriticalMissingPieces(input: DiagnosisInput) {
+  const userText = input.dialogMessages
+    .filter((message) => message.role === "user")
+    .map((message) => message.content)
+    .join(" ");
+  const checks = [
+    {
+      key: "metrica",
+      missing: !/m[eé]trica|indicador|venta|ingreso|margen|tiempo|costo|riesgo|calidad|retenci[oó]n|conversion|conversi[oó]n/i.test(userText),
+      reason: "Sin metrica o senal, el reto puede quedarse en percepcion.",
+    },
+    {
+      key: "restriccion",
+      missing: !/restric|no podemos|presupuesto|legal|regulaci[oó]n|operaci[oó]n|marca|talento|tecnolog/i.test(userText),
+      reason: "Sin restriccion, Ideacion puede proponer algo no ejecutable.",
+    },
+    {
+      key: "intentos previos",
+      missing: !/intent|probamos|hicimos|ya se hizo|funcion[oó]|fall[oó]|no cambio|no funcion/i.test(userText),
+      reason: "Sin intentos previos, se pueden repetir soluciones obvias.",
+    },
+    {
+      key: "tension interna",
+      missing: !/pero|aunque|sin embargo|tensi[oó]n|conflicto|fricci[oó]n|desacuerdo|prioridad/i.test(userText),
+      reason: "Sin tension, el diagnostico puede confundir sintoma con mecanismo.",
+    },
+    {
+      key: "decision trabada",
+      missing: !/decisi[oó]n|decidir|priorizar|destrabar|aprobar|invertir|definir/i.test(userText),
+      reason: "Sin decision, el cierre no habilita accion concreta.",
+    },
+    {
+      key: "cambio esperado",
+      missing: !/esperamos|deber[ií]a cambiar|queremos que|resultado esperado|cambio esperado|lograr|cambiar/i.test(userText),
+      reason: "Sin cambio esperado, no hay forma clara de reconocer avance.",
+    },
+  ];
+
+  return checks.filter((check) => check.missing);
+}
+
 export function buildDiagnosisSystemPrompt() {
   return [
     "Eres la skill de Diagnostico de Nucleo.",
@@ -77,6 +118,7 @@ export function buildQuestionInstruction(input: DiagnosisInput) {
         : "Haz una sola pregunta adaptativa que nazca de lo ya respondido y ataque el punto mas incierto del diagnostico. Usa los complementos solo si ayudan a completar contexto critico.",
     questionComplements: DIAGNOSIS_QUESTION_COMPLEMENTS,
     closeRules: DIAGNOSIS_CLOSE_RULES,
+    criticalMissing: detectCriticalMissingPieces(input),
     input,
   };
 }
@@ -98,6 +140,7 @@ export function buildCompletionInstruction(input: DiagnosisInput) {
       "assumptionToQuestion",
       "ideationBrief",
     ],
+    criticalMissing: detectCriticalMissingPieces(input),
     input,
   };
 }
@@ -112,6 +155,7 @@ export function buildReinterpretInstruction(
       "Responde la correccion antes de avanzar. Recompone el diagnostico completo, cambiando solo lo que la aclaracion afecte. No le des la razon al usuario por defecto; usa la correccion como nueva evidencia, no como conclusion. Mantente breve y directo.",
     previousDiagnosis,
     corrections: input.correctedSections,
+    criticalMissing: detectCriticalMissingPieces(input),
     input,
   };
 }

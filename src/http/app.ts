@@ -2,18 +2,26 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { createDiagnosisEngine } from "../diagnosis/engine.js";
 import { DiagnosisService } from "../diagnosis/service.js";
+import { createRegistrationEngine } from "../registration/engine.js";
+import { RegistrationService } from "../registration/service.js";
 import { diagnosisOutputSchema } from "../contracts/diagnosis.js";
 import { createStore } from "../storage/file-store.js";
 
 export function createApp() {
   const app = new Hono();
-  const service = new DiagnosisService(createDiagnosisEngine(), createStore());
+  const store = createStore();
+  const service = new DiagnosisService(createDiagnosisEngine(), store);
+  const registrationService = new RegistrationService(
+    createRegistrationEngine(),
+    store,
+  );
 
   app.get("/api/health", (context) =>
     context.json({
       ok: true,
       service: "nucleo",
       diagnosis: "ready",
+      databaseId: process.env.NUCLEO_DB_ID ?? "local-file",
     }),
   );
 
@@ -21,6 +29,24 @@ export function createApp() {
     const body = await context.req.json();
     const result = await service.nextQuestion(body);
     return context.json(result);
+  });
+
+  app.post("/api/registration", async (context) => {
+    const body = await context.req.json();
+    const result = await registrationService.create(body);
+    return context.json(result);
+  });
+
+  app.get("/api/registration/:registrationId", async (context) => {
+    const registration = await registrationService.get(
+      context.req.param("registrationId"),
+    );
+
+    if (!registration) {
+      return context.json({ error: "registration_not_found" }, 404);
+    }
+
+    return context.json({ registration });
   });
 
   app.post("/api/diagnosis/complete", async (context) => {
@@ -55,12 +81,42 @@ export function createApp() {
     return context.json({ cycle });
   });
 
+  app.get("/api/diagnosis/cycles/:cycleId/versions", async (context) => {
+    const versions = await service.listVersions(context.req.param("cycleId"));
+    return context.json({ versions });
+  });
+
+  app.get("/api/diagnosis/cycles/:cycleId/audit", async (context) => {
+    const events = await service.listAudit(context.req.param("cycleId"));
+    return context.json({ events });
+  });
+
+  app.get("/api/diagnosis/cycles/:cycleId/ideation-input", async (context) => {
+    const ideationInput = await service.buildIdeationInput(
+      context.req.param("cycleId"),
+    );
+
+    if (!ideationInput) {
+      return context.json({ error: "ideation_input_not_ready" }, 404);
+    }
+
+    return context.json({ ideationInput });
+  });
+
   app.get("/api/companies/:companyId/diagnosis-cycles", async (context) => {
     const cycles = await service.listCompanyCycles(
       context.req.param("companyId"),
     );
 
     return context.json({ cycles });
+  });
+
+  app.get("/api/companies/:companyId/registrations", async (context) => {
+    const registrations = await registrationService.listCompany(
+      context.req.param("companyId"),
+    );
+
+    return context.json({ registrations });
   });
 
   app.onError((error, context) => {
@@ -77,4 +133,3 @@ export function createApp() {
 
   return app;
 }
-

@@ -5,17 +5,23 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DiagnosisService } from "../src/diagnosis/service.js";
 import { HeuristicDiagnosisEngine } from "../src/diagnosis/engine.js";
 import { buildDiagnosisSystemPrompt } from "../src/diagnosis/prompt.js";
+import { RegistrationService } from "../src/registration/service.js";
+import { HeuristicRegistrationEngine } from "../src/registration/engine.js";
 import { FileStore } from "../src/storage/file-store.js";
 import type { DiagnosisInput } from "../src/contracts/diagnosis.js";
 
 let tempDir: string;
 let service: DiagnosisService;
+let registrationService: RegistrationService;
+let store: FileStore;
 
 beforeEach(async () => {
   tempDir = await mkdtemp(join(tmpdir(), "nucleo-test-"));
-  service = new DiagnosisService(
-    new HeuristicDiagnosisEngine(),
-    new FileStore(join(tempDir, "store.json")),
+  store = new FileStore(join(tempDir, "store.json"));
+  service = new DiagnosisService(new HeuristicDiagnosisEngine(), store);
+  registrationService = new RegistrationService(
+    new HeuristicRegistrationEngine(),
+    store,
   );
 });
 
@@ -56,6 +62,25 @@ describe("Diagnostico", () => {
     expect(result.diagnosis.notWorthAttackingYet).toBeDefined();
     expect(result.diagnosis.assumptionToQuestion).toBeTruthy();
     expect(result.diagnosis.ideationBrief).toBeTruthy();
+  });
+
+  it("guarda registro con output contractual para diagnostico", async () => {
+    const input = buildInput();
+    const result = await registrationService.create({
+      cycleId: input.cycleId,
+      profileLicense: input.profileLicense,
+      company: input.company,
+      category: input.category,
+      uploadedDocuments: input.uploadedDocuments,
+    });
+
+    expect(result.registration.id).toMatch(/^reg_/);
+    expect(result.registration.output.contextForDiagnosis.company.name).toBe(
+      input.company.name,
+    );
+    expect(
+      result.registration.output.competitorEvaluationFrame.criteria.length,
+    ).toBeGreaterThan(0);
   });
 
   it("respeta el maximo de 15 preguntas y cierra diagnostico", async () => {
@@ -138,6 +163,29 @@ describe("Diagnostico", () => {
     expect(result.diagnosis.recommendedChallenge).toContain("confianza");
   });
 
+  it("versiona diagnosticos y deja auditoria al reinterpretar", async () => {
+    const previous = (await service.complete(buildInput())).diagnosis;
+    await service.reinterpret(
+      buildInput({
+        correctedSections: [
+          {
+            section: "causes",
+            clarification: "La causa no es falta de demanda; es confianza tardia.",
+          },
+        ],
+      }),
+      previous,
+    );
+
+    const versions = await service.listVersions("cycle-1");
+    const events = await service.listAudit("cycle-1");
+
+    expect(versions.map((item) => item.version)).toEqual([1, 2]);
+    expect(events.some((item) => item.action === "DIAGNOSIS_REINTERPRETED")).toBe(
+      true,
+    );
+  });
+
   it("lista memoria de diagnosticos por empresa sin mezclar empresas", async () => {
     await service.complete(buildInput({ cycleId: "cycle-a" }));
     await service.complete(
@@ -151,6 +199,26 @@ describe("Diagnostico", () => {
 
     expect(cycles).toHaveLength(1);
     expect(cycles[0]?.cycleId).toBe("cycle-a");
+  });
+
+  it("construye handoff formal para ideacion desde diagnostico cerrado", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation" });
+    await registrationService.create({
+      cycleId: input.cycleId,
+      profileLicense: input.profileLicense,
+      company: input.company,
+      category: input.category,
+      uploadedDocuments: input.uploadedDocuments,
+    });
+    await service.complete(input);
+
+    const ideationInput = await service.buildIdeationInput(input.cycleId);
+
+    expect(ideationInput?.selectedChallenge).toBeTruthy();
+    expect(ideationInput?.diagnosticInput.detonators.length).toBeGreaterThan(0);
+    expect(ideationInput?.registration?.contextForDiagnosis.company.name).toBe(
+      input.company.name,
+    );
   });
 
   it("incluye criterio incomodo y no complaciente en el contrato del prompt", () => {
