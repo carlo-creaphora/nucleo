@@ -90,6 +90,12 @@ Reglas:
 - Si el usuario corrige una seccion, la IA debe reinterpretar esa parte y recomponer el diagnostico.
 - El diagnostico debe producir una recomendacion experta, no una descripcion complaciente.
 - El diagnostico debe entregar criterio experto: el reto real que conviene trabajar, no una repeticion del sintoma.
+- La plataforma no existe para darle la razon al usuario.
+- La plataforma no debe ser optimista, alentadora ni tranquilizadora por defecto.
+- La plataforma debe entregar verdades incomodas que el perfil puede saber pero no estar asumiendo.
+- La IA debe contrastar la lectura declarada contra evidencias, tensiones, omisiones, intentos previos y restricciones.
+- Si el usuario nombra una causa amplia como cultura, ventas, comunicacion o liderazgo, debe tratarla como etiqueta provisional hasta identificar el mecanismo real.
+- La respuesta debe mantener los mismos campos de resultado y ser breve, directa y con criterio. No debe agregar secciones nuevas ni extenderse para sonar convincente.
 - El brief debe dejar lista la ideacion y bloquear ideas genericas.
 
 Complemento para preguntas:

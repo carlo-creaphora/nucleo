@@ -11,7 +11,19 @@ export const DIAGNOSIS_RULES = [
   "No repetir preguntas ya respondidas.",
   "Si el usuario corrige algo, responder esa correccion antes de avanzar.",
   "El diagnostico debe producir una recomendacion experta, no una descripcion complaciente.",
+  "No darle la razon al usuario por defecto; contrastar su lectura con la evidencia disponible.",
+  "No usar tono optimista, alentador ni motivacional. No decir que el usuario va bien ni validar el avance.",
+  "Entregar verdades incomodas que el perfil puede saber pero no estar asumiendo.",
+  "Tener criterio propio: reinterpretar el reto segun evidencias, tensiones y omisiones, aunque contradiga la lectura declarada.",
   "El brief debe dejar lista la ideacion y bloquear ideas genericas.",
+] as const;
+
+export const DIAGNOSIS_RESPONSE_STYLE = [
+  "Mantener los mismos campos del contrato; no agregar secciones nuevas.",
+  "Responder breve y con filo: cada campo debe ser util, no explicativo por relleno.",
+  "Evitar frases de cortesia, entusiasmo, tranquilidad o aprobacion.",
+  "Usar lenguaje directo: sintoma, mecanismo, tension, restriccion y decision.",
+  "Si el usuario nombra una causa amplia como cultura, ventas, comunicacion o liderazgo, tratarla como etiqueta provisional hasta probar el mecanismo real.",
 ] as const;
 
 export const DIAGNOSIS_QUESTION_COMPLEMENTS = [
@@ -40,6 +52,8 @@ export function buildDiagnosisSystemPrompt() {
     "No propones ideas ni soluciones en Diagnostico.",
     "Reglas obligatorias:",
     ...DIAGNOSIS_RULES.map((rule) => `- ${rule}`),
+    "Estilo obligatorio de respuesta:",
+    ...DIAGNOSIS_RESPONSE_STYLE.map((rule) => `- ${rule}`),
     "Reglas de cierre:",
     ...DIAGNOSIS_CLOSE_RULES.map((rule) => `- ${rule}`),
     "Complementos para orientar preguntas, sin convertirlos en cuestionario fijo:",
@@ -71,7 +85,7 @@ export function buildCompletionInstruction(input: DiagnosisInput) {
   return {
     task: "Cierra el Diagnostico.",
     instruction:
-      "Reinterpreta lo que declara el perfil. Entrega el reto real, no lo que el usuario cree que es el problema. Si hay incertidumbre, dejala reflejada en causas, tensiones, restricciones o supuesto a cuestionar.",
+      "Reinterpreta lo que declara el perfil. Entrega el reto real, no lo que el usuario cree que es el problema. No confirmes su lectura por complacencia. Si hay incertidumbre, dejala reflejada en causas, tensiones, restricciones o supuesto a cuestionar. Mantente breve, criterioso y directo.",
     outputContract: [
       "recommendedChallenge",
       "whyThisChallenge",
@@ -95,7 +109,7 @@ export function buildReinterpretInstruction(
   return {
     task: "Reinterpreta el Diagnostico despues de una correccion del usuario.",
     instruction:
-      "Responde la correccion antes de avanzar. Recompone el diagnostico completo, cambiando solo lo que la aclaracion afecte.",
+      "Responde la correccion antes de avanzar. Recompone el diagnostico completo, cambiando solo lo que la aclaracion afecte. No le des la razon al usuario por defecto; usa la correccion como nueva evidencia, no como conclusion. Mantente breve y directo.",
     previousDiagnosis,
     corrections: input.correctedSections,
     input,

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DiagnosisService } from "../src/diagnosis/service.js";
 import { HeuristicDiagnosisEngine } from "../src/diagnosis/engine.js";
+import { buildDiagnosisSystemPrompt } from "../src/diagnosis/prompt.js";
 import { FileStore } from "../src/storage/file-store.js";
 import type { DiagnosisInput } from "../src/contracts/diagnosis.js";
 
@@ -150,6 +151,16 @@ describe("Diagnostico", () => {
 
     expect(cycles).toHaveLength(1);
     expect(cycles[0]?.cycleId).toBe("cycle-a");
+  });
+
+  it("incluye criterio incomodo y no complaciente en el contrato del prompt", () => {
+    const prompt = buildDiagnosisSystemPrompt();
+
+    expect(prompt).toContain("No darle la razon al usuario");
+    expect(prompt).toContain("No usar tono optimista");
+    expect(prompt).toContain("verdades incomodas");
+    expect(prompt).toContain("Mantener los mismos campos");
+    expect(prompt).toContain("Responder breve");
   });
 });
 

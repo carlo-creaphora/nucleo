@@ -250,23 +250,23 @@ function buildHeuristicDiagnosis(input: DiagnosisInput): DiagnosisOutput {
   return {
     recommendedChallenge: correction
       ? `Reformular el reto de ${company} incorporando la aclaracion: ${correction}`
-      : `Identificar el mecanismo que impide que ${company} convierta su contexto de ${category} en una decision accionable y medible.`,
+      : `Dejar de tratar el sintoma declarado como causa y aislar el mecanismo operativo que bloquea una decision medible en ${category}.`,
     whyThisChallenge:
-      "Es mas correcto que la lectura inicial porque no asume que el sintoma declarado sea la causa; obliga a separar hechos, restricciones y mecanismo de cambio antes de idear.",
+      "La lectura inicial todavia suena a etiqueta del problema. Este reto fuerza a separar hechos, restricciones y mecanismo antes de idear.",
     symptoms: [
       `El perfil declara: ${declaredProblem}`,
       "La situacion todavia necesita evidencia para distinguir sintoma de causa.",
     ],
     causes: [
-      "Causa probable: el sistema actual puede estar respondiendo al sintoma visible y no al mecanismo que lo produce.",
+      "Causa probable: la empresa esta respondiendo al sintoma visible porque todavia no ha hecho explicito el mecanismo que lo produce.",
     ],
     tensions: [
-      "Tension: avanzar rapido sin repetir soluciones obvias ni romper restricciones de la empresa.",
+      "Tension: querer avanzar rapido mientras el sistema evita tocar la decision incomoda que sostiene el problema.",
     ],
     metrics: ["Definir la senal prioritaria que demostrara si el reto importa."],
     restrictions: input.userClarifications,
     notWorthAttackingYet: [
-      "No conviene atacar con ideas genericas antes de confirmar el mecanismo causal probable.",
+      "No conviene atacar con ideas genericas ni con mas esfuerzo sobre el mismo supuesto declarado.",
     ],
     assumptionToQuestion:
       "Que la lectura inicial del perfil describe el problema real y no solo su sintoma mas visible.",
