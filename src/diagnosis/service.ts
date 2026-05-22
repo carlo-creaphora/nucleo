@@ -4,7 +4,7 @@ import {
   type DiagnosisOutput,
   diagnosisInputSchema,
 } from "../contracts/diagnosis.js";
-import type { IdeationInput } from "../contracts/ideation.js";
+import { type IdeationInput, ideationInputSchema } from "../contracts/ideation.js";
 import type { DiagnosisEngine } from "./engine.js";
 import {
   MAX_DIAGNOSIS_QUESTIONS,
@@ -12,6 +12,18 @@ import {
   detectCriticalMissingPieces,
 } from "./prompt.js";
 import type { NucleoStore, StoredDiagnosisCycle } from "../storage/store.js";
+
+export class DiagnosisClosureError extends Error {
+  readonly status = 409;
+
+  constructor(
+    message: string,
+    readonly criticalMissing: ReturnType<typeof detectCriticalMissingPieces>,
+  ) {
+    super(message);
+    this.name = "DiagnosisClosureError";
+  }
+}
 
 export class DiagnosisService {
   constructor(
@@ -21,6 +33,7 @@ export class DiagnosisService {
 
   async nextQuestion(rawInput: unknown) {
     const input = await this.enrichInput(diagnosisInputSchema.parse(rawInput));
+    await this.ensureRegistrationReady(input);
     const userTurns = countUserDiagnosisTurns(input);
 
     if (userTurns >= MAX_DIAGNOSIS_QUESTIONS) {
@@ -48,6 +61,8 @@ export class DiagnosisService {
 
   async complete(rawInput: unknown) {
     const input = await this.enrichInput(diagnosisInputSchema.parse(rawInput));
+    await this.ensureRegistrationReady(input);
+    this.ensureCanClose(input);
     const diagnosis = await this.engine.completeDiagnosis(input);
     await this.persist(input, diagnosis, "complete");
 
@@ -59,6 +74,7 @@ export class DiagnosisService {
 
   async reinterpret(rawInput: unknown, previousDiagnosis: DiagnosisOutput) {
     const input = await this.enrichInput(diagnosisInputSchema.parse(rawInput));
+    await this.ensureRegistrationReady(input);
 
     if (input.correctedSections.length === 0) {
       throw new Error("reinterpret requiere al menos una seccion corregida");
@@ -72,6 +88,7 @@ export class DiagnosisService {
 
     return {
       diagnosis,
+      changeSummary: summarizeDiagnosisChanges(previousDiagnosis, diagnosis),
       criticalMissing: detectCriticalMissingPieces(input),
     };
   }
@@ -109,7 +126,7 @@ export class DiagnosisService {
       (item) => item.cycleId !== cycleId && item.diagnosis,
     );
 
-    return {
+    const handoff = {
       cycleId,
       companyId: cycle.companyId,
       licenseId: cycle.licenseId,
@@ -156,6 +173,8 @@ export class DiagnosisService {
         ),
       },
     };
+
+    return ideationInputSchema.parse(handoff);
   }
 
   private async persist(
@@ -253,4 +272,103 @@ export class DiagnosisService {
             })),
     };
   }
+
+  private ensureCanClose(input: DiagnosisInput) {
+    const missing = detectCriticalMissingPieces(input);
+    const userTurns = countUserDiagnosisTurns(input);
+
+    if (missing.length > 0 && userTurns < MAX_DIAGNOSIS_QUESTIONS) {
+      throw new DiagnosisClosureError(
+        "Diagnostico no puede cerrar: faltan piezas criticas.",
+        missing,
+      );
+    }
+  }
+
+  private async ensureRegistrationReady(input: DiagnosisInput) {
+    const registration = await this.store.getRegistrationByCycle(input.cycleId);
+
+    if (!registration) {
+      throw new Error("Completa Registro antes de Diagnostico.");
+    }
+
+    if (!registration.output.readiness.isReadyForDiagnosis) {
+      throw new Error(
+        `Registro incompleto para Diagnostico: ${registration.output.readiness.blockingIssues.join(", ")}`,
+      );
+    }
+
+    const currentFingerprint = registrationFingerprint({
+      companyId: input.company.companyId,
+      licenseId: input.profileLicense.licenseId,
+      companyName: input.company.name,
+      sectorCategory: input.company.sectorCategory,
+    });
+    const registrationFingerprintValue = registrationFingerprint({
+      companyId: registration.output.contextForDiagnosis.company.companyId,
+      licenseId:
+        registration.output.contextForDiagnosis.profileLicense.licenseId,
+      companyName: registration.output.contextForDiagnosis.company.name,
+      sectorCategory:
+        registration.output.contextForDiagnosis.company.sectorCategory,
+    });
+
+    if (currentFingerprint !== registrationFingerprintValue) {
+      throw new Error(
+        "Registro no coincide con el contexto actual de Diagnostico. Guarda Registro de nuevo.",
+      );
+    }
+  }
+}
+
+function registrationFingerprint(input: {
+  companyId: string;
+  licenseId: string;
+  companyName: string;
+  sectorCategory: string;
+}) {
+  return [
+    input.companyId,
+    input.licenseId,
+    input.companyName,
+    input.sectorCategory,
+  ]
+    .map((value) => value.trim().toLowerCase())
+    .join("|");
+}
+
+function summarizeDiagnosisChanges(
+  previous: DiagnosisOutput,
+  next: DiagnosisOutput,
+) {
+  const changed: string[] = [];
+  const unchanged: string[] = [];
+  const entries: Array<[keyof DiagnosisOutput, string]> = [
+    ["recommendedChallenge", "reto recomendado"],
+    ["whyThisChallenge", "por que es mas correcto"],
+    ["symptoms", "sintomas"],
+    ["causes", "causas"],
+    ["tensions", "tensiones"],
+    ["metrics", "metricas"],
+    ["restrictions", "restricciones"],
+    ["notWorthAttackingYet", "que no conviene atacar todavia"],
+    ["assumptionToQuestion", "supuesto a cuestionar"],
+    ["ideationBrief", "brief para ideacion"],
+  ];
+
+  for (const [key, label] of entries) {
+    const before = JSON.stringify(previous[key]);
+    const after = JSON.stringify(next[key]);
+
+    if (before === after) unchanged.push(label);
+    else changed.push(label);
+  }
+
+  return {
+    changed,
+    unchanged,
+    summary: changed.length
+      ? `Cambio: ${changed.slice(0, 4).join(", ")}. Sin cambio material: ${unchanged.slice(0, 4).join(", ")}.`
+      : "La aclaracion no obligo a cambiar el diagnostico.",
+  };
 }

@@ -60,6 +60,10 @@ Output:
 - Informacion de categoria derivada de notas y documentos cargados por el perfil.
 - Marco para evaluar competidores.
 - Vinculo entre perfil, licencia, empresa y memoria compartida de empresa.
+- Readiness de Registro: indica si el contexto esta listo para Diagnostico, que bloquea y que queda como advertencia.
+- Documentos cargados con estado de extraccion: extraido, texto provisto, no soportado o vacio.
+- Datos normalizados para paises, canales, empresa, categoria, competidores y perfil.
+- Marco competitivo preparado para Senales/Benchmark: criterios, ejes de comparacion, preguntas de senal y brechas de evidencia.
 
 No debe hacer:
 
@@ -67,6 +71,7 @@ No debe hacer:
 - No propone ideas.
 - No evalua competidores todavia.
 - No mezcla memoria de empresas distintas.
+- No permite avanzar a Diagnostico si el Registro contractual esta incompleto.
 
 ## Diagnostico
 
@@ -85,6 +90,7 @@ Reglas:
 - Usar maximo 15 preguntas de contexto antes de cerrar o declarar datos faltantes.
 - Cerrar despues de suficiente contexto.
 - Detectar si faltan piezas criticas antes de cerrar.
+- Bloquear cierre antes de 15 preguntas si faltan piezas criticas: metrica, restriccion, intentos previos, tension interna, decision trabada o cambio esperado.
 - Modificar la ruta de preguntas segun el problema, reto, aclaraciones o preguntas directas del usuario.
 - Si el usuario corrige algo, responder esa correccion antes de avanzar.
 - Si el usuario corrige una seccion, la IA debe reinterpretar esa parte y recomponer el diagnostico.
@@ -141,6 +147,8 @@ Regla de aclaracion del resultado:
 - La respuesta del perfil se guarda como correccion de seccion, no como conclusion automatica.
 - La IA debe reinterpretar el diagnostico completo con esa nueva evidencia y mantener los mismos 10 campos de output.
 - La reinterpretacion no debe limitarse a editar el campo aclarado si la nueva evidencia afecta reto, causas, tensiones, metricas, restricciones o brief.
+- La reinterpretacion debe devolver un resumen breve de que cambio y que no cambio.
+- El handoff a Ideacion debe usar la ultima version del diagnostico y contener detonadores desde causas/tensiones, senales negativas desde lo que no conviene atacar y memoria disponible del ciclo/empresa.
 
 ## Senales
 

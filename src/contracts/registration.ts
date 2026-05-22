@@ -44,6 +44,19 @@ const outputCategorySchema = z.object({
   notes: z.string().optional(),
 });
 
+const outputUploadedDocumentSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  mimeType: z.string().optional(),
+  sizeBytes: z.number().int().min(0).optional(),
+  sourceUrl: z.string().optional(),
+  extractionStatus: z
+    .enum(["EXTRACTED", "TEXT_PROVIDED", "UNSUPPORTED", "EMPTY"])
+    .optional(),
+  summary: z.string().optional(),
+  extractedText: z.string().optional(),
+});
+
 export const registrationInputSchema = z.object({
   registrationId: z.string().min(1).optional(),
   cycleId: z.string().min(1),
@@ -53,12 +66,28 @@ export const registrationInputSchema = z.object({
   uploadedDocuments: z.array(uploadedDocumentSchema).default([]),
 });
 
+export const registrationDocumentUploadSchema = z.object({
+  cycleId: z.string().min(1),
+  documents: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        mimeType: z.string().optional(),
+        sizeBytes: z.number().int().min(0).optional(),
+        sourceUrl: z.string().url().optional(),
+        text: z.string().optional(),
+        summary: z.string().optional(),
+      }),
+    )
+    .min(1),
+});
+
 export const registrationOutputSchema = z.object({
   contextForDiagnosis: z.object({
     profileLicense: outputProfileLicenseSchema,
     company: outputCompanySchema,
     category: outputCategorySchema,
-    uploadedDocuments: z.array(uploadedDocumentSchema).default([]),
+    uploadedDocuments: z.array(outputUploadedDocumentSchema).default([]),
   }),
   categoryInformation: z.object({
     summary: z.string().min(1),
@@ -68,6 +97,14 @@ export const registrationOutputSchema = z.object({
   competitorEvaluationFrame: z.object({
     criteria: z.array(z.string().min(1)).min(1),
     notes: z.array(z.string()).default([]),
+    comparisonAxes: z.array(z.string().min(1)).min(1),
+    signalQuestions: z.array(z.string().min(1)).min(1),
+    evidenceGaps: z.array(z.string()).default([]),
+  }),
+  readiness: z.object({
+    isReadyForDiagnosis: z.boolean(),
+    blockingIssues: z.array(z.string()).default([]),
+    warnings: z.array(z.string()).default([]),
   }),
 });
 
@@ -85,3 +122,6 @@ export const registrationRecordSchema = z.object({
 export type RegistrationInput = z.infer<typeof registrationInputSchema>;
 export type RegistrationOutput = z.infer<typeof registrationOutputSchema>;
 export type RegistrationRecord = z.infer<typeof registrationRecordSchema>;
+export type RegistrationDocumentUpload = z.infer<
+  typeof registrationDocumentUploadSchema
+>;

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DiagnosisService } from "../src/diagnosis/service.js";
+import { DiagnosisClosureError } from "../src/diagnosis/service.js";
 import { HeuristicDiagnosisEngine } from "../src/diagnosis/engine.js";
 import { buildDiagnosisSystemPrompt } from "../src/diagnosis/prompt.js";
 import { RegistrationService } from "../src/registration/service.js";
@@ -39,6 +40,7 @@ describe("Diagnostico", () => {
         },
       ],
     });
+    await registerInput(input);
 
     const result = await service.nextQuestion(input);
     const stored = await service.getCycle(input.cycleId);
@@ -50,6 +52,7 @@ describe("Diagnostico", () => {
 
   it("cierra diagnostico con los 10 outputs contratados", async () => {
     const input = buildInput();
+    await registerInput(input);
     const result = await service.complete(input);
 
     expect(result.diagnosis.recommendedChallenge).toBeTruthy();
@@ -81,6 +84,27 @@ describe("Diagnostico", () => {
     expect(
       result.registration.output.competitorEvaluationFrame.criteria.length,
     ).toBeGreaterThan(0);
+    expect(
+      result.registration.output.competitorEvaluationFrame.signalQuestions.length,
+    ).toBeGreaterThan(0);
+    expect(result.registration.output.readiness.isReadyForDiagnosis).toBe(true);
+  });
+
+  it("procesa carga real de documentos para Registro", async () => {
+    const result = await registrationService.uploadDocuments({
+      cycleId: "cycle-docs",
+      documents: [
+        {
+          name: "contexto.txt",
+          mimeType: "text/plain",
+          sizeBytes: 58,
+          text: "Los descuentos no cambiaron la calidad de los prospectos.",
+        },
+      ],
+    });
+
+    expect(result.documents[0]?.id).toMatch(/^doc_/);
+    expect(result.documents[0]?.extractionStatus).toBe("EXTRACTED");
   });
 
   it("respeta el maximo de 15 preguntas y cierra diagnostico", async () => {
@@ -89,6 +113,7 @@ describe("Diagnostico", () => {
       content: `Respuesta de contexto ${index + 1}`,
     }));
     const input = buildInput({ dialogMessages });
+    await registerInput(input);
     const result = await service.nextQuestion(input);
 
     expect(result.maxQuestionsReached).toBe(true);
@@ -97,50 +122,54 @@ describe("Diagnostico", () => {
   });
 
   it("usa intentos previos, tensiones, decision trabada y cambio esperado como complementos de pregunta", async () => {
-    const first = await service.nextQuestion(
-      buildInput({
-        dialogMessages: [
-          {
-            role: "user",
-            content:
-              "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta y no podemos bajar precio.",
-          },
-        ],
-      }),
-    );
-    const second = await service.nextQuestion(
-      buildInput({
-        dialogMessages: [
-          {
-            role: "user",
-            content:
-              "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta, no podemos bajar precio, ya probamos webinars y no funcionaron.",
-          },
-        ],
-      }),
-    );
-    const third = await service.nextQuestion(
-      buildInput({
-        dialogMessages: [
-          {
-            role: "user",
-            content:
-              "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta, no podemos bajar precio, ya probamos webinars y no funcionaron. Hay tension entre comercial y operaciones.",
-          },
-        ],
-      }),
-    );
-    const fourth = await service.nextQuestion(
-      buildInput({
-        dialogMessages: [
-          {
-            role: "user",
-            content:
-              "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta, no podemos bajar precio, ya probamos webinars y no funcionaron. Hay tension entre comercial y operaciones. Esta trabada la decision de cambiar la oferta.",
-          },
-        ],
-      }),
-    );
+    const firstInput = buildInput({
+      cycleId: "question-1",
+      dialogMessages: [
+        {
+          role: "user",
+          content:
+            "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta y no podemos bajar precio.",
+        },
+      ],
+    });
+    await registerInput(firstInput);
+    const first = await service.nextQuestion(firstInput);
+    const secondInput = buildInput({
+      cycleId: "question-2",
+      dialogMessages: [
+        {
+          role: "user",
+          content:
+            "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta, no podemos bajar precio, ya probamos webinars y no funcionaron.",
+        },
+      ],
+    });
+    await registerInput(secondInput);
+    const second = await service.nextQuestion(secondInput);
+    const thirdInput = buildInput({
+      cycleId: "question-3",
+      dialogMessages: [
+        {
+          role: "user",
+          content:
+            "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta, no podemos bajar precio, ya probamos webinars y no funcionaron. Hay tension entre comercial y operaciones.",
+        },
+      ],
+    });
+    await registerInput(thirdInput);
+    const third = await service.nextQuestion(thirdInput);
+    const fourthInput = buildInput({
+      cycleId: "question-4",
+      dialogMessages: [
+        {
+          role: "user",
+          content:
+            "El reto es que la venta enterprise tarda mucho. La metrica es ciclo de venta, no podemos bajar precio, ya probamos webinars y no funcionaron. Hay tension entre comercial y operaciones. Esta trabada la decision de cambiar la oferta.",
+        },
+      ],
+    });
+    await registerInput(fourthInput);
+    const fourth = await service.nextQuestion(fourthInput);
 
     expect(first.question?.nextFocus).toBe("intentos previos");
     expect(second.question?.nextFocus).toBe("tensiones internas");
@@ -157,25 +186,46 @@ describe("Diagnostico", () => {
         },
       ],
     });
-    const previous = (await service.complete(buildInput())).diagnosis;
+    await registerInput(input);
+    const previousInput = buildInput({ cycleId: "previous-reinterpret" });
+    await registerInput(previousInput);
+    const previous = (await service.complete(previousInput)).diagnosis;
     const result = await service.reinterpret(input, previous);
 
     expect(result.diagnosis.recommendedChallenge).toContain("confianza");
+    expect(result.changeSummary.changed.length).toBeGreaterThan(0);
+  });
+
+  it("bloquea cierre si faltan piezas criticas antes del maximo", async () => {
+    const input = buildInput({
+      cycleId: "cycle-missing",
+      dialogMessages: [
+        {
+          role: "user",
+          content: "Creo que el problema es cultura.",
+        },
+      ],
+    });
+    await registerInput(input);
+
+    await expect(service.complete(input)).rejects.toBeInstanceOf(
+      DiagnosisClosureError,
+    );
   });
 
   it("versiona diagnosticos y deja auditoria al reinterpretar", async () => {
-    const previous = (await service.complete(buildInput())).diagnosis;
-    await service.reinterpret(
-      buildInput({
+    const base = buildInput();
+    await registerInput(base);
+    const previous = (await service.complete(base)).diagnosis;
+    const reinterpretInput = buildInput({
         correctedSections: [
           {
             section: "causes",
             clarification: "La causa no es falta de demanda; es confianza tardia.",
           },
         ],
-      }),
-      previous,
-    );
+    });
+    await service.reinterpret(reinterpretInput, previous);
 
     const versions = await service.listVersions("cycle-1");
     const events = await service.listAudit("cycle-1");
@@ -187,12 +237,16 @@ describe("Diagnostico", () => {
   });
 
   it("lista memoria de diagnosticos por empresa sin mezclar empresas", async () => {
-    await service.complete(buildInput({ cycleId: "cycle-a" }));
+    const cycleA = buildInput({ cycleId: "cycle-a" });
+    await registerInput(cycleA);
+    await service.complete(cycleA);
+    const cycleB = buildInput({
+      cycleId: "cycle-b",
+      company: { companyId: "other-company", name: "Otra Empresa" },
+    });
+    await registerInput(cycleB);
     await service.complete(
-      buildInput({
-        cycleId: "cycle-b",
-        company: { companyId: "other-company", name: "Otra Empresa" },
-      }),
+      cycleB,
     );
 
     const cycles = await service.listCompanyCycles("company-1");
@@ -276,7 +330,7 @@ function buildInput(
       {
         role: "user",
         content:
-          "El problema declarado es que los clientes tardan mucho en decidir y piden demasiadas reuniones.",
+          "El problema declarado es que los clientes tardan mucho en decidir y piden demasiadas reuniones. La metrica es ciclo de venta y conversion demo-cierre. No podemos bajar precios ni duplicar equipo. Ya probamos webinars y descuentos sin mejora. Hay tension entre comercial y operaciones. Esta trabada la decision de cambiar la oferta. Esperamos reducir ciclo y cerrar sin descuento.",
       },
     ],
     userClarifications: overrides.userClarifications ?? [
@@ -290,4 +344,14 @@ function buildInput(
     previousCycleLearnings: [],
     correctedSections: overrides.correctedSections ?? [],
   };
+}
+
+async function registerInput(input: DiagnosisInput) {
+  await registrationService.create({
+    cycleId: input.cycleId,
+    profileLicense: input.profileLicense,
+    company: input.company,
+    category: input.category,
+    uploadedDocuments: input.uploadedDocuments,
+  });
 }

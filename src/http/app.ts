@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { createDiagnosisEngine } from "../diagnosis/engine.js";
-import { DiagnosisService } from "../diagnosis/service.js";
+import {
+  DiagnosisClosureError,
+  DiagnosisService,
+} from "../diagnosis/service.js";
 import { createRegistrationEngine } from "../registration/engine.js";
 import { RegistrationService } from "../registration/service.js";
 import { diagnosisOutputSchema } from "../contracts/diagnosis.js";
@@ -34,6 +37,12 @@ export function createApp() {
   app.post("/api/registration", async (context) => {
     const body = await context.req.json();
     const result = await registrationService.create(body);
+    return context.json(result);
+  });
+
+  app.post("/api/registration/documents", async (context) => {
+    const body = await context.req.json();
+    const result = await registrationService.uploadDocuments(body);
     return context.json(result);
   });
 
@@ -120,12 +129,26 @@ export function createApp() {
   });
 
   app.onError((error, context) => {
-    const status = error instanceof z.ZodError ? 400 : 500;
+    const status =
+      error instanceof DiagnosisClosureError
+        ? 409
+        : error instanceof z.ZodError
+          ? 400
+          : 500;
 
     return context.json(
       {
-        error: status === 400 ? "invalid_request" : "internal_error",
+        error:
+          status === 400
+            ? "invalid_request"
+            : status === 409
+              ? "diagnosis_not_ready"
+              : "internal_error",
         message: error.message,
+        criticalMissing:
+          error instanceof DiagnosisClosureError
+            ? error.criticalMissing
+            : undefined,
       },
       status,
     );

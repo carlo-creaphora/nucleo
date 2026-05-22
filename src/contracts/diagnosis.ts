@@ -38,6 +38,12 @@ export const categorySchema = z.object({
 export const uploadedDocumentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  mimeType: z.string().optional(),
+  sizeBytes: z.number().int().min(0).optional(),
+  sourceUrl: z.string().url().optional(),
+  extractionStatus: z
+    .enum(["EXTRACTED", "TEXT_PROVIDED", "UNSUPPORTED", "EMPTY"])
+    .optional(),
   summary: z.string().optional(),
   extractedText: z.string().optional(),
 });
@@ -116,8 +122,8 @@ export const diagnosisOutputSchema = z.object({
 
 export type DiagnosisInput = z.infer<typeof diagnosisInputSchema>;
 export type DiagnosisOutput = z.infer<typeof diagnosisOutputSchema>;
+export type UploadedDocument = z.infer<typeof uploadedDocumentSchema>;
 export type DiagnosisQuestionOutput = z.infer<
   typeof diagnosisQuestionOutputSchema
 >;
 export type DiagnosisCorrection = z.infer<typeof diagnosisCorrectionSchema>;
-

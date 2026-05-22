@@ -39,6 +39,8 @@ export class OpenAiRegistrationEngine implements RegistrationEngine {
             "Tu trabajo es preparar contexto limpio para Diagnostico.",
             "Deriva informacion de categoria solo desde notas, documentos y datos declarados.",
             "Construye un marco para evaluar competidores sin concluir quien gana.",
+            "Deja el marco competitivo listo para Senales/Benchmark: ejes, preguntas de senal y brechas de evidencia.",
+            "Marca readiness.isReadyForDiagnosis=false si faltan datos minimos para diagnosticar sin inventar.",
             "Mantente breve, operativo y sin tono motivacional.",
           ].join("\n"),
         },
@@ -119,6 +121,45 @@ export class HeuristicRegistrationEngine implements RegistrationEngine {
         notes: competitorNames.length
           ? competitorNames.map((name) => `Comparar ${name} contra el reto diagnosticado, no contra una lista generica.`)
           : ["Faltan competidores para construir contraste especifico."],
+        comparisonAxes: [
+          "promesa de valor observable",
+          "prueba de confianza o evidencia",
+          "friccion que resuelve antes de compra",
+          "mecanismo de diferenciacion",
+        ],
+        signalQuestions: [
+          "Que afirma cada competidor que el cliente pueda verificar?",
+          "Que evidencia usan para reducir incertidumbre?",
+          "Que parte del proceso de decision parece acelerar o trabar?",
+          "Donde compiten por precio porque no lograron probar valor?",
+        ],
+        evidenceGaps: [
+          competitorNames.length === 3 ? "" : "faltan tres competidores completos",
+          categoryEvidence.length ? "" : "faltan notas o documentos de categoria",
+        ].filter(Boolean),
+      },
+      readiness: {
+        isReadyForDiagnosis:
+          Boolean(input.profileLicense.role) &&
+          Boolean(input.company.name) &&
+          Boolean(input.company.sectorCategory) &&
+          Boolean(input.company.sellsTo) &&
+          Boolean(input.company.revenueModel) &&
+          competitorNames.length > 0,
+        blockingIssues: [
+          input.company.name ? "" : "empresa sin nombre",
+          input.company.sectorCategory ? "" : "sector/categoria faltante",
+          input.company.sellsTo ? "" : "actor comprador no declarado",
+          input.company.revenueModel ? "" : "modelo de cobro no declarado",
+          competitorNames.length > 0 ? "" : "sin competidores para contraste minimo",
+        ].filter(Boolean),
+        warnings: [
+          input.category.averageTicket ? "" : "ticket promedio no declarado",
+          typeof input.category.averageSalesCycleDays === "number"
+            ? ""
+            : "ciclo de venta no declarado",
+          categoryEvidence.length ? "" : "sin evidencia documental o notas de categoria",
+        ].filter(Boolean),
       },
     };
   }

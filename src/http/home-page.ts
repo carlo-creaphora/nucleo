@@ -284,6 +284,25 @@ export function renderHomePage() {
         font-size: 14px;
       }
       .error.active { display: block; }
+      .critical {
+        display: none;
+        margin-bottom: 12px;
+        border: 1px solid #fed7aa;
+        border-radius: 12px;
+        background: #fff7ed;
+        color: #7c2d12;
+        padding: 12px;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .critical.active { display: block; }
+      .critical ul { margin: 8px 0 0; padding-left: 18px; }
+      .document-list {
+        grid-column: 1 / -1;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
       @media (max-width: 920px) {
         .layout, .chat-layout, .grid { grid-template-columns: 1fr; }
         .sidebar { position: static; }
@@ -355,6 +374,8 @@ export function renderHomePage() {
               <label>Competidor 3<input name="competitor3" /></label>
               <label>Web competidor 3<input name="competitor3Web" type="url" /></label>
               <label class="full">Notas de categoría<textarea name="categoryNotes"></textarea></label>
+              <label class="full">Cargar archivos<input id="document-files" name="documentFiles" type="file" multiple /></label>
+              <div id="document-list" class="document-list"></div>
               <label class="full">Documentos o notas cargadas<textarea name="documents" placeholder="Pega aquí resumen de documentos, contexto interno o enlaces relevantes."></textarea></label>
             </form>
             <div class="actions">
@@ -384,6 +405,7 @@ export function renderHomePage() {
               </div>
               <aside class="panel">
                 <h3 style="margin:0 0 12px;">Resultado</h3>
+                <div id="critical-missing" class="critical"></div>
                 <div id="result" class="result">
                   <p style="color: var(--muted); line-height: 1.6;">Cuando cierres el diagnóstico, aquí aparecerán los 10 outputs contratados.</p>
                 </div>
@@ -400,6 +422,7 @@ export function renderHomePage() {
       const state = {
         registration: null,
         registrationRecord: null,
+        uploadedDocuments: [],
         messages: [],
         diagnosis: null,
         correctedSections: [],
@@ -474,6 +497,10 @@ export function renderHomePage() {
           });
           const data = await parseResponse(response);
           state.registrationRecord = data.registration;
+          if (!data.registration.output.readiness.isReadyForDiagnosis) {
+            setError("Registro incompleto: " + data.registration.output.readiness.blockingIssues.join(", "));
+            return;
+          }
           state.registration = data.registration.output.contextForDiagnosis;
           setStep("diagnosis");
           if (state.messages.length === 0) {
@@ -493,6 +520,7 @@ export function renderHomePage() {
       });
       $("send-message").addEventListener("click", sendMessage);
       $("complete-diagnosis").addEventListener("click", completeDiagnosis);
+      $("document-files").addEventListener("change", uploadSelectedDocuments);
       $("result").addEventListener("click", (event) => {
         const button = event.target?.closest?.("[data-clarify-section]");
         if (!button) return;
@@ -522,7 +550,10 @@ export function renderHomePage() {
           [value("competitor2"), value("competitor2Web")],
           [value("competitor3"), value("competitor3Web")]
         ].filter((item) => item[0] && item[1]).map((item) => ({ name: item[0], website: item[1] }));
-        const documents = value("documents") ? [{ id: "doc-1", name: "Notas cargadas", summary: value("documents") }] : [];
+        const documents = [
+          ...state.uploadedDocuments,
+          ...(value("documents") ? [{ id: "doc-notes", name: "Notas cargadas", summary: value("documents"), extractionStatus: "TEXT_PROVIDED" }] : [])
+        ];
 
         return {
           profileLicense: {
@@ -554,6 +585,62 @@ export function renderHomePage() {
           },
           uploadedDocuments: documents
         };
+      }
+
+      async function uploadSelectedDocuments(event) {
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+        setLoading(true);
+        setError("");
+        try {
+          const documents = await Promise.all(files.map(readFileForUpload));
+          const response = await fetch("/api/registration/documents", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ cycleId: state.cycleId, documents })
+          });
+          const data = await parseResponse(response);
+          state.uploadedDocuments = [...state.uploadedDocuments, ...data.documents];
+          renderDocumentList();
+          persistDraft();
+        } catch (error) {
+          setError(error.message || "No se pudieron cargar los documentos.");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function readFileForUpload(file) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve({
+            name: file.name,
+            mimeType: file.type || "application/octet-stream",
+            sizeBytes: file.size,
+            text: typeof reader.result === "string" ? reader.result : ""
+          });
+          reader.onerror = () => resolve({
+            name: file.name,
+            mimeType: file.type || "application/octet-stream",
+            sizeBytes: file.size
+          });
+          if (/text|json|csv|markdown|xml|html|javascript|plain/i.test(file.type) || /\\.(txt|md|csv|json|xml|html)$/i.test(file.name)) {
+            reader.readAsText(file);
+          } else {
+            resolve({
+              name: file.name,
+              mimeType: file.type || "application/octet-stream",
+              sizeBytes: file.size,
+              summary: "Archivo cargado. Extraccion automatica no disponible para este tipo en el demo."
+            });
+          }
+        });
+      }
+
+      function renderDocumentList() {
+        $("document-list").textContent = state.uploadedDocuments.length
+          ? "Archivos cargados: " + state.uploadedDocuments.map((document) => document.name).join(", ")
+          : "";
       }
 
       async function sendMessage() {
@@ -605,8 +692,9 @@ export function renderHomePage() {
             })
           });
           const data = await parseResponse(response);
+          renderCriticalMissing(data.criticalMissing || []);
           renderDiagnosis(data.diagnosis);
-          addMessage("assistant", "Reinterpreté el diagnóstico usando la aclaración de " + target.label + ".");
+          addMessage("assistant", "Reinterpreté el diagnóstico usando la aclaración de " + target.label + ". " + (data.changeSummary?.summary || ""));
         } catch (error) {
           state.correctedSections.pop();
           state.clarificationTarget = target;
@@ -628,6 +716,7 @@ export function renderHomePage() {
             body: JSON.stringify(buildPayload())
           });
           const data = await parseResponse(response);
+          renderCriticalMissing(data.criticalMissing || []);
           if (data.diagnosis) {
             renderDiagnosis(data.diagnosis);
             addMessage("assistant", "Ya tengo suficiente contexto. Cerré el diagnóstico y dejé el resultado a la derecha.");
@@ -655,6 +744,7 @@ export function renderHomePage() {
             body: JSON.stringify(buildPayload())
           });
           const data = await parseResponse(response);
+          renderCriticalMissing(data.criticalMissing || []);
           renderDiagnosis(data.diagnosis);
           addMessage("assistant", "Diagnóstico cerrado. Revisa el reto recomendado y el brief para ideación.");
         } catch (error) {
@@ -736,6 +826,17 @@ export function renderHomePage() {
         persistDraft();
       }
 
+      function renderCriticalMissing(items) {
+        const box = $("critical-missing");
+        if (!items || items.length === 0) {
+          box.innerHTML = "";
+          box.classList.remove("active");
+          return;
+        }
+        box.innerHTML = "<strong>Faltan piezas críticas antes de cerrar</strong><ul>" + items.map((item) => "<li>" + item.key + ": " + item.reason + "</li>").join("") + "</ul>";
+        box.classList.add("active");
+      }
+
       function persistDraft() {
         const formDraft = {};
         if (form) {
@@ -749,6 +850,7 @@ export function renderHomePage() {
           activeStep: state.activeStep,
           registration: state.registration,
           registrationRecord: state.registrationRecord,
+          uploadedDocuments: state.uploadedDocuments,
           messages: state.messages,
           diagnosis: state.diagnosis,
           correctedSections: state.correctedSections,
@@ -766,6 +868,7 @@ export function renderHomePage() {
           if (draft.cycleId) state.cycleId = draft.cycleId;
           if (draft.registration) state.registration = draft.registration;
           if (draft.registrationRecord) state.registrationRecord = draft.registrationRecord;
+          if (Array.isArray(draft.uploadedDocuments)) state.uploadedDocuments = draft.uploadedDocuments;
           if (Array.isArray(draft.messages)) state.messages = draft.messages;
           if (draft.diagnosis) state.diagnosis = draft.diagnosis;
           if (Array.isArray(draft.correctedSections)) state.correctedSections = draft.correctedSections;
@@ -786,6 +889,7 @@ export function renderHomePage() {
             $("messages").appendChild(node);
           }
           if (state.diagnosis) renderDiagnosis(state.diagnosis);
+          renderDocumentList();
           setStep(state.activeStep || (state.registration ? "diagnosis" : "registration"));
         } catch {
           localStorage.removeItem(storageKey);
@@ -794,7 +898,10 @@ export function renderHomePage() {
 
       async function parseResponse(response) {
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || data.error || "Error de API");
+        if (!response.ok) {
+          if (data.criticalMissing) renderCriticalMissing(data.criticalMissing);
+          throw new Error(data.message || data.error || "Error de API");
+        }
         return data;
       }
 

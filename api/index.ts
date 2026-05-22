@@ -1,6 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createDiagnosisEngine } from "../src/diagnosis/engine.js";
-import { DiagnosisService } from "../src/diagnosis/service.js";
+import {
+  DiagnosisClosureError,
+  DiagnosisService,
+} from "../src/diagnosis/service.js";
 import { createRegistrationEngine } from "../src/registration/engine.js";
 import { RegistrationService } from "../src/registration/service.js";
 import { diagnosisOutputSchema } from "../src/contracts/diagnosis.js";
@@ -54,6 +57,11 @@ export default async function handler(
     if (method === "POST" && url.pathname === "/api/registration") {
       const body = await readJson(request);
       return sendJson(response, 200, await registrationService.create(body));
+    }
+
+    if (method === "POST" && url.pathname === "/api/registration/documents") {
+      const body = await readJson(request);
+      return sendJson(response, 200, await registrationService.uploadDocuments(body));
     }
 
     const registrationMatch = /^\/api\/registration\/([^/]+)$/.exec(
@@ -175,11 +183,24 @@ export default async function handler(
     return sendJson(response, 404, { error: "not_found" });
   } catch (error) {
     const status =
-      error instanceof Error && error.name === "ZodError" ? 400 : 500;
+      error instanceof DiagnosisClosureError
+        ? error.status
+        : error instanceof Error && error.name === "ZodError"
+          ? 400
+          : 500;
 
     return sendJson(response, status, {
-      error: status === 400 ? "invalid_request" : "internal_error",
+      error:
+        status === 400
+          ? "invalid_request"
+          : status === 409
+            ? "diagnosis_not_ready"
+            : "internal_error",
       message: error instanceof Error ? error.message : "Unknown error",
+      criticalMissing:
+        error instanceof DiagnosisClosureError
+          ? error.criticalMissing
+          : undefined,
     });
   }
 }
