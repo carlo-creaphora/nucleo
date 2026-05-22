@@ -103,6 +103,7 @@ async function extractByKind(kind: string, buffer: Buffer) {
 }
 
 async function extractPdf(buffer: Buffer) {
+  await ensurePdfCanvasGlobals();
   const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
 
@@ -112,6 +113,17 @@ async function extractPdf(buffer: Buffer) {
   } finally {
     await parser.destroy();
   }
+}
+
+async function ensurePdfCanvasGlobals() {
+  const canvas = await import("@napi-rs/canvas");
+  const globalScope = globalThis as Record<string, unknown>;
+
+  globalScope.DOMMatrix ??= canvas.DOMMatrix;
+  globalScope.DOMPoint ??= canvas.DOMPoint;
+  globalScope.DOMRect ??= canvas.DOMRect;
+  globalScope.ImageData ??= canvas.ImageData;
+  globalScope.Path2D ??= canvas.Path2D;
 }
 
 async function extractDocx(buffer: Buffer) {
