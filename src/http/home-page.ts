@@ -463,12 +463,14 @@ export function renderHomePage() {
       }
       .intro-actions .btn {
         min-height: 48px;
+        border: 0;
         padding: 0 28px;
         border-radius: 9999px;
         background: #05060f;
         box-shadow: 0 18px 50px rgba(5, 6, 15, 0.18);
         font-size: 16px;
         font-weight: 600;
+        line-height: 24px;
       }
       .intro-words {
         width: min(760px, 100%);
@@ -476,6 +478,7 @@ export function renderHomePage() {
         color: rgba(5, 6, 15, 0.3);
         font-size: 14px;
         font-weight: 500;
+        line-height: 20px;
         letter-spacing: 0.08em;
       }
       @keyframes aurora-drift {
