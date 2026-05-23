@@ -124,7 +124,7 @@ export class OpenAiSignalsEngine implements SignalsEngine {
           content: JSON.stringify(
             {
               instruction:
-                "Analiza solo estas senales base. Produce obligatoriamente exactamente 2 gaps y exactamente 2 insights. GAP = diferencia entre estado actual de la empresa y potencial/expectativa/movimiento del mercado. INSIGHT = revelacion sobre comportamiento, motivacion, miedo o deseo del cliente/comprador declarado. Rechaza cualquier salida que solo parafrasee el diagnostico interno.",
+                "Analiza solo estas senales base. Produce obligatoriamente exactamente 2 gaps y exactamente 2 insights. GAP = diferencia entre estado actual de la empresa y potencial/expectativa/movimiento del mercado. INSIGHT = revelacion sobre comportamiento, motivacion, miedo o deseo del cliente/comprador declarado. Rechaza cualquier salida que solo parafrasee el diagnostico interno o que repita un gap con otras palabras.",
               diagnosis: input.ideationInput.diagnosis,
               registration: input.registration,
               buyer: inferBuyer(input),
@@ -417,6 +417,8 @@ function buildSynthesisSystemPrompt() {
     "Si el mercado contradice al usuario o debilita el diagnostico, dilo.",
     "Un gap debe comparar estadoActualEmpresa contra potencialMercado; no puede ser solo una causa interna.",
     "Un insight debe revelar comportamiento, motivacion, miedo o deseo del cliente/comprador; no puede hablar principalmente de la empresa.",
+    "Los insights no pueden repetir el mismo fenomeno de los gaps con otra redaccion. Si un gap habla de costos ocultos, incumplimiento o desconfianza, el insight debe ir a una capa distinta: criterio de compra, temor reputacional, costo politico, aversion al cambio, deseo de control, necesidad de prueba o ritual de decision.",
+    "Cada insight debe responder: que esta intentando proteger o conseguir el cliente que no aparece literalmente en el gap.",
     "Si una frase podria salir solo del diagnostico, rechazala y formula desde mercado/cliente.",
     "Competidores deben analizar promesa visible versus friccion evidenciada.",
     "Debes entregar exactamente 2 gaps y 2 insights. Si la evidencia es debil, marca evidenceBase como indirecta.",
