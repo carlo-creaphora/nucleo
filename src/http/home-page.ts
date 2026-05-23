@@ -36,6 +36,24 @@ export function renderHomePage() {
         margin: 0;
         padding: 0;
       }
+      .shell.splash-mode {
+        display: block;
+        height: 100dvh;
+        min-height: 620px;
+      }
+      .shell.splash-mode .topbar,
+      .shell.splash-mode .sidebar {
+        display: none;
+      }
+      .shell.splash-mode .layout {
+        display: block;
+        height: 100%;
+      }
+      .shell.splash-mode .workspace {
+        display: block;
+        height: 100%;
+        overflow: hidden;
+      }
       .topbar {
         grid-column: 2;
         grid-row: 1;
@@ -174,6 +192,10 @@ export function renderHomePage() {
       }
       .section.splash {
         display: block;
+        width: 100%;
+        height: 100dvh;
+        margin: 0;
+        padding: 0;
       }
       .section.splash.hidden {
         display: none;
@@ -368,27 +390,25 @@ export function renderHomePage() {
       .intro-card {
         position: relative;
         display: grid;
-        gap: 18px;
-        min-height: 360px;
+        gap: 22px;
+        width: 100%;
+        min-height: 100dvh;
         align-content: center;
-        border: 1px solid var(--line);
-        border-radius: 16px;
+        justify-items: center;
+        border: 0;
+        border-radius: 0;
         background:
-          radial-gradient(circle at 85% 12%, rgba(214, 211, 209, 0.62), transparent 24%),
-          linear-gradient(180deg, #ffffff 0%, #faf9f5 100%);
-        margin-bottom: 24px;
+          radial-gradient(circle at 52% 38%, rgba(191, 219, 254, 0.52), transparent 28%),
+          radial-gradient(circle at 50% 76%, rgba(219, 234, 254, 0.68), transparent 18%),
+          linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
+        margin: 0;
         overflow: hidden;
-        padding: clamp(28px, 5vw, 64px);
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        padding: 32px;
+        text-align: center;
+        box-shadow: none;
       }
       .intro-card::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image: radial-gradient(#d6d3d1 0.65px, transparent 0.65px);
-        background-size: 22px 22px;
-        opacity: 0.5;
-        pointer-events: none;
+        content: none;
       }
       .intro-card > * { position: relative; z-index: 1; }
       .intro-eyebrow {
@@ -398,21 +418,37 @@ export function renderHomePage() {
         text-transform: uppercase;
       }
       .intro-card h2 {
-        max-width: 820px;
-        font-size: clamp(44px, 7vw, 96px);
-        line-height: 0.9;
+        max-width: none;
+        font-size: clamp(84px, 10vw, 150px);
+        line-height: 0.86;
         letter-spacing: 0;
+        font-weight: 900;
       }
       .intro-card p {
         max-width: 620px;
-        color: #57534e;
-        font-size: 16px;
-        line-height: 1.65;
+        margin: -4px 0 0;
+        color: #71717a;
+        font-size: clamp(24px, 2vw, 34px);
+        line-height: 1.18;
+        font-weight: 300;
       }
       .intro-actions {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
+        justify-content: center;
+      }
+      .intro-actions .btn {
+        min-height: 46px;
+        padding: 0 28px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .intro-words {
+        color: #c4c1c0;
+        font-size: 13px;
+        font-weight: 650;
+        letter-spacing: 0.04em;
       }
       .signals-layout {
         display: grid;
@@ -789,7 +825,7 @@ export function renderHomePage() {
     </style>
   </head>
   <body>
-    <main class="shell">
+    <main id="app-shell" class="shell splash-mode">
       <header class="topbar">
         <div class="brand">
           <span>Sistema de innovación</span>
@@ -823,12 +859,12 @@ export function renderHomePage() {
         <section class="workspace">
           <div id="splash-section" class="section splash">
             <div class="intro-card">
-              <span class="intro-eyebrow">Núcleo</span>
-              <h2>Diseña una ruta real de innovación.</h2>
-              <p>Registro, diagnóstico, señales e ideación en un flujo guiado para convertir evidencia y tensiones reales en ideas accionables.</p>
+              <h2>Núcleo</h2>
+              <p>Una solución que ayuda a encontrar el reto correcto y convertirlo en acción.</p>
               <div class="intro-actions">
                 <button id="start-clean-demo" class="btn primary" type="button">Iniciar demo</button>
               </div>
+              <div class="intro-words">Diagnostica · Idea · Prueba · Evalúa</div>
             </div>
           </div>
 
@@ -1005,6 +1041,7 @@ export function renderHomePage() {
 
       $("start-clean-demo").addEventListener("click", () => {
         state.started = true;
+        $("app-shell").classList.remove("splash-mode");
         $("splash-section").classList.add("hidden");
         setStep("registration");
         persistDraft();
@@ -1068,6 +1105,7 @@ export function renderHomePage() {
       function setStep(step) {
         if (step !== "splash") {
           state.started = true;
+          $("app-shell").classList.remove("splash-mode");
           $("splash-section").classList.add("hidden");
         }
         state.activeStep = step;
