@@ -172,6 +172,12 @@ export function renderHomePage() {
         margin: 0 auto;
         padding: 28px 0 40px;
       }
+      .section.splash {
+        display: block;
+      }
+      .section.splash.hidden {
+        display: none;
+      }
       .section.active { display: block; }
       .section-head {
         display: flex;
@@ -815,15 +821,18 @@ export function renderHomePage() {
         </aside>
 
         <section class="workspace">
-          <div id="registration-section" class="section active">
+          <div id="splash-section" class="section splash">
             <div class="intro-card">
               <span class="intro-eyebrow">Núcleo</span>
               <h2>Diseña una ruta real de innovación.</h2>
-              <p>Registro, diagnóstico, señales e ideación en un flujo guiado. La visual replica el demo original; la lógica sigue siendo la nueva, limpia y conectada a OpenAI.</p>
+              <p>Registro, diagnóstico, señales e ideación en un flujo guiado para convertir evidencia y tensiones reales en ideas accionables.</p>
               <div class="intro-actions">
-                <button id="fill-demo" class="btn primary" type="button">Iniciar demo</button>
+                <button id="start-clean-demo" class="btn primary" type="button">Iniciar demo</button>
               </div>
             </div>
+          </div>
+
+          <div id="registration-section" class="section">
             <div class="section-head">
               <div>
                 <h2>Registro</h2>
@@ -837,7 +846,7 @@ export function renderHomePage() {
               <label>Cargo<input name="profileRole" required /></label>
               <label>Área<input name="profileArea" required /></label>
               <label>País<input name="profileCountry" required /></label>
-              <label>Personas a cargo<input name="peopleManaged" type="number" min="0" value="0" /></label>
+              <label>Personas a cargo<input name="peopleManaged" type="number" min="0" /></label>
 
               <div class="group-title">Empresa</div>
               <label>Nombre empresa<input name="companyName" required /></label>
@@ -951,7 +960,7 @@ export function renderHomePage() {
     </main>
 
     <script>
-      const storageKey = "nucleo-current-cycle-v3";
+      const storageKey = "nucleo-current-cycle-v4-clean";
 
       const state = {
         registration: null,
@@ -973,7 +982,8 @@ export function renderHomePage() {
         criticalMissing: [],
         correctedSections: [],
         clarificationTarget: null,
-        activeStep: "registration",
+        activeStep: "splash",
+        started: false,
         cycleId: "cycle-" + Date.now()
       };
 
@@ -991,39 +1001,12 @@ export function renderHomePage() {
       const loading = $("loading");
       const errorBox = $("error");
 
-      restoreDraft();
+      resetLegacyDemoState();
 
-      $("fill-demo").addEventListener("click", () => {
-        const data = {
-          profileName: "Ana Gómez",
-          profileEmail: "ana@example.com",
-          profileRole: "Líder Comercial",
-          profileArea: "Comercial",
-          profileCountry: "Colombia",
-          peopleManaged: "4",
-          companyName: "Empresa Demo",
-          sectorCategory: "Servicios B2B",
-          employeeCount: "80",
-          yearsInMarket: "10",
-          operatingCountries: "Colombia",
-          sellsTo: "Empresas medianas",
-          revenueModel: "Mensualidad",
-          website: "https://example.com",
-          acquisitionChannels: "referidos, venta consultiva",
-          averageTicket: "USD 1000",
-          averageSalesCycleDays: "30",
-          competitor1: "Competidor 1",
-          competitor1Web: "https://competidor1.com",
-          competitor2: "Competidor 2",
-          competitor2Web: "https://competidor2.com",
-          competitor3: "Competidor 3",
-          competitor3Web: "https://competidor3.com",
-          categoryNotes: "Los clientes comparan por confianza, casos previos y claridad del retorno antes de comprar.",
-          documents: "Aprendizaje previo: los webinars y descuentos no mejoraron la calidad de leads."
-        };
-        for (const [key, value] of Object.entries(data)) {
-          if (form.elements[key]) form.elements[key].value = value;
-        }
+      $("start-clean-demo").addEventListener("click", () => {
+        state.started = true;
+        $("splash-section").classList.add("hidden");
+        setStep("registration");
         persistDraft();
       });
 
@@ -1083,6 +1066,10 @@ export function renderHomePage() {
       form.addEventListener("input", persistDraft);
 
       function setStep(step) {
+        if (step !== "splash") {
+          state.started = true;
+          $("splash-section").classList.add("hidden");
+        }
         state.activeStep = step;
         $("registration-section").classList.toggle("active", step === "registration");
         $("diagnosis-section").classList.toggle("active", step === "diagnosis");
@@ -2256,56 +2243,24 @@ export function renderHomePage() {
           criticalMissing: state.criticalMissing,
           correctedSections: state.correctedSections,
           clarificationTarget: state.clarificationTarget,
+          started: state.started,
           formDraft
         }));
       }
 
-      function restoreDraft() {
-        const raw = localStorage.getItem(storageKey);
-        if (!raw) return;
-
-        try {
-          const draft = JSON.parse(raw);
-          if (draft.cycleId) state.cycleId = draft.cycleId;
-          if (draft.registration) state.registration = draft.registration;
-          if (draft.registrationRecord) state.registrationRecord = draft.registrationRecord;
-          if (Array.isArray(draft.uploadedDocuments)) state.uploadedDocuments = draft.uploadedDocuments;
-          if (Array.isArray(draft.messages)) state.messages = draft.messages;
-          if (draft.diagnosis) state.diagnosis = draft.diagnosis;
-          if (draft.signals) state.signals = draft.signals;
-          if (draft.ideationOptions) state.ideationOptions = draft.ideationOptions;
-          if (draft.ideationSelection) state.ideationSelection = draft.ideationSelection;
-          if (draft.ideationZoom) state.ideationZoom = draft.ideationZoom;
-          if (draft.ideationPan) state.ideationPan = draft.ideationPan;
-          if (draft.ideation) state.ideation = draft.ideation;
-          if (Array.isArray(draft.ideationSets)) state.ideationSets = draft.ideationSets;
-          if (Array.isArray(draft.criticalMissing)) state.criticalMissing = draft.criticalMissing;
-          if (Array.isArray(draft.correctedSections)) state.correctedSections = draft.correctedSections;
-          if (draft.clarificationTarget) state.clarificationTarget = draft.clarificationTarget;
-          if (draft.activeStep) state.activeStep = draft.activeStep;
-
-          if (draft.formDraft) {
-            for (const [key, value] of Object.entries(draft.formDraft)) {
-              if (form.elements[key]) form.elements[key].value = value;
-            }
+      function resetLegacyDemoState() {
+        for (const key of Object.keys(localStorage)) {
+          if (key.startsWith("nucleo-current-cycle-")) {
+            localStorage.removeItem(key);
           }
-
-          $("messages").innerHTML = "";
-          for (const message of state.messages) {
-            const node = document.createElement("div");
-            node.className = "msg " + message.role;
-            node.textContent = message.content;
-            $("messages").appendChild(node);
-          }
-          if (state.diagnosis) renderDiagnosis(state.diagnosis);
-          renderCriticalMissing(state.criticalMissing || []);
-          if (state.signals) renderSignals(state.signals, false);
-          if (state.ideationOptions) renderIdeationCanvas();
-          renderDocumentList();
-          setStep(state.activeStep || (state.ideation || state.ideationSets.length ? "ideation" : state.signals ? "signals" : state.registration ? "diagnosis" : "registration"));
-        } catch {
-          localStorage.removeItem(storageKey);
         }
+        form.reset();
+        $("messages").innerHTML = "";
+        $("result").innerHTML = '<p style="color: var(--muted); line-height: 1.6;">Cuando cierres el diagnóstico, aquí aparecerán los outputs contratados.</p>';
+        $("signals-result").innerHTML = '<p style="color: var(--muted); line-height: 1.6;">Confirma el diagnóstico para ejecutar Señales.</p>';
+        $("ideation-canvas").innerHTML = '<p style="color: var(--muted); line-height: 1.6;">Consulta Señales para cargar rutas, gaps e insights.</p>';
+        $("ideation-result").innerHTML = "";
+        renderDocumentList();
       }
 
       async function parseResponse(response) {
