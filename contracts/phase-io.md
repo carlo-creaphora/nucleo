@@ -220,6 +220,7 @@ Metodo:
 - Ejecutar busquedas reales y explicitas por lente: social listening, tendencias, competidores y customer insight.
 - Social listening, tendencias y competidores alimentan principalmente gaps.
 - Customer insight alimenta insights y busca motivaciones, deseos, verdades incomodas, riesgos politicos, miedo reputacional, criterios de compra, aversion al cambio, necesidad de control y rituales de decision del comprador declarado.
+- Customer insight debe usar un mapa de compradores derivado de `a quien vende`, categoria y notas para expandir comprador, actores de presion, motivaciones, disparadores de decision y terminos de busqueda.
 - Cada busqueda debe ser agresiva y orientada a fricciones, contradicciones, senales negativas o motivaciones ocultas del comprador.
 - Extraer maximo 5 evidencias textuales por lente.
 - Rankear evidencias por utilidad para Ideacion.

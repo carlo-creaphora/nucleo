@@ -19,6 +19,113 @@ const evidenceResponseSchema = z.object({
 
 type EvidenceWithoutId = z.infer<typeof evidenceResponseSchema>["signals"][number];
 
+type BuyerMapEntry = {
+  id: string;
+  patterns: RegExp[];
+  buyers: string[];
+  pressureActors: string[];
+  motivations: string[];
+  decisionTriggers: string[];
+  searchTerms: string[];
+};
+
+type BuyerMapMatch = {
+  buyers: string[];
+  pressureActors: string[];
+  motivations: string[];
+  decisionTriggers: string[];
+  searchTerms: string[];
+};
+
+const BUYER_MAP: BuyerMapEntry[] = [
+  {
+    id: "building-property-management",
+    patterns: [
+      /ascensor|elevator|edificio|copropiedad|propiedad horizontal|centro comercial|mall|facility|mantenimiento/i,
+    ],
+    buyers: [
+      "administradores de edificios",
+      "administradores de centros comerciales",
+      "property managers",
+      "facility managers",
+      "comites de copropiedad",
+      "responsables de mantenimiento",
+    ],
+    pressureActors: [
+      "residentes",
+      "arrendatarios",
+      "visitantes",
+      "juntas o comites",
+      "gerencia del inmueble",
+      "reguladores",
+    ],
+    motivations: [
+      "reducir exposicion ante reclamos",
+      "evitar quedar como responsable visible de fallas",
+      "mantener continuidad operativa",
+      "tener evidencia defendible de gestion",
+      "sentir control sin depender de promesas del proveedor",
+    ],
+    decisionTriggers: [
+      "aprobacion de junta",
+      "renovacion o cambio de proveedor",
+      "incidentes repetidos",
+      "quejas de residentes o arrendatarios",
+      "riesgo de seguridad o cumplimiento",
+      "necesidad de reportes trazables",
+    ],
+    searchTerms: [
+      "property manager vendor selection maintenance",
+      "facility manager maintenance reporting expectations",
+      "building manager tenant complaints maintenance",
+      "administradores edificios reclamos mantenimiento proveedor",
+      "administrador centro comercial mantenimiento reclamos arrendatarios",
+      "cambiar proveedor mantenimiento edificio riesgos",
+      "elevator maintenance complaints property manager",
+      "mantenimiento ascensores reclamos residentes administracion",
+    ],
+  },
+  {
+    id: "b2b-buyers",
+    patterns: [/b2b|empresa|corporativo|enterprise|negocio|cliente empresarial/i],
+    buyers: [
+      "compradores empresariales",
+      "decisores de area",
+      "usuarios operadores",
+      "responsables de implementacion",
+      "finanzas o compras",
+    ],
+    pressureActors: [
+      "direccion",
+      "usuarios internos",
+      "compras",
+      "finanzas",
+      "operaciones",
+    ],
+    motivations: [
+      "justificar la decision ante la organizacion",
+      "reducir riesgo de implementacion",
+      "evitar costos ocultos",
+      "proteger continuidad operativa",
+      "mostrar retorno o control",
+    ],
+    decisionTriggers: [
+      "comite de compra",
+      "prueba piloto",
+      "renovacion presupuestal",
+      "riesgo de adopcion interna",
+      "comparacion de proveedores",
+    ],
+    searchTerms: [
+      "B2B vendor selection criteria risk",
+      "enterprise buyer switching vendor concerns",
+      "software implementation buyer risk hidden costs",
+      "comprador empresarial criterios seleccion proveedor",
+      "cambio de proveedor B2B riesgos implementacion",
+    ],
+  },
+];
+
 export type SignalsEngine = {
   generate(input: SignalsInput): Promise<SignalsOutput>;
 };
@@ -462,17 +569,22 @@ function buildSearchSystemPrompt(lens: SignalLens) {
   return shared.join(" ");
 }
 
+export function buildSearchUserPromptForTest(input: SignalsInput, lens: SignalLens) {
+  return buildSearchUserPrompt(input, lens);
+}
+
 function buildSearchUserPrompt(input: SignalsInput, lens: SignalLens) {
   const context = input.registration.contextForDiagnosis;
+  const buyerMap = inferBuyerMap(input);
   const competitors = context.category.competitors
     .map((competitor) => `${competitor.name} ${competitor.website}`)
     .join(" | ");
 
-  return [
+  const lines = [
     `Lente a buscar: ${lens}`,
     `Categoria: ${context.company.sectorCategory}`,
     `Comprador/cliente declarado: ${context.company.sellsTo}`,
-    `Comprador inferido para busqueda: ${inferBuyer(input)}`,
+    `Comprador inferido para busqueda: ${buyerMap.buyers.join(", ")}`,
     `Modelo de cobro: ${context.company.revenueModel}`,
     `Paises/regiones: ${context.company.operatingCountries.join(", ") || context.profileLicense.country}`,
     `Competidores declarados: ${competitors || "No informados"}`,
@@ -485,11 +597,25 @@ function buildSearchUserPrompt(input: SignalsInput, lens: SignalLens) {
     "",
     "Objetivo: encontrar la diferencia entre el estado actual de la empresa y el potencial del mercado, y descubrir comportamiento/motivacion/deseo del comprador.",
     "No devuelvas causas internas que ya declaro el perfil como si fueran senales.",
-    lens === "CUSTOMER_INSIGHT"
-      ? "Para este lente, busca solo motivaciones, deseos, verdades ocultas, temores, criterios de decision y riesgos percibidos del comprador."
-      : "Para este lente, busca potencial de mercado, fricciones externas, promesas competitivas o expectativas nuevas.",
-    "Devuelve maximo 5 senales. Prefiere menos senales, pero mas utiles.",
-  ].join("\n");
+  ];
+
+  if (lens === "CUSTOMER_INSIGHT") {
+    lines.push(
+      "Para este lente, busca solo motivaciones, deseos, verdades ocultas, temores, criterios de decision y riesgos percibidos del comprador.",
+      `Actores que presionan al comprador: ${buyerMap.pressureActors.join(", ")}`,
+      `Motivaciones a investigar: ${buyerMap.motivations.join(" | ")}`,
+      `Disparadores de decision: ${buyerMap.decisionTriggers.join(" | ")}`,
+      `Terminos sugeridos de busqueda: ${buyerMap.searchTerms.join(" | ")}`,
+    );
+  } else {
+    lines.push(
+      "Para este lente, busca potencial de mercado, fricciones externas, promesas competitivas o expectativas nuevas.",
+    );
+  }
+
+  lines.push("Devuelve maximo 5 senales. Prefiere menos senales, pero mas utiles.");
+
+  return lines.join("\n");
 }
 
 function buildGapSynthesisSystemPrompt() {
@@ -565,6 +691,10 @@ function rankEvidence(signals: Omit<SignalEvidence, "id">[]) {
 }
 
 function inferBuyer(input: SignalsInput) {
+  return inferBuyerMap(input).buyers.join(", ");
+}
+
+function inferBuyerMap(input: SignalsInput): BuyerMapMatch {
   const context = input.registration.contextForDiagnosis;
   const text = [
     context.company.sectorCategory,
@@ -577,15 +707,44 @@ function inferBuyer(input: SignalsInput) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-  if (text.includes("ascensor") || text.includes("elevator")) {
-    return "administradores de edificios, property managers, facility managers, comites de copropiedad y responsables de mantenimiento";
+  const matches = BUYER_MAP.filter((entry) =>
+    entry.patterns.some((pattern) => pattern.test(text)),
+  );
+
+  if (matches.length === 0) {
+    return {
+      buyers: [context.company.sellsTo],
+      pressureActors: ["usuarios finales", "decisores", "compras", "operaciones"],
+      motivations: [
+        "reducir riesgo de decision",
+        "justificar la compra",
+        "evitar costos ocultos",
+        "mantener control sobre el resultado",
+      ],
+      decisionTriggers: [
+        "comparacion de proveedores",
+        "necesidad de evidencia",
+        "presion por resolver un problema visible",
+      ],
+      searchTerms: [
+        `${context.company.sellsTo} criterios compra proveedor`,
+        `${context.company.sellsTo} cambiar proveedor riesgos`,
+        `${context.company.sellsTo} vendor selection criteria`,
+      ],
+    };
   }
 
-  if (text.includes("b2b")) {
-    return "compradores empresariales, usuarios operadores, decisores de area y responsables de implementar el servicio";
-  }
+  return {
+    buyers: unique(matches.flatMap((entry) => entry.buyers)),
+    pressureActors: unique(matches.flatMap((entry) => entry.pressureActors)),
+    motivations: unique(matches.flatMap((entry) => entry.motivations)),
+    decisionTriggers: unique(matches.flatMap((entry) => entry.decisionTriggers)),
+    searchTerms: unique(matches.flatMap((entry) => entry.searchTerms)),
+  };
+}
 
-  return context.company.sellsTo;
+function unique(items: string[]) {
+  return Array.from(new Set(items.filter(Boolean)));
 }
 
 export function createSignalsEngine() {

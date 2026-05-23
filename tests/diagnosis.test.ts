@@ -10,7 +10,10 @@ import { buildDiagnosisSystemPrompt } from "../src/diagnosis/prompt.js";
 import { RegistrationService } from "../src/registration/service.js";
 import { HeuristicRegistrationEngine } from "../src/registration/engine.js";
 import { SignalsService } from "../src/signals/service.js";
-import { HeuristicSignalsEngine } from "../src/signals/engine.js";
+import {
+  HeuristicSignalsEngine,
+  buildSearchUserPromptForTest,
+} from "../src/signals/engine.js";
 import { FileStore } from "../src/storage/file-store.js";
 import type { DiagnosisInput } from "../src/contracts/diagnosis.js";
 
@@ -390,6 +393,41 @@ describe("Diagnostico", () => {
     expect(signalsIdeationInput?.insights).toHaveLength(2);
     expect(signalsIdeationInput?.evidence.length).toBeGreaterThan(0);
     expect(signalsIdeationInput?.companyId).toBe(input.company.companyId);
+  });
+
+  it("usa mapa de clientes para orientar busqueda de customer insight", async () => {
+    const input = buildInput({
+      cycleId: "cycle-buyer-map",
+      company: {
+        sectorCategory: "Mantenimiento de ascensores",
+        sellsTo: "Administradores de edificios y centros comerciales",
+      },
+      category: {
+        averageTicket: "USD 1200 mensual",
+        averageSalesCycleDays: 45,
+        competitors: [
+          { name: "Competidor 1", website: "https://competidor1.com" },
+          { name: "Competidor 2", website: "https://competidor2.com" },
+          { name: "Competidor 3", website: "https://competidor3.com" },
+        ],
+        notes:
+          "Compradores con presion de residentes, comites y arrendatarios.",
+      },
+    });
+    await registerInput(input);
+    await service.complete(input);
+
+    const signalsInput = await signalsService.buildInput(input.cycleId);
+    const prompt = buildSearchUserPromptForTest(
+      signalsInput,
+      "CUSTOMER_INSIGHT",
+    );
+
+    expect(prompt).toContain("administradores de edificios");
+    expect(prompt).toContain("administradores de centros comerciales");
+    expect(prompt).toContain("residentes");
+    expect(prompt).toContain("responsable visible");
+    expect(prompt).toContain("maintenance reporting");
   });
 
   it("bloquea Senales si Diagnostico no esta cerrado", async () => {
