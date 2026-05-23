@@ -332,7 +332,8 @@ export function renderHomePage() {
         position: relative;
         height: min(760px, calc(100vh - 170px));
         min-height: 620px;
-        overflow: auto;
+        overflow: hidden;
+        touch-action: none;
         cursor: grab;
         border: 1px solid rgba(5, 6, 15, 0.12);
         border-radius: 18px;
@@ -343,9 +344,10 @@ export function renderHomePage() {
       }
       .ideation-flow-viewport {
         width: 920px;
-        margin: 72px auto 120px;
-        transform-origin: top center;
-        transition: transform 180ms ease;
+        margin: 72px 0 120px;
+        transform-origin: top left;
+        transition: none;
+        will-change: transform;
       }
       .ideation-flow-frame.dragging {
         cursor: grabbing;
@@ -538,13 +540,24 @@ export function renderHomePage() {
       }
       .idea-set-board {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: center;
         align-items: flex-start;
         gap: 20px;
       }
       .idea-set {
-        width: min(760px, 100%);
+        flex: 0 0 560px;
+        width: 560px;
+      }
+      .workflow-node.output-node {
+        left: 50%;
+        transform: translateX(-50%);
+        width: max-content;
+        max-width: none;
+      }
+      .workflow-node.output-node .workflow-shell,
+      .workflow-node.output-node .workflow-inner {
+        width: max-content;
       }
       .idea-card-head {
         display: flex;
@@ -1373,7 +1386,7 @@ export function renderHomePage() {
         frame.className = "ideation-flow-frame";
         const viewport = document.createElement("div");
         viewport.className = "ideation-flow-viewport";
-        viewport.style.transform = "translate(" + state.ideationPan.x + "px, " + state.ideationPan.y + "px) scale(" + state.ideationZoom + ")";
+        applyCanvasTransform(frame, viewport);
         attachCanvasNavigation(frame);
 
         viewport.appendChild(renderWorkflowNode({
@@ -1393,12 +1406,8 @@ export function renderHomePage() {
               state.ideationSelection.gapTitle = null;
               state.ideationSelection.insightTitle = null;
               state.ideationZoom = 0.76;
-              state.ideationPan = { x: 0, y: 0 };
+              state.ideationPan = { x: 0, y: -150 };
               renderIdeationCanvas();
-              setTimeout(() => {
-                const currentFrame = $("ideation-canvas").querySelector(".ideation-flow-frame");
-                if (currentFrame) currentFrame.scrollTo({ top: 220, behavior: "smooth" });
-              }, 80);
               persistDraft();
             }
           }))
@@ -1468,6 +1477,7 @@ export function renderHomePage() {
         frame.appendChild(viewport);
         frame.appendChild(renderFlowControls());
         canvas.appendChild(frame);
+        applyCanvasTransform(frame, viewport);
       }
 
       function renderWorkflowNode(data) {
@@ -1667,38 +1677,59 @@ export function renderHomePage() {
         let dragging = false;
         let startX = 0;
         let startY = 0;
-        let startScrollLeft = 0;
-        let startScrollTop = 0;
+        let startPan = { x: 0, y: 0 };
 
         frame.addEventListener("pointerdown", (event) => {
           if (event.target.closest("button, input, textarea, a, label")) return;
           dragging = true;
           startX = event.clientX;
           startY = event.clientY;
-          startScrollLeft = frame.scrollLeft;
-          startScrollTop = frame.scrollTop;
+          startPan = { ...state.ideationPan };
           frame.classList.add("dragging");
           frame.setPointerCapture(event.pointerId);
         });
         frame.addEventListener("pointermove", (event) => {
           if (!dragging) return;
-          frame.scrollLeft = startScrollLeft - (event.clientX - startX);
-          frame.scrollTop = startScrollTop - (event.clientY - startY);
+          state.ideationPan = {
+            x: startPan.x + event.clientX - startX,
+            y: startPan.y + event.clientY - startY
+          };
+          const viewport = frame.querySelector(".ideation-flow-viewport");
+          if (viewport) applyCanvasTransform(frame, viewport);
         });
         frame.addEventListener("pointerup", (event) => {
           dragging = false;
           frame.classList.remove("dragging");
           try { frame.releasePointerCapture(event.pointerId); } catch {}
+          persistDraft();
         });
         frame.addEventListener("wheel", (event) => {
-          if (!event.ctrlKey && Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
           event.preventDefault();
-          const next = Math.min(1.18, Math.max(0.52, state.ideationZoom - event.deltaY * 0.001));
-          state.ideationZoom = Number(next.toFixed(2));
           const viewport = frame.querySelector(".ideation-flow-viewport");
-          if (viewport) viewport.style.transform = "translate(" + state.ideationPan.x + "px, " + state.ideationPan.y + "px) scale(" + state.ideationZoom + ")";
+          if (!viewport) return;
+          const previousZoom = state.ideationZoom;
+          const nextZoom = Number(Math.min(1.22, Math.max(0.48, previousZoom - event.deltaY * 0.001)).toFixed(2));
+          if (nextZoom === previousZoom) return;
+          const frameRect = frame.getBoundingClientRect();
+          const viewportWidth = viewport.offsetWidth;
+          const baseX = Math.max(0, (frame.clientWidth - viewportWidth) / 2);
+          const cursorX = event.clientX - frameRect.left;
+          const cursorY = event.clientY - frameRect.top;
+          const worldX = (cursorX - baseX - state.ideationPan.x) / previousZoom;
+          const worldY = (cursorY - 72 - state.ideationPan.y) / previousZoom;
+          state.ideationZoom = nextZoom;
+          state.ideationPan = {
+            x: cursorX - baseX - worldX * nextZoom,
+            y: cursorY - 72 - worldY * nextZoom
+          };
+          applyCanvasTransform(frame, viewport);
           persistDraft();
         }, { passive: false });
+      }
+
+      function applyCanvasTransform(frame, viewport) {
+        const baseX = Math.max(0, (frame.clientWidth - viewport.offsetWidth) / 2);
+        viewport.style.transform = "translate(" + (baseX + state.ideationPan.x) + "px, " + state.ideationPan.y + "px) scale(" + state.ideationZoom + ")";
       }
 
       function renderFlowControls() {
