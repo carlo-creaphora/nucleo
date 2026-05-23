@@ -1667,10 +1667,10 @@ export function renderHomePage() {
         selector.append(checkbox, document.createTextNode("Evaluar"));
         head.append(title, selector);
         card.appendChild(head);
-        appendIdeaField(card, "Supuesto que rompe", idea.supuestoQueRompe);
-        appendIdeaField(card, "Mecánica concreta", idea.mecanicaConcreta);
+        appendIdeaField(card, "Supuesto que rompe", cleanAssumptionForDisplay(idea.supuestoQueRompe));
+        appendIdeaField(card, "Mecánica concreta", cleanCompactTextForDisplay(idea.mecanicaConcreta, 2));
         if (idea.source !== "user") {
-          appendIdeaField(card, "Por qué funciona", idea.porQueFunciona);
+          appendIdeaField(card, "Por qué funciona", cleanCompactTextForDisplay(idea.porQueFunciona, 2));
           appendIdeaField(card, "Caso análogo", idea.casoAnalogo);
           appendIdeaField(card, "Métrica que mueve", idea.metricaQueMueve);
           appendIdeaField(card, "Primer paso ejecutable", idea.primerPasoEjecutable);
@@ -1969,9 +1969,9 @@ export function renderHomePage() {
           const title = document.createElement("h3");
           title.textContent = idea.idea;
           card.appendChild(title);
-          appendIdeaField(card, "Supuesto que rompe", idea.supuestoQueRompe);
-          appendIdeaField(card, "Mecánica concreta", idea.mecanicaConcreta);
-          appendIdeaField(card, "Por qué funciona", idea.porQueFunciona);
+          appendIdeaField(card, "Supuesto que rompe", cleanAssumptionForDisplay(idea.supuestoQueRompe));
+          appendIdeaField(card, "Mecánica concreta", cleanCompactTextForDisplay(idea.mecanicaConcreta, 2));
+          appendIdeaField(card, "Por qué funciona", cleanCompactTextForDisplay(idea.porQueFunciona, 2));
           appendIdeaField(card, "Caso análogo", idea.casoAnalogo);
           appendIdeaField(card, "Métrica que mueve", idea.metricaQueMueve);
           appendIdeaField(card, "Primer paso ejecutable", idea.primerPasoEjecutable);
@@ -1994,6 +1994,29 @@ export function renderHomePage() {
           field.appendChild(text);
         }
         card.appendChild(field);
+      }
+
+      function cleanAssumptionForDisplay(value) {
+        const cleaned = String(value || "")
+          .trim()
+          .replace(/^supuesto\s+que\s+rompe\s*:\s*/i, "")
+          .replace(/^rompe\s+(?:el\s+)?supuesto\s+de\s+que\s+/i, "")
+          .replace(/^rompe\s+(?:la\s+)?creencia\s+de\s+que\s+/i, "")
+          .replace(/^el\s+supuesto\s+que\s+rompe\s+es\s+que\s+/i, "")
+          .replace(/^la\s+creencia\s+que\s+rompe\s+es\s+que\s+/i, "");
+        return uppercaseFirst(cleanCompactTextForDisplay(cleaned, 1));
+      }
+
+      function cleanCompactTextForDisplay(value, maxSentences) {
+        const cleaned = String(value || "").replace(/\s+/g, " ").trim();
+        const sentences = cleaned.match(/[^.!?]+[.!?]?/g);
+        if (!sentences) return cleaned;
+        return sentences.slice(0, maxSentences).join(" ").replace(/\s+/g, " ").trim();
+      }
+
+      function uppercaseFirst(value) {
+        const trimmed = String(value || "").trim();
+        return trimmed ? trimmed[0].toUpperCase() + trimmed.slice(1) : trimmed;
       }
 
       function renderSignalsSources(signals) {
