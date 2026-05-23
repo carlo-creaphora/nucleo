@@ -38,7 +38,7 @@ export function renderHomePage() {
       }
       .shell.splash-mode {
         display: block;
-        height: 100dvh;
+        height: 100vh;
         min-height: 620px;
       }
       .shell.splash-mode .topbar,
@@ -392,20 +392,31 @@ export function renderHomePage() {
         display: grid;
         gap: 22px;
         width: 100%;
-        min-height: 100dvh;
+        min-height: 100vh;
         align-content: center;
         justify-items: center;
         border: 0;
         border-radius: 0;
-        background:
-          radial-gradient(circle at 52% 38%, rgba(191, 219, 254, 0.52), transparent 28%),
-          radial-gradient(circle at 50% 76%, rgba(219, 234, 254, 0.68), transparent 18%),
-          linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
+        background: #fff;
+        isolation: isolate;
         margin: 0;
         overflow: hidden;
         padding: 32px;
         text-align: center;
         box-shadow: none;
+      }
+      .intro-card::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse 42% 66% at 50% 36%, rgba(209, 224, 252, 0.82) 0%, rgba(227, 236, 253, 0.48) 38%, rgba(255, 255, 255, 0) 70%),
+          radial-gradient(ellipse 22% 24% at 50% 78%, rgba(220, 233, 254, 0.68) 0%, rgba(255, 255, 255, 0) 74%),
+          #fff;
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
       }
       .intro-card::after {
         content: none;
@@ -820,7 +831,7 @@ export function renderHomePage() {
         .msg { max-width: 100%; }
         .ideation-flow-viewport, .workflow-node { width: min(760px, calc(100vw - 72px)); }
         .workflow-prompt { font-size: 24px; }
-        .intro-card { min-height: 320px; }
+        .intro-card { min-height: 100vh; }
       }
     </style>
   </head>
