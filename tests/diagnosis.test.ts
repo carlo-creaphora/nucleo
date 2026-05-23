@@ -647,7 +647,8 @@ describe("Diagnostico", () => {
     expect(reviewPrompt).toContain("No bloquees por palabras sueltas");
     expect(reviewPrompt).toContain("modelo de la idea");
     expect(prompt).toContain("mandatoryCaseScreening");
-    expect(prompt).toContain("una referencia distinta por idea");
+    expect(prompt).toContain("Generar exactamente 1 idea");
+    expect(prompt).toContain("referencia principal");
     expect(prompt).toContain("Cruzar cada idea contra antipatrones");
     expect(prompt).toContain("No copiar el caso");
     expect(prompt).not.toContain("prototypeBrief");
@@ -742,6 +743,8 @@ function buildIdeationOutputForTest(
       disruptiveCaseName: "IKEA Cook this Page",
     },
     ...override,
+    source: override.source ?? "ai",
+    selectedForEvaluation: override.selectedForEvaluation ?? false,
   };
 
   return {

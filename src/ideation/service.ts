@@ -45,7 +45,7 @@ export class IdeationService {
       stage: "IDEATION",
       action: existing ? "IDEATION_REGENERATED" : "IDEATION_GENERATED",
       summary:
-        "Ideacion genero 3 ideas desde ruptura, gap, insight y knowledge pack limpio.",
+        "Ideacion genero 1 idea desde ruptura, gap, insight y knowledge pack limpio.",
       metadata: {
         ideas: output.ideas.length,
         gaps: input.signalsHandoff.gaps.length,

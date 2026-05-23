@@ -42,7 +42,7 @@ const ideationConceptReviewSchema = z.object({
       antiPatternTitle: z.string().min(3).optional(),
       requiredReframe: z.string().min(12).optional(),
     }),
-  ).length(3),
+  ).min(1).max(4),
 });
 
 type IdeationConceptReview = z.infer<typeof ideationConceptReviewSchema>;
@@ -154,7 +154,7 @@ export class OpenAiIdeationEngine implements IdeationEngine {
   ) {
     return this.runStructured({
       instruction:
-        "Repara la ideacion por incumplimiento contractual. No cambies gap, insight, tipo de ruptura ni los casos ya seleccionados en caseScreening. Reformula solo las ideas afectadas y conserva exactamente 3 ideas.",
+        "Repara la ideacion por incumplimiento contractual. No cambies gap, insight, tipo de ruptura ni los casos ya seleccionados en caseScreening. Reformula solo la idea afectada y conserva exactamente 1 idea.",
       violations,
       mandatoryCaseScreening: caseScreening,
       originalOutput: output,
@@ -321,13 +321,13 @@ export function buildIdeationSystemPrompt() {
     "",
     "PROCESO INTERNO OBLIGATORIO",
     "1. Releer mandatoryCaseScreening antes de escribir cualquier idea.",
-    "2. Usar exactamente las 3 referencias seleccionadas: una referencia distinta por idea.",
+    "2. Usar las referencias seleccionadas como base; la idea final debe nacer de una referencia principal y puede apoyarse en las otras.",
     "3. Traducir el mecanismo transferible, no copiar el caso ni presentarlo como biblioteca.",
     "4. Cruzar cada reinterpretacion con supuestos por industria: cada idea debe romper un supuesto explicitamente.",
     "5. Cruzar cada idea contra antipatrones antes de responder. Si coincide con D3 Solucion antes que problema o D4 Beneficio sin mecanica, esta prohibida.",
     "6. No basta decir el beneficio: la mecanica concreta debe incluir actor, objeto/ritual/interaccion, regla de uso, frecuencia o momento. El piloto va solo en primerPasoEjecutable.",
     "7. Usar modelos de negocio raros solo como apoyo cuando mejoren la mecanica; no los presentes como idea abstracta.",
-    "8. Formular exactamente 3 ideas, cada una prototipable en un piloto acotado.",
+    "8. Formular exactamente 1 idea prototipable en un piloto acotado para la ruta seleccionada.",
     "",
     "CRITERIO PARA USAR CASOS DISRUPTIVOS",
     "- Preferir transferencia de mecanismo sobre similitud superficial de industria.",
@@ -344,10 +344,10 @@ export function buildIdeationSystemPrompt() {
     "No mezclar rutas: una idea moderada no debe cambiar quien paga; una fuerte debe tocar una pieza del modelo, regla, incentivo o forma de decidir; una radical debe negar un supuesto industrial explicito.",
     "",
     "FORMATO DE IDEAS",
-    "Generar exactamente 3 ideas para la ruta seleccionada.",
-    "Cada idea debe derivarse del gap seleccionado, insight seleccionado, reto recomendado, restricciones, tensiones y evidencias usadas.",
-    "Cada idea debe tener exactamente esta estructura visible y en este orden:",
-    "1. idea: debe empezar con 'Idea N. [nombre distintivo]: [descripcion corta]'",
+    "Generar exactamente 1 idea para la ruta seleccionada.",
+    "La idea debe derivarse del gap seleccionado, insight seleccionado, reto recomendado, restricciones, tensiones y evidencias usadas.",
+    "La idea debe tener exactamente esta estructura visible y en este orden:",
+    "1. idea: debe empezar con 'Idea 1. [nombre distintivo]: [descripcion corta]'",
     "2. supuestoQueRompe: contenido de 'Supuesto que rompe:'",
     "3. mecanicaConcreta: contenido de 'Mecanica concreta:'",
     "4. porQueFunciona: contenido de 'Por que funciona:'",
@@ -360,7 +360,7 @@ export function buildIdeationSystemPrompt() {
     "antiPatronesAEvitar debe estar escrito para el usuario final, sin codigos internos como D3, D4 o textos entre parentesis tipo '(evitar D4)'.",
     "",
     "SALIDA INTERNA",
-    "En internal.caseScreening.translatedCaseReferences copia las 3 referencias de mandatoryCaseScreening ya reinterpretadas, sin inventar otras nuevas.",
+    "En internal.caseScreening.translatedCaseReferences copia las referencias de mandatoryCaseScreening ya reinterpretadas, sin inventar otras nuevas.",
   ].join("\n");
 }
 
@@ -456,7 +456,7 @@ export function buildConceptReviewSystemPrompt() {
     "- D4 Beneficio sin mecanica falla cuando promete un resultado sin explicar la mecanica concreta que lo produce.",
     "",
     "SALIDA",
-    "Devuelve passed=true solo si las 3 ideas pasan conceptualmente.",
+    "Devuelve passed=true solo si todas las ideas pasan conceptualmente.",
   ].join("\n");
 }
 
@@ -515,7 +515,7 @@ function buildIdeationUserPayload(
 
   return {
     instruction:
-      "Genera exactamente 3 ideas para la seleccion usando mandatoryCaseScreening. No hagas scouting nuevo de casos en esta etapa: traduce cada caso seleccionado en una idea concreta y evita los anti-patrones marcados.",
+      "Genera exactamente 1 idea para la seleccion usando mandatoryCaseScreening. No hagas scouting nuevo de casos en esta etapa: traduce el caso con mayor potencia en una idea concreta y evita los anti-patrones marcados.",
     selection: input.selection,
     expectedRoute: buildRoute(
       input.selection.ruptureType,

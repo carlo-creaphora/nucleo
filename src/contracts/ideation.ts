@@ -172,6 +172,8 @@ export const ideationRouteSchema = z.object({
 export const ideationIdeaSchema = z.object({
   id: z.string().min(1),
   routeId: z.string().min(1),
+  source: z.enum(["ai", "user"]).default("ai"),
+  selectedForEvaluation: z.boolean().default(false),
   idea: z.string().min(8),
   supuestoQueRompe: z.string().min(20),
   mecanicaConcreta: z.string().min(40),
@@ -191,7 +193,7 @@ export const ideationIdeaSchema = z.object({
 export const ideationOutputSchema = z.object({
   generatedAt: z.string().datetime(),
   route: ideationRouteSchema,
-  ideas: z.array(ideationIdeaSchema).length(3),
+  ideas: z.array(ideationIdeaSchema).min(1).max(4),
   internal: z.object({
     caseScreening: z.object({
       translatedCaseReferences: z.array(
@@ -201,7 +203,7 @@ export const ideationOutputSchema = z.object({
           reinterpretationForThisIdea: z.string().min(20),
           caveat: z.string().min(8),
         }),
-      ).length(3),
+      ).min(1).max(4),
       rejectedCaseFamilies: z.array(z.string().min(8)).default([]),
     }),
     consultedKnowledge: z.object({
