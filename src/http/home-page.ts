@@ -5,6 +5,9 @@ export function renderHomePage() {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Nucleo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@200;400;500;600;900&display=swap" rel="stylesheet" />
     <style>
       :root {
         --ink: #09090b;
@@ -20,9 +23,9 @@ export function renderHomePage() {
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        font-family: "Geist", "Geist Fallback", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         color: var(--ink);
-        background: #faf9f5;
+        background: linear-gradient(#fff, #f8fafc 44%, #f1f5f9);
       }
       button, input, textarea { font: inherit; }
       button { cursor: pointer; }
@@ -389,15 +392,16 @@ export function renderHomePage() {
       }
       .intro-card {
         position: relative;
-        display: grid;
-        gap: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
         width: 100%;
         min-height: 100vh;
-        align-content: center;
-        justify-items: center;
+        align-items: center;
+        justify-content: center;
         border: 0;
         border-radius: 0;
-        background: #fff;
+        background: transparent;
         isolation: isolate;
         margin: 0;
         overflow: hidden;
@@ -407,16 +411,20 @@ export function renderHomePage() {
       }
       .intro-card::before {
         content: "";
-        position: fixed;
-        inset: 0;
+        position: absolute;
+        top: -18vh;
+        left: -18vw;
+        width: 136vw;
+        height: 136vh;
         z-index: 0;
+        opacity: 0.74;
         pointer-events: none;
+        filter: blur(12px);
         background:
-          radial-gradient(ellipse 42% 66% at 50% 36%, rgba(209, 224, 252, 0.82) 0%, rgba(227, 236, 253, 0.48) 38%, rgba(255, 255, 255, 0) 70%),
-          radial-gradient(ellipse 22% 24% at 50% 78%, rgba(220, 233, 254, 0.68) 0%, rgba(255, 255, 255, 0) 74%),
-          #fff;
-        background-repeat: no-repeat;
-        background-size: 100% 100%;
+          repeating-linear-gradient(105deg, rgba(255, 255, 255, 0.96) 0px, rgba(255, 255, 255, 0.96) 8%, rgba(255, 255, 255, 0) 11%, rgba(255, 255, 255, 0) 13%, rgba(255, 255, 255, 0.88) 17%),
+          repeating-linear-gradient(105deg, rgba(125, 178, 255, 0.42) 9%, rgba(167, 184, 255, 0.36) 15%, rgba(116, 224, 239, 0.28) 22%, rgba(199, 181, 255, 0.26) 28%, rgba(105, 178, 255, 0.34) 34%);
+        background-size: 300% 300%, 210% 210%;
+        animation: aurora-drift 64s linear infinite;
       }
       .intro-card::after {
         content: none;
@@ -428,38 +436,52 @@ export function renderHomePage() {
         font-weight: 700;
         text-transform: uppercase;
       }
+      .intro-card h1,
       .intro-card h2 {
         max-width: none;
-        font-size: clamp(84px, 10vw, 150px);
-        line-height: 0.86;
+        margin: 0;
+        color: #05060f;
+        font-size: clamp(76px, 15vw, 192px);
+        line-height: 0.9;
         letter-spacing: 0;
         font-weight: 900;
       }
       .intro-card p {
-        max-width: 620px;
-        margin: -4px 0 0;
-        color: #71717a;
-        font-size: clamp(24px, 2vw, 34px);
-        line-height: 1.18;
-        font-weight: 300;
+        max-width: 920px;
+        margin: 32px 0 0;
+        color: rgba(37, 37, 42, 0.75);
+        font-size: clamp(24px, 2.8125vw, 36px);
+        line-height: 1.22;
+        font-weight: 200;
       }
       .intro-actions {
         display: flex;
+        margin-top: 36px;
         gap: 10px;
         flex-wrap: wrap;
         justify-content: center;
       }
       .intro-actions .btn {
-        min-height: 46px;
+        min-height: 48px;
         padding: 0 28px;
-        font-size: 14px;
-        font-weight: 700;
+        border-radius: 9999px;
+        background: #05060f;
+        box-shadow: 0 18px 50px rgba(5, 6, 15, 0.18);
+        font-size: 16px;
+        font-weight: 600;
       }
       .intro-words {
-        color: #c4c1c0;
-        font-size: 13px;
-        font-weight: 650;
-        letter-spacing: 0.04em;
+        width: min(760px, 100%);
+        margin-top: 36px;
+        color: rgba(5, 6, 15, 0.3);
+        font-size: 14px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+      }
+      @keyframes aurora-drift {
+        0% { background-position: 0% 50%, 0% 50%; }
+        50% { background-position: 100% 50%, 100% 50%; }
+        100% { background-position: 0% 50%, 0% 50%; }
       }
       .signals-layout {
         display: grid;
@@ -870,7 +892,7 @@ export function renderHomePage() {
         <section class="workspace">
           <div id="splash-section" class="section splash">
             <div class="intro-card">
-              <h2>Núcleo</h2>
+              <h1>Núcleo</h1>
               <p>Una solución que ayuda a encontrar el reto correcto y convertirlo en acción.</p>
               <div class="intro-actions">
                 <button id="start-clean-demo" class="btn primary" type="button">Iniciar demo</button>
