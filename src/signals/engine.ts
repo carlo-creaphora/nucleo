@@ -124,9 +124,12 @@ export class OpenAiSignalsEngine implements SignalsEngine {
           content: JSON.stringify(
             {
               instruction:
-                "Analiza solo estas senales base. Rankea mentalmente por utilidad para Ideacion y produce obligatoriamente exactamente 2 gaps y exactamente 2 insights. Si la evidencia es floja, usa baseEvidencia indirecta; no dejes vacio.",
+                "Analiza solo estas senales base. Produce obligatoriamente exactamente 2 gaps y exactamente 2 insights. GAP = diferencia entre estado actual de la empresa y potencial/expectativa/movimiento del mercado. INSIGHT = revelacion sobre comportamiento, motivacion, miedo o deseo del cliente/comprador declarado. Rechaza cualquier salida que solo parafrasee el diagnostico interno.",
               diagnosis: input.ideationInput.diagnosis,
               registration: input.registration,
+              buyer: inferBuyer(input),
+              bannedParaphraseSource:
+                "No repitas coordinacion operativa, estandarizacion, falta de personal, diferencias normativas o tensiones internas salvo como estadoActualEmpresa; el valor debe venir del mercado o del cliente.",
               memory: input.ideationInput.memory,
               evidence,
             },
@@ -255,10 +258,14 @@ export class HeuristicSignalsEngine implements SignalsEngine {
       gaps: [
         {
           title: "Brecha entre reto diagnosticado y evidencia externa",
-          summary:
+          estadoActualEmpresa:
             "El reto no debe pasar a Ideacion como verdad hasta contrastar senales publicas reales.",
-          contradiction:
+          potencialMercado:
+            "El mercado puede estar exigiendo pruebas visibles de confiabilidad antes de comprar o adoptar.",
+          brecha:
             "El diagnostico puede estar bien formulado internamente, pero aun no esta probado contra mercado.",
+          evidenciaMercado:
+            "En modo heuristico no hay evidencia publica real; se marca como base indirecta.",
           evidenceIds: ["sig_1", "sig_2"],
           evidenceBase: "indirecta",
           implicationForIdeation:
@@ -266,10 +273,14 @@ export class HeuristicSignalsEngine implements SignalsEngine {
         },
         {
           title: "Brecha entre promesa competitiva y friccion observable",
-          summary:
+          estadoActualEmpresa:
             "El competidor declarado no basta como referencia; hay que contrastar su promesa contra fricciones publicas.",
-          contradiction:
+          potencialMercado:
+            "El mercado premia ofertas que reducen incertidumbre visible para el comprador, no solo claims.",
+          brecha:
             "Copiar claims competitivos puede repetir una promesa que el mercado no valida.",
+          evidenciaMercado:
+            "En modo heuristico no hay contraste publico de promesa versus friccion.",
           evidenceIds: ["sig_3"],
           evidenceBase: "indirecta",
           implicationForIdeation:
@@ -279,24 +290,30 @@ export class HeuristicSignalsEngine implements SignalsEngine {
       insights: [
         {
           title: "La ausencia de evidencia tambien es criterio",
-          summary:
+          cliente: input.registration.contextForDiagnosis.company.sellsTo,
+          comportamientoObservado:
             "Si no aparece voz publica defendible, la primera idea no debe asumir que el mercado ya reconoce el dolor.",
-          actionableTruth:
+          motivacionODeseo:
+            "El comprador necesita reducir incertidumbre antes de creer en una promesa de mejora.",
+          verdadAccionable:
             "La ideacion debe crear mecanismos que produzcan evidencia temprana, no solo soluciones completas.",
           evidenceIds: ["sig_1"],
           evidenceBase: "indirecta",
-          ideationPrompt:
+          promptParaIdeacion:
             `Que idea permite probar ${challenge} sin asumir que el mercado ya lo entiende?`,
         },
         {
           title: "La promesa no es diferenciacion hasta que supera friccion",
-          summary:
+          cliente: input.registration.contextForDiagnosis.company.sellsTo,
+          comportamientoObservado:
             "Una idea util debe atacar la friccion que impide creer, comprar o ejecutar, no solo formular una oferta mas clara.",
-          actionableTruth:
+          motivacionODeseo:
+            "El comprador busca evidencia de confiabilidad antes de comprometerse con una solucion.",
+          verdadAccionable:
             "La ideacion debe convertir la friccion en una prueba observable de confianza.",
           evidenceIds: ["sig_2", "sig_3"],
           evidenceBase: "indirecta",
-          ideationPrompt:
+          promptParaIdeacion:
             `Que idea demuestra ${challenge} antes de pedir adopcion completa?`,
         },
       ],
@@ -324,11 +341,13 @@ function buildSearchSystemPrompt(lens: SignalLens) {
   const shared = [
     "Eres la etapa de busqueda real de Senales de Nucleo.",
     "Debes buscar fuentes publicas reales y devolver solo evidencia textual util para construir 2 gaps y 2 insights.",
+    "No busques soporte para el diagnostico interno; busca comportamiento del comprador y potencial del mercado que la empresa no esta capturando.",
     "No inventes datos, fuentes, URLs, competidores ni comportamientos.",
     "Busca primero senales negativas: quejas, fricciones, miedos, reclamos, abandono, ratings bajos, costos ocultos o promesas incumplidas.",
     "No hagas investigacion general ni resumen de mercado.",
     "No conviertas hallazgos en ideas. Solo devuelve evidencia publica resumida.",
     "Cada senal debe decir tipoDeFriccion, relacionConDiagnostico y porQueImportaParaIdeacion.",
+    "La evidencia debe venir del mercado, clientes, compradores, usuarios, reguladores, competidores o categoria; no de repetir el problema interno.",
   ];
 
   if (lens === "SOCIAL_LISTENING") {
@@ -337,6 +356,7 @@ function buildSearchSystemPrompt(lens: SignalLens) {
       "Blogs, prensa corporativa, paginas SEO y comunicados no cuentan como social listening.",
       "Busca resenas, foros, Reddit/Quora, marketplaces, app stores, quejas, reclamos, FAQs y soporte publico.",
       "Prioriza busquedas con palabras como: queja, reclamo, resena baja, no funciona, caro, dificil, demorado, soporte, abandono, promesa incumplida.",
+      "Encuentra que temen, evitan o desean los compradores/usuarios declarados.",
     );
   }
 
@@ -345,6 +365,7 @@ function buildSearchSystemPrompt(lens: SignalLens) {
       "Este lente es tendencias: prioriza reportes fechados, reguladores, asociaciones, sitios oficiales y noticias sectoriales.",
       "Una tendencia positiva no debe presentarse como gap ni oportunidad por si sola.",
       "Busca presiones externas: regulacion, costos crecientes, cambios de comprador, exigencias nuevas, adopcion lenta, riesgo operativo.",
+      "Encuentra hacia donde se esta moviendo el mercado y que expectativa nueva crea para el comprador.",
     );
   }
 
@@ -353,6 +374,7 @@ function buildSearchSystemPrompt(lens: SignalLens) {
       "Este lente es competidores: analiza promesa visible versus friccion evidenciada.",
       "Usa webs declaradas, claims, precios, garantias, casos, FAQs, onboarding y fricciones publicas asociadas.",
       "Busca la contradiccion entre lo que prometen y lo que parece dificil, condicionado, costoso o no probado.",
+      "Encuentra potencial de mercado en claims, funcionalidades, casos, garantias, SLA, digitalizacion, trazabilidad o reduccion de riesgo.",
     );
   }
 
@@ -368,7 +390,8 @@ function buildSearchUserPrompt(input: SignalsInput, lens: SignalLens) {
   return [
     `Lente a buscar: ${lens}`,
     `Categoria: ${context.company.sectorCategory}`,
-    `Cliente: ${context.company.sellsTo}`,
+    `Comprador/cliente declarado: ${context.company.sellsTo}`,
+    `Comprador inferido para busqueda: ${inferBuyer(input)}`,
     `Modelo de cobro: ${context.company.revenueModel}`,
     `Paises/regiones: ${context.company.operatingCountries.join(", ") || context.profileLicense.country}`,
     `Competidores declarados: ${competitors || "No informados"}`,
@@ -379,7 +402,8 @@ function buildSearchUserPrompt(input: SignalsInput, lens: SignalLens) {
     `Restricciones: ${input.ideationInput.diagnosis.restrictions.join(" | ")}`,
     `No conviene atacar todavia: ${input.ideationInput.diagnosis.notWorthAttackingYet.join(" | ")}`,
     "",
-    "Objetivo: encontrar evidencia que rompa, corrija o afine el diagnostico para ideacion.",
+    "Objetivo: encontrar la diferencia entre el estado actual de la empresa y el potencial del mercado, y descubrir comportamiento/motivacion/deseo del comprador.",
+    "No devuelvas causas internas que ya declaro el perfil como si fueran senales.",
     "Devuelve maximo 5 senales. Prefiere menos senales, pero mas utiles.",
   ].join("\n");
 }
@@ -391,11 +415,12 @@ function buildSynthesisSystemPrompt() {
     "No diagnostiques de nuevo y no propongas ideas.",
     "No seas optimista por defecto ni conviertas todo en oportunidad.",
     "Si el mercado contradice al usuario o debilita el diagnostico, dilo.",
-    "Un gap exige contradiccion o friccion no resuelta.",
-    "Un insight debe ser una verdad accionable, no un resumen.",
+    "Un gap debe comparar estadoActualEmpresa contra potencialMercado; no puede ser solo una causa interna.",
+    "Un insight debe revelar comportamiento, motivacion, miedo o deseo del cliente/comprador; no puede hablar principalmente de la empresa.",
+    "Si una frase podria salir solo del diagnostico, rechazala y formula desde mercado/cliente.",
     "Competidores deben analizar promesa visible versus friccion evidenciada.",
     "Debes entregar exactamente 2 gaps y 2 insights. Si la evidencia es debil, marca evidenceBase como indirecta.",
-    "Prioriza: contradiccion con diagnostico, friccion negativa, impacto en compra/adopcion/ejecucion, competidor/categoria, tension interna.",
+    "Prioriza: potencial de mercado, expectativa nueva del comprador, friccion negativa, comportamiento de compra/adopcion, promesa competitiva incumplida.",
     "Todo gap e insight debe referenciar evidenceIds existentes.",
   ].join(" ");
 }
@@ -440,6 +465,30 @@ function rankEvidence(signals: Omit<SignalEvidence, "id">[]) {
     }))
     .sort((a, b) => b.rank - a.rank)
     .map(({ signal }) => signal);
+}
+
+function inferBuyer(input: SignalsInput) {
+  const context = input.registration.contextForDiagnosis;
+  const text = [
+    context.company.sectorCategory,
+    context.company.sellsTo,
+    context.category.notes ?? "",
+    input.ideationInput.selectedChallenge,
+  ]
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  if (text.includes("ascensor") || text.includes("elevator")) {
+    return "administradores de edificios, property managers, facility managers, comites de copropiedad y responsables de mantenimiento";
+  }
+
+  if (text.includes("b2b")) {
+    return "compradores empresariales, usuarios operadores, decisores de area y responsables de implementar el servicio";
+  }
+
+  return context.company.sellsTo;
 }
 
 export function createSignalsEngine() {

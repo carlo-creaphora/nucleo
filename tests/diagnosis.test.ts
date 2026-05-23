@@ -365,7 +365,9 @@ describe("Diagnostico", () => {
     expect(result.signals.output.gaps).toHaveLength(2);
     expect(result.signals.output.insights).toHaveLength(2);
     expect(result.signals.output.gaps[0]?.evidenceBase).toBeTruthy();
+    expect(result.signals.output.gaps[0]?.potencialMercado).toBeTruthy();
     expect(result.signals.output.insights[0]?.evidenceBase).toBeTruthy();
+    expect(result.signals.output.insights[0]?.cliente).toBeTruthy();
     expect(result.signals.output.memoriaEmpresa.companyPatterns).toBeDefined();
     expect(result.signals.output.internal.senalesBase.length).toBeGreaterThan(0);
     expect(stored?.cycleId).toBe(input.cycleId);

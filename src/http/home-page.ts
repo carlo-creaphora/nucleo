@@ -985,9 +985,9 @@ export function renderHomePage() {
           box.appendChild(title);
 
           if (key === "gaps") {
-            box.appendChild(renderBulletList(value.map((item, index) => "Gap " + (index + 1) + " · " + item.title + " [" + item.evidenceBase + "]: " + item.summary + " Implicación: " + item.implicationForIdeation)));
+            box.appendChild(renderBulletList(value.map((item, index) => "Gap " + (index + 1) + " · " + item.title + " [" + item.evidenceBase + "]: empresa hoy: " + item.estadoActualEmpresa + " Mercado: " + item.potencialMercado + " Brecha: " + item.brecha + " Implicación: " + item.implicationForIdeation)));
           } else if (key === "insights") {
-            box.appendChild(renderBulletList(value.map((item, index) => "Insight " + (index + 1) + " · " + item.title + " [" + item.evidenceBase + "]: " + item.actionableTruth + " Prompt: " + item.ideationPrompt)));
+            box.appendChild(renderBulletList(value.map((item, index) => "Insight " + (index + 1) + " · " + item.title + " [" + item.evidenceBase + "]: " + item.cliente + " observa/hace: " + item.comportamientoObservado + " Motivación: " + item.motivacionODeseo + " Verdad: " + item.verdadAccionable + " Prompt: " + item.promptParaIdeacion)));
           } else if (key === "memoriaEmpresa") {
             const memoryItems = [
               ...(value.companyPatterns || []).map((item) => "Patrón: " + item),

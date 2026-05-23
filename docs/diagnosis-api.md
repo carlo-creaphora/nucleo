@@ -117,7 +117,9 @@ Luego sintetiza solo sobre la evidencia encontrada. Devuelve:
 - `internal.senalesBase`
 - `internal.vaciosDeEvidencia`
 
-Cada gap e insight incluye `evidenceBase`: `fuerte`, `media` o `indirecta`.
+Cada gap incluye `estadoActualEmpresa`, `potencialMercado`, `brecha`, `evidenciaMercado` y `evidenceBase`.
+
+Cada insight incluye `cliente`, `comportamientoObservado`, `motivacionODeseo`, `verdadAccionable` y `evidenceBase`.
 
 ## GET `/signals/cycles/:cycleId`
 

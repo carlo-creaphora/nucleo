@@ -207,6 +207,9 @@ Reglas:
 - Un insight debe ser una verdad accionable, no un resumen.
 - La sintesis final debe entregar exactamente 2 gaps y exactamente 2 insights.
 - Si la evidencia es debil, no bloquear Ideacion: marcar `evidenceBase` como `indirecta`.
+- Un gap debe expresar la diferencia entre estado actual de la empresa y potencial, expectativa o movimiento del mercado.
+- Un insight debe revelar comportamiento, motivacion, miedo o deseo del cliente/comprador declarado.
+- No se permite entregar como gap o insight una parafrasis de causas internas ya declaradas en Diagnostico.
 - Competidores deben analizar promesa visible versus friccion evidenciada.
 - No convertir todo en oportunidad optimista.
 - Si el mercado contradice al usuario o debilita el Diagnostico, decirlo.

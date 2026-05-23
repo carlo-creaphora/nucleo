@@ -53,8 +53,10 @@ export const signalsAnalysisSectionForAiSchema = z.object({
 
 export const signalGapSchema = z.object({
   title: z.string().min(8),
-  summary: z.string().min(20),
-  contradiction: z.string().min(12),
+  estadoActualEmpresa: z.string().min(20),
+  potencialMercado: z.string().min(20),
+  brecha: z.string().min(20),
+  evidenciaMercado: z.string().min(20),
   evidenceIds: z.array(z.string().min(1)).min(1),
   evidenceBase: signalEvidenceBaseSchema,
   implicationForIdeation: z.string().min(12),
@@ -62,11 +64,13 @@ export const signalGapSchema = z.object({
 
 export const signalInsightSchema = z.object({
   title: z.string().min(8),
-  summary: z.string().min(20),
-  actionableTruth: z.string().min(12),
+  cliente: z.string().min(3),
+  comportamientoObservado: z.string().min(20),
+  motivacionODeseo: z.string().min(20),
+  verdadAccionable: z.string().min(12),
   evidenceIds: z.array(z.string().min(1)).min(1),
   evidenceBase: signalEvidenceBaseSchema,
-  ideationPrompt: z.string().min(12),
+  promptParaIdeacion: z.string().min(12),
 });
 
 export const signalsMemorySchema = z.object({
