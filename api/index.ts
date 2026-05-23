@@ -208,6 +208,23 @@ export default async function handler(
       return sendJson(response, 200, { signals });
     }
 
+    const signalsIdeationInputMatch =
+      /^\/api\/signals\/cycles\/([^/]+)\/ideation-input$/.exec(url.pathname);
+
+    if (method === "GET" && signalsIdeationInputMatch) {
+      const signalsIdeationInput = await signalsService.buildIdeationInput(
+        decodeURIComponent(signalsIdeationInputMatch[1]!),
+      );
+
+      if (!signalsIdeationInput) {
+        return sendJson(response, 404, {
+          error: "signals_ideation_input_not_ready",
+        });
+      }
+
+      return sendJson(response, 200, { signalsIdeationInput });
+    }
+
     const companyCyclesMatch =
       /^\/api\/companies\/([^/]+)\/diagnosis-cycles$/.exec(url.pathname);
 

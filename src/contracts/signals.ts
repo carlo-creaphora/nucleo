@@ -103,14 +103,6 @@ export const signalsOutputSchema = z.object({
   }),
 });
 
-export const signalsSynthesisForAiSchema = z.object({
-  analisisSocialListening: signalsAnalysisSectionForAiSchema,
-  analisisTendencias: signalsAnalysisSectionForAiSchema,
-  analisisCompetidores: signalsAnalysisSectionForAiSchema,
-  gaps: z.array(signalGapSchema).length(2),
-  insights: z.array(signalInsightSchema).length(2),
-});
-
 export const signalGapSynthesisForAiSchema = z.object({
   analisisSocialListening: signalsAnalysisSectionForAiSchema,
   analisisTendencias: signalsAnalysisSectionForAiSchema,

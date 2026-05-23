@@ -58,6 +58,35 @@ export class SignalsService {
     return this.store.getSignalsRun(cycleId);
   }
 
+  async buildIdeationInput(cycleId: string) {
+    const signals = await this.store.getSignalsRun(cycleId);
+
+    if (!signals) {
+      return null;
+    }
+
+    return {
+      cycleId,
+      companyId: signals.companyId,
+      licenseId: signals.licenseId,
+      searchDepth: signals.output.searchDepth,
+      generatedAt: signals.output.generatedAt,
+      gaps: signals.output.gaps,
+      insights: signals.output.insights,
+      memory: signals.output.memoriaEmpresa,
+      evidence: signals.output.internal.senalesBase.map((signal) => ({
+        id: signal.id,
+        lens: signal.lens,
+        title: signal.title,
+        observedText: signal.observedText,
+        sourceLabel: signal.sourceLabel,
+        sourceUrl: signal.sourceUrl,
+        evidenceBase: signal.confidence,
+        usefulnessForIdeation: signal.usefulnessForIdeation,
+      })),
+    };
+  }
+
   async buildInput(cycleId: string): Promise<SignalsInput> {
     const ideationInput = await this.diagnosisService.buildIdeationInput(cycleId);
 

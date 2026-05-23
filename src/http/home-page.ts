@@ -450,7 +450,7 @@ export function renderHomePage() {
               </div>
               <span id="signals-loading" class="loading">Buscando...</span>
             </div>
-            <div class="signals-layout">
+            <div class="signals-layout" style="grid-template-columns: minmax(0, 1fr);">
               <div class="panel">
                 <h3 style="margin:0 0 12px;">Análisis</h3>
                 <div id="signals-result" class="result">
@@ -458,7 +458,7 @@ export function renderHomePage() {
                 </div>
                 <div id="signals-error" class="error"></div>
               </div>
-              <aside class="panel">
+              <aside class="panel" hidden>
                 <h3 style="margin:0 0 12px;">Fuentes y vacíos</h3>
                 <div id="signals-sources" class="source-list">
                   <p style="color: var(--muted); line-height: 1.6;">Aquí aparecerán las fuentes consultadas y vacíos de evidencia.</p>

@@ -146,6 +146,18 @@ export function createApp() {
     return context.json({ signals });
   });
 
+  app.get("/api/signals/cycles/:cycleId/ideation-input", async (context) => {
+    const signalsIdeationInput = await signalsService.buildIdeationInput(
+      context.req.param("cycleId"),
+    );
+
+    if (!signalsIdeationInput) {
+      return context.json({ error: "signals_ideation_input_not_ready" }, 404);
+    }
+
+    return context.json({ signalsIdeationInput });
+  });
+
   app.get("/api/companies/:companyId/diagnosis-cycles", async (context) => {
     const cycles = await service.listCompanyCycles(
       context.req.param("companyId"),

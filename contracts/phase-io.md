@@ -192,6 +192,7 @@ Output interno:
 - Fuentes consultadas.
 - Senales base con lente, fuente, URL si existe y nivel de confianza.
 - Vacios de evidencia.
+- Handoff formal hacia Ideacion con 2 gaps, 2 insights, memoria y evidencias usadas.
 
 Reglas:
 

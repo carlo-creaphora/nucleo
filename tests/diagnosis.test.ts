@@ -376,6 +376,22 @@ describe("Diagnostico", () => {
     );
   });
 
+  it("construye handoff formal de Senales hacia Ideacion", async () => {
+    const input = buildInput({ cycleId: "cycle-signals-ideation" });
+    await registerInput(input);
+    await service.complete(input);
+    await signalsService.generate(input.cycleId);
+
+    const signalsIdeationInput = await signalsService.buildIdeationInput(
+      input.cycleId,
+    );
+
+    expect(signalsIdeationInput?.gaps).toHaveLength(2);
+    expect(signalsIdeationInput?.insights).toHaveLength(2);
+    expect(signalsIdeationInput?.evidence.length).toBeGreaterThan(0);
+    expect(signalsIdeationInput?.companyId).toBe(input.company.companyId);
+  });
+
   it("bloquea Senales si Diagnostico no esta cerrado", async () => {
     const input = buildInput({ cycleId: "cycle-signals-blocked" });
     await registerInput(input);

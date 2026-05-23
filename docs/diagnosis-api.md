@@ -126,6 +126,19 @@ Cada insight incluye `cliente`, `comportamientoObservado`, `motivacionODeseo`, `
 
 Consulta el ultimo resultado de Senales guardado para el ciclo.
 
+## GET `/signals/cycles/:cycleId/ideation-input`
+
+Devuelve el handoff formal de Senales hacia Ideacion. Requiere Senales generadas.
+
+Incluye:
+
+- `gaps`
+- `insights`
+- `memory`
+- `evidence`
+- `searchDepth`
+- `generatedAt`
+
 ## GET `/companies/:companyId/diagnosis-cycles`
 
 Lista ciclos de diagnostico de una empresa para alimentar memoria compartida sin mezclar empresas.
