@@ -547,6 +547,55 @@ describe("Diagnostico", () => {
     ).toBe(false);
   });
 
+  it("acepta ruptura fuerte cuando transforma reglas o incentivos de decision", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation-strong-rules" });
+    await registerInput(input);
+    await service.complete(input);
+    const signalsResult = await signalsService.generate(input.cycleId);
+    const selectedGap = signalsResult.signals.output.gaps[0]?.title;
+    const selectedInsight = signalsResult.signals.output.insights[0]?.title;
+    const ideationInput = await ideationService.buildInput(input.cycleId, {
+      ruptureType: "RUPTURA_FUERTE",
+      gapTitle: selectedGap,
+      insightTitle: selectedInsight,
+    });
+    const output = buildIdeationOutputForTest(ideationInput, {
+      routeId: "ruptura_fuerte",
+      mecanicaConcreta:
+        "Cambiar la regla de decision: cada cierre requiere un ritual de arbitraje entre pares donde el responsable solo aprueba si existe evidencia de criterio comun, con incentivos ligados a convergencia y no a velocidad.",
+      supuestoQueRompe:
+        "Que la forma de decidir debe seguir dependiendo de supervision individual del lider.",
+    });
+    const violations = validateIdeationOutput(ideationInput, output);
+
+    expect(
+      violations.some((violation) => violation.type === "ROUTE_MISMATCH"),
+    ).toBe(false);
+  });
+
+  it("no bloquea una idea concreta solo por mencionar plataforma sin conectar generico", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation-platform-word" });
+    await registerInput(input);
+    await service.complete(input);
+    const signalsResult = await signalsService.generate(input.cycleId);
+    const selectedGap = signalsResult.signals.output.gaps[0]?.title;
+    const selectedInsight = signalsResult.signals.output.insights[0]?.title;
+    const ideationInput = await ideationService.buildInput(input.cycleId, {
+      ruptureType: "RUPTURA_MODERADA",
+      gapTitle: selectedGap,
+      insightTitle: selectedInsight,
+    });
+    const output = buildIdeationOutputForTest(ideationInput, {
+      mecanicaConcreta:
+        "Instalar una plataforma fisica de decision en campo: una plantilla visible con tres casillas obligatorias, responsable del cierre y regla de evidencia antes de terminar cada tarea.",
+    });
+    const violations = validateIdeationOutput(ideationInput, output);
+
+    expect(
+      violations.some((violation) => violation.type === "ANTI_PATTERN"),
+    ).toBe(false);
+  });
+
   it("bloquea Ideacion sin Senales generadas", async () => {
     const input = buildInput({ cycleId: "cycle-ideation-blocked" });
     await registerInput(input);

@@ -14,12 +14,12 @@ export type IdeationContractViolation = {
 };
 
 const UNIVERSAL_ANTI_PATTERN_REGEXES = [
-  /\b(app|aplicaci[oó]n)\b.*\b(conecta|conectar|gestiona|centraliza)\b/i,
-  /\b(plataforma)\b.*\b(para|de)\b/i,
-  /\b(usar|utilizar|implementar)\s+ia\b/i,
-  /\b(agente|chatbot)\b.*\bia\b/i,
+  /\b(app|aplicaci[oó]n|plataforma)\b.{0,120}\b(conecta|conectar|gestiona|centraliza)\b/i,
+  /\b(usar|utilizar|implementar)\s+ia\b(?![\s\S]{0,160}\b(regla|ritual|objeto|interfaz|decision|decisi[oó]n|piloto|mec[aá]nica)\b)/i,
+  /\b(agente|chatbot)\b.{0,120}\bia\b(?![\s\S]{0,160}\b(regla|ritual|objeto|interfaz|decision|decisi[oó]n|piloto|mec[aá]nica)\b)/i,
   /\b(gamificaci[oó]n|puntos|badges|leaderboard|ranking)\b/i,
-  /\b(comunidad|marketplace)\b/i,
+  /\b(cre(ar)?|lanzar|montar|hacer)\s+(una\s+)?comunidad\b/i,
+  /\bmarketplace\b.{0,120}\b(conecta|conectar)\b/i,
   /\b(webinar|workshop|taller|evento)\b/i,
   /\b(newsletter|podcast|linkedin|contenido)\b/i,
   /\b(alianza estrat[eé]gica)\b(?!.*\bprimer experimento\b)/i,
@@ -63,7 +63,7 @@ function validateAntiPatterns(
   const violations: IdeationContractViolation[] = [];
 
   for (const idea of output.ideas) {
-    const text = ideaText(idea);
+    const text = antiPatternText(idea);
 
     for (const regex of UNIVERSAL_ANTI_PATTERN_REGEXES) {
       if (regex.test(text)) {
@@ -122,7 +122,7 @@ function validateRouteFit(
 
     if (
       ruptureType === "RUPTURA_FUERTE" &&
-      !/\b(cobra|cobro|paga|pagador|entrega|accede|acceso|canal|modelo|precio|suscripci[oó]n|distribuci[oó]n|quien paga|qui[eé]n paga)\b/i.test(
+      !/\b(cobra|cobro|paga|pagador|entrega|accede|acceso|canal|modelo|precio|suscripci[oó]n|distribuci[oó]n|quien paga|qui[eé]n paga|regla|reglas|incentivo|incentivos|decide|decidir|decisi[oó]n|criterio|ritual|aprobaci[oó]n|responsable|flujo|operaci[oó]n)\b/i.test(
         text,
       )
     ) {
@@ -130,7 +130,7 @@ function validateRouteFit(
         type: "ROUTE_MISMATCH",
         ideaId: idea.id,
         message:
-          "Ruptura fuerte debe transformar una pieza del modelo: cobro, pagador, entrega, acceso, canal, precio o distribucion.",
+          "Ruptura fuerte debe transformar una pieza del modelo: cobro, pagador, entrega, acceso, canal, precio, distribucion, reglas, incentivos o forma de decidir.",
       });
     }
 
@@ -159,6 +159,17 @@ function ideaText(idea: IdeationOutput["ideas"][number]) {
     idea.mecanicaConcreta,
     idea.porQueFunciona,
     idea.casoAnalogo,
+    idea.metricaQueMueve,
+    idea.primerPasoEjecutable,
+  ].join("\n");
+}
+
+function antiPatternText(idea: IdeationOutput["ideas"][number]) {
+  return [
+    idea.idea,
+    idea.supuestoQueRompe,
+    idea.mecanicaConcreta,
+    idea.porQueFunciona,
     idea.metricaQueMueve,
     idea.primerPasoEjecutable,
   ].join("\n");

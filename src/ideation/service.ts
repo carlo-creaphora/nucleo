@@ -91,7 +91,7 @@ export class IdeationService {
             "Que pieza del modelo podria funcionar de otra manera?",
           riskLevel: "medio",
           description:
-            "Se cambia la forma del modelo: como se cobra, quien paga, como se entrega o como accede el cliente.",
+            "Se cambia la forma del sistema: como se cobra, quien paga, como se entrega, como accede el cliente, que regla decide o que incentivo mueve conducta.",
         },
         {
           id: "RUPTURA_RADICAL_CONTROLADA",
