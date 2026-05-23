@@ -987,7 +987,7 @@ export function renderHomePage() {
           if (key === "gaps") {
             box.appendChild(renderBulletList(value.map((item, index) => "Gap " + (index + 1) + " · " + item.title + " [" + item.evidenceBase + "]: Mercado: " + item.potencialMercado + " Brecha: " + item.brecha)));
           } else if (key === "insights") {
-            box.appendChild(renderBulletList(value.map((item, index) => "Insight " + (index + 1) + " · " + item.title + " [" + item.evidenceBase + "]: " + item.cliente + " observa/hace: " + item.comportamientoObservado + " Motivación: " + item.motivacionODeseo + " Verdad: " + item.verdadAccionable)));
+            box.appendChild(renderBulletList(value.map((item, index) => "Insight " + (index + 1) + " · " + item.title + " [" + item.evidenceBase + "]: " + item.cliente + " observa/hace: " + item.comportamientoObservado + " Motivación: " + item.motivacionODeseo)));
           } else if (key === "memoriaEmpresa") {
             const memoryItems = [
               ...(value.companyPatterns || []).map((item) => "Patrón: " + item),
