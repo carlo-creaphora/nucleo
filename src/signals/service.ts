@@ -4,6 +4,7 @@ import {
   type SignalsRecord,
   signalsInputSchema,
 } from "../contracts/signals.js";
+import { ideationSignalsInputSchema } from "../contracts/ideation.js";
 import type { DiagnosisService } from "../diagnosis/service.js";
 import type { NucleoStore } from "../storage/store.js";
 import type { SignalsEngine } from "./engine.js";
@@ -65,7 +66,7 @@ export class SignalsService {
       return null;
     }
 
-    return {
+    return ideationSignalsInputSchema.parse({
       cycleId,
       companyId: signals.companyId,
       licenseId: signals.licenseId,
@@ -84,7 +85,7 @@ export class SignalsService {
         evidenceBase: signal.confidence,
         usefulnessForIdeation: signal.usefulnessForIdeation,
       })),
-    };
+    });
   }
 
   async buildInput(cycleId: string): Promise<SignalsInput> {

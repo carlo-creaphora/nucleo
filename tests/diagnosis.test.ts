@@ -14,13 +14,24 @@ import {
   HeuristicSignalsEngine,
   buildSearchUserPromptForTest,
 } from "../src/signals/engine.js";
+import { IdeationService } from "../src/ideation/service.js";
+import {
+  buildIdeationSystemPrompt,
+  createIdeationEngine,
+} from "../src/ideation/engine.js";
+import { validateIdeationOutput } from "../src/ideation/validation.js";
 import { FileStore } from "../src/storage/file-store.js";
 import type { DiagnosisInput } from "../src/contracts/diagnosis.js";
+import type {
+  IdeationGenerationInput,
+  IdeationOutput,
+} from "../src/contracts/ideation.js";
 
 let tempDir: string;
 let service: DiagnosisService;
 let registrationService: RegistrationService;
 let signalsService: SignalsService;
+let ideationService: IdeationService;
 let store: FileStore;
 
 beforeEach(async () => {
@@ -35,6 +46,12 @@ beforeEach(async () => {
     new HeuristicSignalsEngine(),
     store,
     service,
+  );
+  ideationService = new IdeationService(
+    createIdeationEngine(),
+    store,
+    service,
+    signalsService,
   );
 });
 
@@ -448,7 +465,197 @@ describe("Diagnostico", () => {
     expect(prompt).toContain("Mantener los mismos campos");
     expect(prompt).toContain("Responder breve");
   });
+
+  it("construye input y opciones de Ideacion sin motor heuristico", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation-clean" });
+    await registerInput(input);
+    await service.complete(input);
+    const signalsResult = await signalsService.generate(input.cycleId);
+    const selectedGap = signalsResult.signals.output.gaps[0]?.title;
+    const selectedInsight = signalsResult.signals.output.insights[0]?.title;
+
+    const options = await ideationService.buildOptions(input.cycleId);
+    const ideationInput = await ideationService.buildInput(
+      input.cycleId,
+      {
+        ruptureType: "RUPTURA_FUERTE",
+        gapTitle: selectedGap,
+        insightTitle: selectedInsight,
+      },
+    );
+
+    expect(options.ruptureTypes[1]?.verb).toBe("transformar");
+    expect(options.ruptureTypes[1]?.guidingQuestion).toContain("pieza del modelo");
+    expect(options.ruptureTypes[1]?.riskLevel).toBe("medio");
+    expect(ideationInput.selection.ruptureType).toBe("RUPTURA_FUERTE");
+    expect(ideationInput.knowledgePack.disruptiveCases.length).toBeGreaterThanOrEqual(
+      60,
+    );
+  });
+
+  it("valida anti-patrones y ajuste de ruta en Ideacion", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation-validation" });
+    await registerInput(input);
+    await service.complete(input);
+    const signalsResult = await signalsService.generate(input.cycleId);
+    const selectedGap = signalsResult.signals.output.gaps[0]?.title;
+    const selectedInsight = signalsResult.signals.output.insights[0]?.title;
+    const ideationInput = await ideationService.buildInput(input.cycleId, {
+      ruptureType: "RUPTURA_MODERADA",
+      gapTitle: selectedGap,
+      insightTitle: selectedInsight,
+    });
+    const output = buildIdeationOutputForTest(ideationInput, {
+      idea:
+        "Idea 1. App generica: crear una plataforma que conecta administradores con tecnicos",
+      mecanicaConcreta:
+        "Crear una app que conecta administradores con tecnicos y cambia el modelo de negocio con suscripcion mensual.",
+    });
+    const violations = validateIdeationOutput(ideationInput, output);
+
+    expect(violations.some((violation) => violation.type === "ANTI_PATTERN")).toBe(
+      true,
+    );
+    expect(
+      violations.some((violation) => violation.type === "ROUTE_MISMATCH"),
+    ).toBe(true);
+  });
+
+  it("bloquea Ideacion sin Senales generadas", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation-blocked" });
+    await registerInput(input);
+    await service.complete(input);
+
+    await expect(
+      ideationService.generate(input.cycleId, {
+        ruptureType: "RUPTURA_MODERADA",
+        gapTitle: "gap inexistente",
+        insightTitle: "insight inexistente",
+      }),
+    ).rejects.toThrow("Ideacion requiere Senales generadas");
+  });
+
+  it("el prompt final de Ideacion fuerza uso criterio de casos y antipatrones", () => {
+    const prompt = buildIdeationSystemPrompt();
+
+    expect(prompt).toContain("Antes de idear, buscar en todos los casos disruptivos");
+    expect(prompt).toContain("No presentes los casos como resultado");
+    expect(prompt).toContain("reinterpretar su mecanismo");
+    expect(prompt).toContain("Cruzar cada idea contra antipatrones");
+    expect(prompt).toContain("No copiar el caso");
+    expect(prompt).not.toContain("prototypeBrief");
+    expect(prompt).toContain("translatedCaseReferences");
+    expect(prompt).toContain("1. idea:");
+    expect(prompt).toContain("8. antiPatronesAEvitar:");
+    expect(prompt).toContain("mejorar optimiza el juego");
+    expect(prompt).toContain("RUPTURA_FUERTE = transformar");
+    expect(prompt).toContain("No mezclar rutas");
+  });
 });
+
+function buildIdeationOutputForTest(
+  input: IdeationGenerationInput,
+  override: Partial<IdeationOutput["ideas"][number]> = {},
+): IdeationOutput {
+  const gapTitle = input.selection.gapTitle;
+  const insightTitle = input.selection.insightTitle;
+  const route = {
+    id: input.selection.ruptureType.toLowerCase(),
+    title: "Ruptura moderada",
+    ruptureType: input.selection.ruptureType,
+    verb: "mejorar" as const,
+    guidingQuestion: "Que hacemos hoy que podria funcionar mejor?",
+    riskLevel: "bajo" as const,
+    purpose:
+      "Mejorar lo que ya existe para hacerlo mas rapido, barato, comodo o con menos friccion.",
+    usesGapTitles: [gapTitle],
+    usesInsightTitles: [insightTitle],
+  };
+  const baseIdea: IdeationOutput["ideas"][number] = {
+    id: "idea_1",
+    routeId: route.id,
+    idea: "Idea 1. Regla visible: reducir friccion en una decision existente",
+    supuestoQueRompe:
+      "Que la operacion mejora solamente cuando se agrega mas supervision.",
+    mecanicaConcreta:
+      "Tomar una decision existente y hacerla mas rapida con una regla visible, un responsable y una evidencia minima antes del cierre.",
+    porQueFunciona:
+      "Funciona porque reduce ambiguedad sin cambiar el modelo de negocio ni pedir una transformacion estructural.",
+    casoAnalogo:
+      "IKEA, Cook this Page, 2002, retail/hogar, Suecia. La similitud es convertir una instruccion interpretable en una guia visible; la diferencia es que aqui se aplica a una decision empresarial.",
+    metricaQueMueve:
+      "Tiempo de decision y variabilidad de ejecucion en el proceso seleccionado.",
+    primerPasoEjecutable:
+      "En 30 dias, elegir una decision repetida, crear una regla visible y probarla con cinco usuarios reales del proceso.",
+    antiPatronesAEvitar: [
+      "No convertirlo en capacitacion generica.",
+      "No hacerlo como dashboard sin decision obligatoria.",
+    ],
+    trace: {
+      gapTitles: [gapTitle],
+      insightTitles: [insightTitle],
+      evidenceIds: ["sig_1"],
+      disruptiveCaseName: "IKEA Cook this Page",
+    },
+    ...override,
+  };
+
+  return {
+    generatedAt: new Date().toISOString(),
+    route,
+    ideas: [
+      baseIdea,
+      {
+        ...baseIdea,
+        id: "idea_2",
+        idea: "Idea 2. Criterio comparado: mejorar una revision existente",
+      },
+      {
+        ...baseIdea,
+        id: "idea_3",
+        idea: "Idea 3. Evidencia minima: mejorar el cierre de una accion",
+      },
+    ],
+    internal: {
+      caseScreening: {
+        translatedCaseReferences: [
+          {
+            caseName: "IKEA Cook this Page",
+            transferableMechanism:
+              "Convertir instrucciones interpretables en una interfaz fisica.",
+            reinterpretationForThisIdea:
+              "Traducir el mecanismo a una regla visible de decision.",
+            caveat: "Validar que no se vuelva burocracia.",
+          },
+          {
+            caseName: "UPS left turns",
+            transferableMechanism:
+              "Optimizar por una variable contraintuitiva y no por la obvia.",
+            reinterpretationForThisIdea:
+              "Elegir una variable de decision que anticipe friccion.",
+            caveat: "Requiere datos operativos minimos.",
+          },
+          {
+            caseName: "WeightWatchers",
+            transferableMechanism:
+              "Usar pares para sostener comportamiento y accountability.",
+            reinterpretationForThisIdea:
+              "Convertir revision entre pares en criterio comun.",
+            caveat: "Evitar juicio personal.",
+          },
+        ],
+        rejectedCaseFamilies: [],
+      },
+      consultedKnowledge: {
+        assumptionsByIndustry: 1,
+        antiPatterns: 1,
+        disruptiveCases: 60,
+        weirdBusinessModels: 1,
+      },
+      rejectedAntiPatternMatches: [],
+    },
+  };
+}
 
 function buildInput(
   overrides: Partial<Omit<DiagnosisInput, "company">> & {

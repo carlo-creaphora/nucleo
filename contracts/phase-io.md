@@ -228,9 +228,77 @@ Metodo:
 
 ## Ideacion
 
-Input: pendiente de definir.
+Proposito: generar pocas ideas accionables y no genericas desde evidencia, tensiones y analogias disruptivas. Ideacion no diagnostica de nuevo, no evalua con scores y no le da la razon al usuario. Transforma gaps, insights, restricciones y casos disruptivos en rutas de solucion prototipables.
 
-Output: pendiente de definir.
+Input:
+
+- Handoff de Diagnostico:
+  - reto recomendado
+  - diagnostico completo
+  - registro
+  - detonadores desde causas y tensiones
+  - senales negativas desde lo que no conviene atacar todavia
+  - memoria de empresa y aprendizajes previos
+- Handoff de Senales:
+  - exactamente 2 gaps
+  - exactamente 2 insights
+  - evidencias usadas
+  - memoria
+- Knowledge pack limpio de Ideacion:
+  - supuestos por industria
+  - antipatrones
+  - casos disruptivos
+  - modelos de negocio raros
+
+Output visible:
+
+- Opciones para disenar la ruta:
+  - nivel 1: tipo de ruptura, entre ruptura moderada, ruptura fuerte y ruptura radical controlada
+    - moderada: mejorar; pregunta guia: que hacemos hoy que podria funcionar mejor; riesgo bajo
+    - fuerte: transformar; pregunta guia: que pieza del modelo podria funcionar de otra manera; riesgo medio
+    - radical controlada: romper; pregunta guia: que cree todo el mundo en este sector que en realidad no es cierto; riesgo alto controlado
+  - nivel 2: gap seleccionado
+  - nivel 3: insight seleccionado
+- 3 ideas por ruta seleccionada.
+- Cada idea debe incluir:
+  - Idea N. nombre distintivo: descripcion corta
+  - Supuesto que rompe
+  - Mecanica concreta
+  - Por que funciona
+  - Caso analogo
+  - Metrica que mueve
+  - Primer paso ejecutable
+  - Anti-patrones a evitar al ejecutar
+
+Output interno:
+
+- Trazabilidad de cada idea hacia gaps, insights, evidencias y caso disruptivo usado.
+- Conteo de archivos/familias del knowledge pack consultadas.
+- Antipatrones rechazados o evitados.
+
+Reglas:
+
+- No traer M0/M1.
+- No usar pilares antiguos.
+- No usar gates.
+- No usar scores.
+- No usar hipotesis con score.
+- No usar retry interno por score bajo.
+- No usar mappings heredados.
+- No hacer optimismo automatico.
+- No darle la razon al usuario.
+- No generar ideas si no existen Diagnostico cerrado y Senales generadas.
+- No generar ideas si no existe knowledge pack con supuestos, antipatrones y casos disruptivos.
+- Ideacion debe consultar los archivos del knowledge pack del repo, no depender de un JSON manual del usuario.
+- Los antipatrones son prohibiciones, no inspiracion.
+- La base principal son los casos disruptivos: Ideacion debe analizar que ejemplos se pueden traducir o reinterpretar para el problema, no copiar ejemplos, no listar casos como salida y no generar creatividad generica.
+- Cada idea debe partir del gap seleccionado y del insight seleccionado.
+- La ruptura moderada debe proponer cambios ejecutables con baja friccion interna.
+- La ruptura moderada mejora lo existente: mas rapido, mas barato, mas comodo o con menos friccion; no cuestiona modelo de negocio ni supuestos de industria.
+- La ruptura fuerte transforma una pieza del modelo: como se cobra, quien paga, como se entrega o como accede el cliente; no necesariamente niega creencias de industria.
+- La ruptura radical controlada rompe una creencia que la industria da por obvia y debe probarse en un perimetro acotado que no comprometa la operacion principal.
+- La progresion es acumulativa: mejorar optimiza el juego, transformar cambia las reglas del juego, romper supuestos cambia el juego mismo.
+- Cada idea debe dejar lista una prueba prototipable.
 
 ## Prototipado
 

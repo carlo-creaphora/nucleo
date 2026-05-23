@@ -11,6 +11,8 @@ import { createStore } from "../src/storage/file-store.js";
 import { renderHomePage } from "../src/http/home-page.js";
 import { createSignalsEngine } from "../src/signals/engine.js";
 import { SignalsService } from "../src/signals/service.js";
+import { createIdeationEngine } from "../src/ideation/engine.js";
+import { IdeationService } from "../src/ideation/service.js";
 
 const store = createStore();
 const service = new DiagnosisService(createDiagnosisEngine(), store);
@@ -22,6 +24,12 @@ const signalsService = new SignalsService(
   createSignalsEngine(),
   store,
   service,
+);
+const ideationService = new IdeationService(
+  createIdeationEngine(),
+  store,
+  service,
+  signalsService,
 );
 
 export const config = {
@@ -58,6 +66,7 @@ export default async function handler(
         service: "nucleo",
         diagnosis: "ready",
         signals: "ready",
+        ideation: "ready",
         databaseId: process.env.NUCLEO_DB_ID ?? "local-file",
       });
     }
@@ -223,6 +232,46 @@ export default async function handler(
       }
 
       return sendJson(response, 200, { signalsIdeationInput });
+    }
+
+    const ideationGenerateMatch =
+      /^\/api\/ideation\/cycles\/([^/]+)\/generate$/.exec(url.pathname);
+
+    if (method === "POST" && ideationGenerateMatch) {
+      const body = await readJson(request);
+      const result = await ideationService.generate(
+        decodeURIComponent(ideationGenerateMatch[1]!),
+        body.selection,
+      );
+
+      return sendJson(response, 200, result);
+    }
+
+    const ideationOptionsMatch =
+      /^\/api\/ideation\/cycles\/([^/]+)\/options$/.exec(url.pathname);
+
+    if (method === "GET" && ideationOptionsMatch) {
+      const options = await ideationService.buildOptions(
+        decodeURIComponent(ideationOptionsMatch[1]!),
+      );
+
+      return sendJson(response, 200, { options });
+    }
+
+    const ideationMatch = /^\/api\/ideation\/cycles\/([^/]+)$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && ideationMatch) {
+      const ideation = await ideationService.get(
+        decodeURIComponent(ideationMatch[1]!),
+      );
+
+      if (!ideation) {
+        return sendJson(response, 404, { error: "ideation_not_found" });
+      }
+
+      return sendJson(response, 200, { ideation });
     }
 
     const companyCyclesMatch =

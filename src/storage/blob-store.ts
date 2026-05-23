@@ -1,4 +1,5 @@
 import { get, put } from "@vercel/blob";
+import type { IdeationRecord } from "../contracts/ideation.js";
 import type { RegistrationRecord } from "../contracts/registration.js";
 import type {
   AuditEvent,
@@ -13,6 +14,7 @@ type StoreFile = {
   diagnosisCycles: StoredDiagnosisCycle[];
   diagnosisVersions: StoredDiagnosisVersion[];
   signalsRuns: StoredSignalsRun[];
+  ideationRuns: IdeationRecord[];
   auditEvents: AuditEvent[];
 };
 
@@ -21,6 +23,7 @@ const emptyStore: StoreFile = {
   diagnosisCycles: [],
   diagnosisVersions: [],
   signalsRuns: [],
+  ideationRuns: [],
   auditEvents: [],
 };
 
@@ -112,6 +115,23 @@ export class BlobStore implements NucleoStore {
     return data.signalsRuns.find((item) => item.cycleId === cycleId) ?? null;
   }
 
+  async saveIdeationRun(run: IdeationRecord) {
+    const data = await this.read();
+    const index = data.ideationRuns.findIndex(
+      (item) => item.cycleId === run.cycleId,
+    );
+
+    if (index >= 0) data.ideationRuns[index] = run;
+    else data.ideationRuns.push(run);
+
+    await this.write(data);
+  }
+
+  async getIdeationRun(cycleId: string) {
+    const data = await this.read();
+    return data.ideationRuns.find((item) => item.cycleId === cycleId) ?? null;
+  }
+
   async saveAuditEvent(event: AuditEvent) {
     const data = await this.read();
     data.auditEvents.push(event);
@@ -144,6 +164,7 @@ export class BlobStore implements NucleoStore {
         diagnosisCycles: data.diagnosisCycles ?? [],
         diagnosisVersions: data.diagnosisVersions ?? [],
         signalsRuns: data.signalsRuns ?? [],
+        ideationRuns: data.ideationRuns ?? [],
         auditEvents: data.auditEvents ?? [],
       };
     } catch (error) {

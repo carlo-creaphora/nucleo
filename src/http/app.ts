@@ -11,6 +11,8 @@ import { diagnosisOutputSchema } from "../contracts/diagnosis.js";
 import { createStore } from "../storage/file-store.js";
 import { createSignalsEngine } from "../signals/engine.js";
 import { SignalsService } from "../signals/service.js";
+import { createIdeationEngine } from "../ideation/engine.js";
+import { IdeationService } from "../ideation/service.js";
 import { renderHomePage } from "./home-page.js";
 
 export function createApp() {
@@ -26,6 +28,12 @@ export function createApp() {
     store,
     service,
   );
+  const ideationService = new IdeationService(
+    createIdeationEngine(),
+    store,
+    service,
+    signalsService,
+  );
 
   app.get("/", (context) => context.html(renderHomePage()));
 
@@ -35,6 +43,7 @@ export function createApp() {
       service: "nucleo",
       diagnosis: "ready",
       signals: "ready",
+      ideation: "ready",
       databaseId: process.env.NUCLEO_DB_ID ?? "local-file",
     }),
   );
@@ -156,6 +165,34 @@ export function createApp() {
     }
 
     return context.json({ signalsIdeationInput });
+  });
+
+  app.post("/api/ideation/cycles/:cycleId/generate", async (context) => {
+    const body = await context.req.json();
+    const result = await ideationService.generate(
+      context.req.param("cycleId"),
+      body.selection,
+    );
+
+    return context.json(result);
+  });
+
+  app.get("/api/ideation/cycles/:cycleId/options", async (context) => {
+    const options = await ideationService.buildOptions(
+      context.req.param("cycleId"),
+    );
+
+    return context.json({ options });
+  });
+
+  app.get("/api/ideation/cycles/:cycleId", async (context) => {
+    const ideation = await ideationService.get(context.req.param("cycleId"));
+
+    if (!ideation) {
+      return context.json({ error: "ideation_not_found" }, 404);
+    }
+
+    return context.json({ ideation });
   });
 
   app.get("/api/companies/:companyId/diagnosis-cycles", async (context) => {

@@ -1,4 +1,5 @@
 import pg from "pg";
+import type { IdeationRecord } from "../contracts/ideation.js";
 import type { RegistrationRecord } from "../contracts/registration.js";
 import type {
   AuditEvent,
@@ -193,6 +194,41 @@ export class PostgresStore implements NucleoStore {
     return result.rows[0] ? this.toSignalsRun(result.rows[0]) : null;
   }
 
+  async saveIdeationRun(run: IdeationRecord) {
+    await this.ensureSchema();
+    await this.pool.query(
+      `insert into nucleo_ideation_runs
+        (id, cycle_id, company_id, license_id, input, output, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (cycle_id) do update set
+        company_id = excluded.company_id,
+        license_id = excluded.license_id,
+        input = excluded.input,
+        output = excluded.output,
+        updated_at = excluded.updated_at`,
+      [
+        run.id,
+        run.cycleId,
+        run.companyId,
+        run.licenseId,
+        run.input,
+        run.output,
+        run.createdAt,
+        run.updatedAt,
+      ],
+    );
+  }
+
+  async getIdeationRun(cycleId: string) {
+    await this.ensureSchema();
+    const result = await this.pool.query(
+      `select * from nucleo_ideation_runs where cycle_id = $1 limit 1`,
+      [cycleId],
+    );
+
+    return result.rows[0] ? this.toIdeationRun(result.rows[0]) : null;
+  }
+
   async saveAuditEvent(event: AuditEvent) {
     await this.ensureSchema();
     await this.pool.query(
@@ -287,10 +323,22 @@ export class PostgresStore implements NucleoStore {
         updated_at timestamptz not null
       );
 
+      create table if not exists nucleo_ideation_runs (
+        id text primary key,
+        cycle_id text not null unique,
+        company_id text not null,
+        license_id text not null,
+        input jsonb not null,
+        output jsonb not null,
+        created_at timestamptz not null,
+        updated_at timestamptz not null
+      );
+
       create index if not exists nucleo_registrations_company_idx on nucleo_registrations(company_id);
       create index if not exists nucleo_diagnosis_cycles_company_idx on nucleo_diagnosis_cycles(company_id);
       create index if not exists nucleo_diagnosis_versions_cycle_idx on nucleo_diagnosis_versions(cycle_id);
       create index if not exists nucleo_signals_runs_company_idx on nucleo_signals_runs(company_id);
+      create index if not exists nucleo_ideation_runs_company_idx on nucleo_ideation_runs(company_id);
       create index if not exists nucleo_audit_events_cycle_idx on nucleo_audit_events(cycle_id);
     `);
   }
@@ -358,6 +406,19 @@ export class PostgresStore implements NucleoStore {
       licenseId: String(row.license_id),
       input: row.input as StoredSignalsRun["input"],
       output: row.output as StoredSignalsRun["output"],
+      createdAt: new Date(String(row.created_at)).toISOString(),
+      updatedAt: new Date(String(row.updated_at)).toISOString(),
+    };
+  }
+
+  private toIdeationRun(row: Record<string, unknown>): IdeationRecord {
+    return {
+      id: String(row.id),
+      cycleId: String(row.cycle_id),
+      companyId: String(row.company_id),
+      licenseId: String(row.license_id),
+      input: row.input as IdeationRecord["input"],
+      output: row.output as IdeationRecord["output"],
       createdAt: new Date(String(row.created_at)).toISOString(),
       updatedAt: new Date(String(row.updated_at)).toISOString(),
     };

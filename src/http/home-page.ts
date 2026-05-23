@@ -325,8 +325,97 @@ export function renderHomePage() {
         line-height: 1.35;
         word-break: break-word;
       }
+      .ideation-canvas {
+        display: grid;
+        gap: 14px;
+      }
+      .challenge-card, .route-summary, .idea-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255,255,255,0.78);
+        padding: 14px;
+      }
+      .challenge-card strong, .route-summary strong, .idea-card strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .challenge-card div, .route-summary div {
+        color: var(--muted);
+        line-height: 1.48;
+        font-size: 14px;
+      }
+      .choice-board {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .choice-column {
+        display: grid;
+        align-content: start;
+        gap: 8px;
+      }
+      .choice-column h3 {
+        margin: 0;
+        font-size: 13px;
+      }
+      .choice-card {
+        min-height: 132px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255,255,255,0.72);
+        color: var(--ink);
+        padding: 12px;
+        text-align: left;
+      }
+      .choice-card.active {
+        background: #05060f;
+        border-color: #05060f;
+        color: white;
+      }
+      .choice-card strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+      .choice-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.42;
+      }
+      .choice-card.active span { color: rgba(255,255,255,0.72); }
+      .ideas-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .idea-card h3 {
+        margin: 0 0 12px;
+        font-size: 18px;
+        line-height: 1.25;
+      }
+      .idea-field {
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+        margin-top: 10px;
+      }
+      .idea-field span {
+        display: block;
+        color: rgba(5, 6, 15, 0.54);
+        font-size: 12px;
+        font-weight: 850;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+      }
+      .idea-field div, .idea-field ul {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
       @media (max-width: 920px) {
-        .layout, .chat-layout, .signals-layout, .grid { grid-template-columns: 1fr; }
+        .layout, .chat-layout, .signals-layout, .grid, .choice-board { grid-template-columns: 1fr; }
         .sidebar { position: static; }
         .section-head { display: block; }
         .composer { grid-template-columns: 1fr; }
@@ -339,7 +428,7 @@ export function renderHomePage() {
       <header class="topbar">
         <div class="brand">
           <h1>Núcleo</h1>
-          <span>Registro + Diagnóstico + Señales</span>
+          <span>Registro + Diagnóstico + Señales + Ideación</span>
         </div>
         <div class="status">IA real en producción</div>
       </header>
@@ -358,7 +447,11 @@ export function renderHomePage() {
             <span class="num">3</span>
             <span><strong>Señales</strong><span>Social listening, tendencias y competidores</span></span>
           </button>
-          <p class="sidebar-note">Este demo usa la API pública de Núcleo. Registro prepara contexto, Diagnóstico reinterpreta el reto y Señales consulta fuentes públicas reales.</p>
+          <button id="step-ideation" class="step" type="button">
+            <span class="num">4</span>
+            <span><strong>Ideación</strong><span>Ruptura, gap e insight</span></span>
+          </button>
+          <p class="sidebar-note">Este demo usa la API pública de Núcleo. Registro prepara contexto, Diagnóstico reinterpreta el reto, Señales consulta fuentes públicas e Ideación genera ideas con OpenAI.</p>
         </aside>
 
         <section class="workspace">
@@ -457,6 +550,9 @@ export function renderHomePage() {
                   <p style="color: var(--muted); line-height: 1.6;">Confirma el diagnóstico para ejecutar Señales.</p>
                 </div>
                 <div id="signals-error" class="error"></div>
+                <div class="actions">
+                  <button id="go-ideation" class="btn primary" type="button" disabled>Diseñar ruta de ideación</button>
+                </div>
               </div>
               <aside class="panel" hidden>
                 <h3 style="margin:0 0 12px;">Fuentes y vacíos</h3>
@@ -464,6 +560,23 @@ export function renderHomePage() {
                   <p style="color: var(--muted); line-height: 1.6;">Aquí aparecerán las fuentes consultadas y vacíos de evidencia.</p>
                 </div>
               </aside>
+            </div>
+          </div>
+
+          <div id="ideation-section" class="section">
+            <div class="section-head">
+              <div>
+                <h2>Ideación disruptiva</h2>
+                <p>Elige una ruta de ruptura, un gap y un insight. La IA traducirá casos disruptivos al reto seleccionado para generar 3 ideas accionables.</p>
+              </div>
+              <span id="ideation-loading" class="loading">Ideando...</span>
+            </div>
+            <div class="panel">
+              <div id="ideation-canvas" class="ideation-canvas">
+                <p style="color: var(--muted); line-height: 1.6;">Consulta Señales para cargar rutas, gaps e insights.</p>
+              </div>
+              <div id="ideation-error" class="error"></div>
+              <div id="ideation-result" class="ideas-grid"></div>
             </div>
           </div>
         </section>
@@ -480,6 +593,13 @@ export function renderHomePage() {
         messages: [],
         diagnosis: null,
         signals: null,
+        ideationOptions: null,
+        ideationSelection: {
+          ruptureType: null,
+          gapTitle: null,
+          insightTitle: null
+        },
+        ideation: null,
         criticalMissing: [],
         correctedSections: [],
         clarificationTarget: null,
@@ -577,9 +697,13 @@ export function renderHomePage() {
       $("step-signals").addEventListener("click", () => {
         if (state.diagnosis || state.signals) setStep("signals");
       });
+      $("step-ideation").addEventListener("click", () => {
+        if (state.signals) openIdeation();
+      });
       $("send-message").addEventListener("click", sendMessage);
       $("complete-diagnosis").addEventListener("click", completeDiagnosis);
       $("confirm-diagnosis-signals").addEventListener("click", generateSignals);
+      $("go-ideation").addEventListener("click", openIdeation);
       $("document-files").addEventListener("change", uploadSelectedDocuments);
       $("result").addEventListener("click", (event) => {
         const button = event.target?.closest?.("[data-clarify-section]");
@@ -593,12 +717,15 @@ export function renderHomePage() {
         $("registration-section").classList.toggle("active", step === "registration");
         $("diagnosis-section").classList.toggle("active", step === "diagnosis");
         $("signals-section").classList.toggle("active", step === "signals");
+        $("ideation-section").classList.toggle("active", step === "ideation");
         $("step-registration").classList.toggle("active", step === "registration");
         $("step-diagnosis").classList.toggle("active", step === "diagnosis");
         $("step-signals").classList.toggle("active", step === "signals");
+        $("step-ideation").classList.toggle("active", step === "ideation");
         $("step-registration").classList.toggle("done", Boolean(state.registration));
         $("step-diagnosis").classList.toggle("done", Boolean(state.diagnosis) && canAdvanceToSignals());
         $("step-signals").classList.toggle("done", Boolean(state.signals));
+        $("step-ideation").classList.toggle("done", Boolean(state.ideation));
         persistDraft();
       }
 
@@ -912,9 +1039,15 @@ export function renderHomePage() {
         state.diagnosis = diagnosis;
         if (previousDiagnosis && previousDiagnosis !== nextDiagnosis) {
           state.signals = null;
+          state.ideationOptions = null;
+          state.ideation = null;
+          state.ideationSelection = { ruptureType: null, gapTitle: null, insightTitle: null };
           $("signals-result").innerHTML = "";
           $("signals-sources").innerHTML = "";
+          $("ideation-canvas").innerHTML = "";
+          $("ideation-result").innerHTML = "";
           setSignalsError("");
+          setIdeationError("");
         }
         const items = [
           ["recommendedChallenge", "Reto recomendado", diagnosis.recommendedChallenge],
@@ -966,8 +1099,15 @@ export function renderHomePage() {
         persistDraft();
       }
 
-      function renderSignals(signals) {
+      function renderSignals(signals, resetIdeation = true) {
         state.signals = signals;
+        if (resetIdeation) {
+          state.ideationOptions = null;
+          state.ideation = null;
+          state.ideationSelection = { ruptureType: null, gapTitle: null, insightTitle: null };
+          $("ideation-result").innerHTML = "";
+          setIdeationError("");
+        }
         const sections = [
           ["gaps", "Gaps", signals.gaps],
           ["insights", "Insights", signals.insights],
@@ -1004,7 +1144,230 @@ export function renderHomePage() {
           $("signals-result").appendChild(box);
         }
         renderSignalsSources(signals);
+        $("go-ideation").disabled = false;
         persistDraft();
+      }
+
+      async function openIdeation() {
+        if (!state.signals) {
+          setSignalsError("Consulta Señales antes de pasar a Ideación.");
+          return;
+        }
+        setStep("ideation");
+        await loadIdeationOptions();
+      }
+
+      async function loadIdeationOptions() {
+        if (state.ideationOptions) {
+          renderIdeationCanvas();
+          return;
+        }
+
+        setLoading(true);
+        setIdeationError("");
+        try {
+          const response = await fetch("/api/ideation/cycles/" + encodeURIComponent(state.cycleId) + "/options");
+          const data = await parseResponse(response);
+          state.ideationOptions = data.options;
+          state.ideationSelection = {
+            ruptureType: state.ideationSelection.ruptureType || data.options.ruptureTypes[0]?.id || null,
+            gapTitle: state.ideationSelection.gapTitle || data.options.gaps[0]?.title || null,
+            insightTitle: state.ideationSelection.insightTitle || data.options.insights[0]?.title || null
+          };
+          renderIdeationCanvas();
+        } catch (error) {
+          setIdeationError(error.message || "No se pudieron cargar opciones de Ideación.");
+        } finally {
+          setLoading(false);
+          persistDraft();
+        }
+      }
+
+      function renderIdeationCanvas() {
+        const options = state.ideationOptions;
+        const canvas = $("ideation-canvas");
+        canvas.innerHTML = "";
+        if (!options) {
+          const empty = document.createElement("p");
+          empty.style.color = "var(--muted)";
+          empty.style.lineHeight = "1.6";
+          empty.textContent = "Consulta Señales para cargar rutas, gaps e insights.";
+          canvas.appendChild(empty);
+          return;
+        }
+
+        const challenge = document.createElement("div");
+        challenge.className = "challenge-card";
+        const challengeTitle = document.createElement("strong");
+        challengeTitle.textContent = "Reto recomendado";
+        const challengeText = document.createElement("div");
+        challengeText.textContent = state.diagnosis?.recommendedChallenge || "Sin reto recomendado.";
+        challenge.append(challengeTitle, challengeText);
+        canvas.appendChild(challenge);
+
+        const board = document.createElement("div");
+        board.className = "choice-board";
+        board.appendChild(renderChoiceColumn(
+          "Nivel 1 · Ruptura",
+          options.ruptureTypes,
+          "ruptureType",
+          (item) => item.id,
+          (item) => item.title,
+          (item) => item.verb + " · " + item.guidingQuestion + " " + item.description
+        ));
+        board.appendChild(renderChoiceColumn(
+          "Nivel 2 · Gap",
+          options.gaps,
+          "gapTitle",
+          (item) => item.title,
+          (item) => item.title,
+          (item) => item.brecha + " Implicación: " + item.implicationForIdeation
+        ));
+        board.appendChild(renderChoiceColumn(
+          "Nivel 3 · Insight",
+          options.insights,
+          "insightTitle",
+          (item) => item.title,
+          (item) => item.title,
+          (item) => item.cliente + ": " + item.comportamientoObservado + " Motivación: " + item.motivacionODeseo
+        ));
+        canvas.appendChild(board);
+
+        const summary = document.createElement("div");
+        summary.className = "route-summary";
+        const summaryTitle = document.createElement("strong");
+        summaryTitle.textContent = "Ruta que se enviará a OpenAI";
+        const summaryText = document.createElement("div");
+        summaryText.textContent = buildRouteSummary();
+        summary.append(summaryTitle, summaryText);
+        canvas.appendChild(summary);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const generateButton = document.createElement("button");
+        generateButton.id = "generate-ideation";
+        generateButton.className = "btn primary";
+        generateButton.type = "button";
+        generateButton.textContent = state.ideation ? "Regenerar 3 ideas" : "Generar 3 ideas";
+        generateButton.disabled = !isIdeationSelectionComplete();
+        generateButton.addEventListener("click", generateIdeation);
+        actions.appendChild(generateButton);
+        canvas.appendChild(actions);
+
+        if (state.ideation) renderIdeationResult(state.ideation);
+      }
+
+      function renderChoiceColumn(title, items, selectionKey, getValue, getTitle, getDescription) {
+        const column = document.createElement("div");
+        column.className = "choice-column";
+        const heading = document.createElement("h3");
+        heading.textContent = title;
+        column.appendChild(heading);
+        for (const item of items || []) {
+          const value = getValue(item);
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "choice-card" + (state.ideationSelection[selectionKey] === value ? " active" : "");
+          button.addEventListener("click", () => {
+            state.ideationSelection[selectionKey] = value;
+            state.ideation = null;
+            $("ideation-result").innerHTML = "";
+            renderIdeationCanvas();
+            persistDraft();
+          });
+          const label = document.createElement("strong");
+          label.textContent = getTitle(item);
+          const description = document.createElement("span");
+          description.textContent = getDescription(item);
+          button.append(label, description);
+          column.appendChild(button);
+        }
+        return column;
+      }
+
+      function buildRouteSummary() {
+        const options = state.ideationOptions;
+        if (!options || !isIdeationSelectionComplete()) {
+          return "Selecciona ruptura, gap e insight para construir la ruta.";
+        }
+        const route = options.ruptureTypes.find((item) => item.id === state.ideationSelection.ruptureType);
+        const gap = options.gaps.find((item) => item.title === state.ideationSelection.gapTitle);
+        const insight = options.insights.find((item) => item.title === state.ideationSelection.insightTitle);
+        return (route?.title || "Ruta") + " para " + (route?.verb || "idear") + " sobre el gap “" + (gap?.title || "") + "”, usando el insight “" + (insight?.title || "") + "”.";
+      }
+
+      function isIdeationSelectionComplete() {
+        return Boolean(state.ideationSelection.ruptureType && state.ideationSelection.gapTitle && state.ideationSelection.insightTitle);
+      }
+
+      async function generateIdeation() {
+        if (!isIdeationSelectionComplete()) {
+          setIdeationError("Selecciona ruptura, gap e insight antes de generar ideas.");
+          return;
+        }
+        setLoading(true);
+        setIdeationError("");
+        try {
+          const response = await fetch("/api/ideation/cycles/" + encodeURIComponent(state.cycleId) + "/generate", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ selection: state.ideationSelection })
+          });
+          const data = await parseResponse(response);
+          state.ideation = data.ideation.output;
+          renderIdeationCanvas();
+          addMessage("assistant", "Ideación generó 3 ideas para la ruta seleccionada.");
+        } catch (error) {
+          setIdeationError(error.message || "No se pudo generar Ideación.");
+        } finally {
+          setLoading(false);
+          persistDraft();
+        }
+      }
+
+      function renderIdeationResult(output) {
+        const result = $("ideation-result");
+        result.innerHTML = "";
+        const route = document.createElement("div");
+        route.className = "route-summary";
+        const routeTitle = document.createElement("strong");
+        routeTitle.textContent = output.route.title;
+        const routeText = document.createElement("div");
+        routeText.textContent = output.route.purpose;
+        route.append(routeTitle, routeText);
+        result.appendChild(route);
+
+        for (const idea of output.ideas || []) {
+          const card = document.createElement("article");
+          card.className = "idea-card";
+          const title = document.createElement("h3");
+          title.textContent = idea.idea;
+          card.appendChild(title);
+          appendIdeaField(card, "Supuesto que rompe", idea.supuestoQueRompe);
+          appendIdeaField(card, "Mecánica concreta", idea.mecanicaConcreta);
+          appendIdeaField(card, "Por qué funciona", idea.porQueFunciona);
+          appendIdeaField(card, "Caso análogo", idea.casoAnalogo);
+          appendIdeaField(card, "Métrica que mueve", idea.metricaQueMueve);
+          appendIdeaField(card, "Primer paso ejecutable", idea.primerPasoEjecutable);
+          appendIdeaField(card, "Anti-patrones a evitar al ejecutar", idea.antiPatronesAEvitar);
+          result.appendChild(card);
+        }
+      }
+
+      function appendIdeaField(card, label, value) {
+        const field = document.createElement("div");
+        field.className = "idea-field";
+        const labelNode = document.createElement("span");
+        labelNode.textContent = label;
+        field.appendChild(labelNode);
+        if (Array.isArray(value)) {
+          field.appendChild(renderBulletList(value));
+        } else {
+          const text = document.createElement("div");
+          text.textContent = value || "Sin dato declarado.";
+          field.appendChild(text);
+        }
+        card.appendChild(field);
       }
 
       function renderSignalsSources(signals) {
@@ -1078,6 +1441,9 @@ export function renderHomePage() {
           messages: state.messages,
           diagnosis: state.diagnosis,
           signals: state.signals,
+          ideationOptions: state.ideationOptions,
+          ideationSelection: state.ideationSelection,
+          ideation: state.ideation,
           criticalMissing: state.criticalMissing,
           correctedSections: state.correctedSections,
           clarificationTarget: state.clarificationTarget,
@@ -1098,6 +1464,9 @@ export function renderHomePage() {
           if (Array.isArray(draft.messages)) state.messages = draft.messages;
           if (draft.diagnosis) state.diagnosis = draft.diagnosis;
           if (draft.signals) state.signals = draft.signals;
+          if (draft.ideationOptions) state.ideationOptions = draft.ideationOptions;
+          if (draft.ideationSelection) state.ideationSelection = draft.ideationSelection;
+          if (draft.ideation) state.ideation = draft.ideation;
           if (Array.isArray(draft.criticalMissing)) state.criticalMissing = draft.criticalMissing;
           if (Array.isArray(draft.correctedSections)) state.correctedSections = draft.correctedSections;
           if (draft.clarificationTarget) state.clarificationTarget = draft.clarificationTarget;
@@ -1118,9 +1487,10 @@ export function renderHomePage() {
           }
           if (state.diagnosis) renderDiagnosis(state.diagnosis);
           renderCriticalMissing(state.criticalMissing || []);
-          if (state.signals) renderSignals(state.signals);
+          if (state.signals) renderSignals(state.signals, false);
+          if (state.ideationOptions) renderIdeationCanvas();
           renderDocumentList();
-          setStep(state.activeStep || (state.signals ? "signals" : state.registration ? "diagnosis" : "registration"));
+          setStep(state.activeStep || (state.ideation ? "ideation" : state.signals ? "signals" : state.registration ? "diagnosis" : "registration"));
         } catch {
           localStorage.removeItem(storageKey);
         }
@@ -1138,9 +1508,13 @@ export function renderHomePage() {
       function setLoading(active) {
         loading.classList.toggle("active", active);
         $("signals-loading").classList.toggle("active", active);
+        $("ideation-loading").classList.toggle("active", active);
         $("send-message").disabled = active;
         $("complete-diagnosis").disabled = active;
         $("confirm-diagnosis-signals").disabled = active || !state.diagnosis || !canAdvanceToSignals() || Boolean(state.clarificationTarget);
+        $("go-ideation").disabled = active || !state.signals;
+        const generateButton = $("generate-ideation");
+        if (generateButton) generateButton.disabled = active || !isIdeationSelectionComplete();
         updateClarifyButtons(active);
       }
 
@@ -1163,6 +1537,11 @@ export function renderHomePage() {
       function setSignalsError(message) {
         $("signals-error").textContent = message;
         $("signals-error").classList.toggle("active", Boolean(message));
+      }
+
+      function setIdeationError(message) {
+        $("ideation-error").textContent = message;
+        $("ideation-error").classList.toggle("active", Boolean(message));
       }
 
       function slug(value) {
