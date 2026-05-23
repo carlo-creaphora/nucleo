@@ -833,7 +833,7 @@ export function renderHomePage() {
     </main>
 
     <script>
-      const storageKey = "nucleo-current-cycle-v1";
+      const storageKey = "nucleo-current-cycle-v2";
 
       const state = {
         registration: null,
@@ -2019,29 +2019,58 @@ export function renderHomePage() {
           field.appendChild(renderBulletList(value));
         } else {
           const text = document.createElement("div");
-          text.textContent = value || "Sin dato declarado.";
+          text.textContent = cleanIdeaFieldForDisplay(label, value) || "Sin dato declarado.";
           field.appendChild(text);
         }
         card.appendChild(field);
       }
 
       function cleanAssumptionForDisplay(value) {
-        const cleaned = String(value || "")
+        const cleaned = repairSpanishTextForDisplay(String(value || ""))
           .trim()
-          .replace(/^supuesto\s+que\s+rompe\s*:\s*/i, "")
-          .replace(/^[\s"'“”‘’]*(?:rompe|romper)\s+[\s\S]{0,90}?\s+de\s+que\s+/i, "")
-          .replace(/^rompe\s+(?:el\s+)?supuesto\s+de\s+que\s+/i, "")
-          .replace(/^rompe\s+(?:la\s+)?creencia\s+de\s+que\s+/i, "")
-          .replace(/^el\s+supuesto\s+que\s+rompe\s+es\s+que\s+/i, "")
-          .replace(/^la\s+creencia\s+que\s+rompe\s+es\s+que\s+/i, "");
+          .replace(/^supuesto\\s+que\\s+rompe\\s*:\\s*/i, "")
+          .replace(/^rompe\\s+el\\s+upue\\s*to\\s+de\\s+que\\s+/i, "")
+          .replace(/^rompe\\s+el\\s+supue\\s*to\\s+de\\s+que\\s+/i, "")
+          .replace(/^[\\s"'“”‘’]*(?:rompe|romper)\\s+[\\s\\S]{0,90}?\\s+de\\s+que\\s+/i, "")
+          .replace(/^rompe\\s+(?:el\\s+)?supuesto\\s+de\\s+que\\s+/i, "")
+          .replace(/^rompe\\s+(?:la\\s+)?creencia\\s+de\\s+que\\s+/i, "")
+          .replace(/^el\\s+supuesto\\s+que\\s+rompe\\s+es\\s+que\\s+/i, "")
+          .replace(/^la\\s+creencia\\s+que\\s+rompe\\s+es\\s+que\\s+/i, "");
         return uppercaseFirst(cleanCompactTextForDisplay(cleaned, 1));
       }
 
+      function cleanIdeaFieldForDisplay(label, value) {
+        if (label === "Supuesto que rompe") return cleanAssumptionForDisplay(value);
+        if (label === "Mecánica concreta") return cleanCompactTextForDisplay(repairSpanishTextForDisplay(value), 2);
+        if (label === "Por qué funciona") return cleanCompactTextForDisplay(repairSpanishTextForDisplay(value), 2);
+        return repairSpanishTextForDisplay(value);
+      }
+
+      function repairSpanishTextForDisplay(value) {
+        return String(value || "")
+          .replace(/\\bupue\\s*to\\b/gi, "supuesto")
+          .replace(/\\bervicio\\b/gi, "servicio")
+          .replace(/\\bai\\s*lada\\b/gi, "aislada")
+          .replace(/\\ba\\s*umiendo\\b/gi, "asumiendo")
+          .replace(/\\brie\\s*go\\b/gi, "riesgo")
+          .replace(/\\breproce\\s*o\\b/gi, "reproceso")
+          .replace(/\\bre\\s*pon\\s*able\\b/gi, "responsable")
+          .replace(/\\be\\s*tablece\\b/gi, "establece")
+          .replace(/\\bba\\s*ada\\b/gi, "basada")
+          .replace(/\\begura\\b/gi, "segura")
+          .replace(/\\ba\\s*cen\\s*ore\\b/gi, "ascensores")
+          .replace(/\\be\\s*calera\\b/gi, "escalera")
+          .replace(/\\bre\\s*ultado\\s+de\\s*eado\\b/gi, "resultado deseado")
+          .replace(/\\bre\\s*ultado\\b/gi, "resultado")
+          .replace(/\\bpre\\s*encia\\b/gi, "presencia")
+          .replace(/\\bincentivo entre\\b/gi, "incentivos entre");
+      }
+
       function cleanCompactTextForDisplay(value, maxSentences) {
-        const cleaned = String(value || "").replace(/\s+/g, " ").trim();
+        const cleaned = String(value || "").replace(/\\s+/g, " ").trim();
         const sentences = cleaned.match(/[^.!?]+[.!?]?/g);
         if (!sentences) return cleaned;
-        return sentences.slice(0, maxSentences).join(" ").replace(/\s+/g, " ").trim();
+        return sentences.slice(0, maxSentences).join(" ").replace(/\\s+/g, " ").trim();
       }
 
       function uppercaseFirst(value) {

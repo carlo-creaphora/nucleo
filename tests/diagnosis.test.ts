@@ -701,9 +701,28 @@ describe("Diagnostico", () => {
         buildIdeationOutputForTest(ideationInput, {
           supuestoQueRompe:
             "Rompe el upue to de que el servicio de mantenimiento debe cobrarse por visita.",
+          mecanicaConcreta:
+            "Conecta actua como re pon able y e tablece una tarifa ba ada en operacion egura de a cen ore y e calera electrica.",
+          porQueFunciona:
+            "Alinea incentivo entre proveedor y cliente hacia el re ultado de eado con operacion egura y menor reproce o.",
         }),
       ).ideas[0]?.supuestoQueRompe,
     ).toBe("El servicio de mantenimiento debe cobrarse por visita.");
+    const repaired = cleanIdeationOutputForDisplay(
+      buildIdeationOutputForTest(ideationInput, {
+        mecanicaConcreta:
+          "Conecta actua como re pon able y e tablece una tarifa ba ada en operacion egura de a cen ore y e calera electrica.",
+        porQueFunciona:
+          "Alinea incentivo entre proveedor y cliente hacia el re ultado de eado con operacion egura y menor reproce o.",
+      }),
+    );
+    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("responsable");
+    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("establece");
+    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("basada");
+    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("segura");
+    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("ascensores");
+    expect(repaired.ideas[0]?.porQueFunciona).toContain("resultado deseado");
+    expect(repaired.ideas[0]?.porQueFunciona).toContain("reproceso");
     expect(cleaned.ideas[0]?.antiPatronesAEvitar).toEqual([
       "No convertirlo en otro checklist burocratico.",
       "No saltar directo a una solucion de software.",

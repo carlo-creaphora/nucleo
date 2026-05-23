@@ -378,15 +378,15 @@ export function cleanIdeationOutputForDisplay(
           "Supuesto que rompe",
         ]),
       ),
-      mecanicaConcreta: limitSentences(stripPilotFromMechanic(
+      mecanicaConcreta: limitSentences(repairSpanishText(stripPilotFromMechanic(
         stripLeadingFieldLabel(idea.mecanicaConcreta, [
           "Mecanica concreta",
           "Mecánica concreta",
           "La mecanica concreta consiste en",
           "La mecánica concreta consiste en",
         ]),
-      ), 2),
-      porQueFunciona: limitSentences(idea.porQueFunciona, 2),
+      )), 2),
+      porQueFunciona: limitSentences(repairSpanishText(idea.porQueFunciona), 2),
       antiPatronesAEvitar: idea.antiPatronesAEvitar
         .map(stripInternalAntiPatternCode)
         .filter((item) => item.length > 0),
@@ -395,14 +395,36 @@ export function cleanIdeationOutputForDisplay(
 }
 
 function cleanAssumption(value: string) {
-  const withoutPrefix = value
+  const withoutPrefix = repairSpanishText(value)
     .trim()
+    .replace(/^rompe\s+el\s+upue\s*to\s+de\s+que\s+/i, "")
+    .replace(/^rompe\s+el\s+supue\s*to\s+de\s+que\s+/i, "")
     .replace(/^[\s"'“”‘’]*(?:rompe|romper)\s+[\s\S]{0,90}?\s+de\s+que\s+/i, "")
     .replace(/^rompe\s+(?:el\s+)?supuesto\s+de\s+que\s+/i, "")
     .replace(/^rompe\s+(?:la\s+)?creencia\s+de\s+que\s+/i, "")
     .replace(/^el\s+supuesto\s+que\s+rompe\s+es\s+que\s+/i, "")
     .replace(/^la\s+creencia\s+que\s+rompe\s+es\s+que\s+/i, "");
   return limitSentences(uppercaseFirst(withoutPrefix), 1);
+}
+
+function repairSpanishText(value: string) {
+  return value
+    .replace(/\bupue\s*to\b/gi, "supuesto")
+    .replace(/\bervicio\b/gi, "servicio")
+    .replace(/\bai\s*lada\b/gi, "aislada")
+    .replace(/\ba\s*umiendo\b/gi, "asumiendo")
+    .replace(/\brie\s*go\b/gi, "riesgo")
+    .replace(/\breproce\s*o\b/gi, "reproceso")
+    .replace(/\bre\s*pon\s*able\b/gi, "responsable")
+    .replace(/\be\s*tablece\b/gi, "establece")
+    .replace(/\bba\s*ada\b/gi, "basada")
+    .replace(/\begura\b/gi, "segura")
+    .replace(/\ba\s*cen\s*ore\b/gi, "ascensores")
+    .replace(/\be\s*calera\b/gi, "escalera")
+    .replace(/\bre\s*ultado\s+de\s*eado\b/gi, "resultado deseado")
+    .replace(/\bre\s*ultado\b/gi, "resultado")
+    .replace(/\bpre\s*encia\b/gi, "presencia")
+    .replace(/\bincentivo entre\b/gi, "incentivos entre");
 }
 
 function uppercaseFirst(value: string) {
