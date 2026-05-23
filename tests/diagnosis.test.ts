@@ -18,6 +18,7 @@ import { IdeationService } from "../src/ideation/service.js";
 import {
   buildCaseScreeningSystemPrompt,
   buildConceptReviewSystemPrompt,
+  buildCopyEditSystemPrompt,
   buildIdeationSystemPrompt,
   cleanIdeationOutputForDisplay,
   createIdeationEngine,
@@ -640,12 +641,15 @@ describe("Diagnostico", () => {
     const prompt = buildIdeationSystemPrompt();
     const screeningPrompt = buildCaseScreeningSystemPrompt();
     const reviewPrompt = buildConceptReviewSystemPrompt();
+    const copyPrompt = buildCopyEditSystemPrompt();
 
     expect(screeningPrompt).toContain("seleccionar casos disruptivos antes de generar ideas");
     expect(screeningPrompt).toContain("Selecciona exactamente 3 casos");
     expect(screeningPrompt).toContain("mecanismo transferible");
     expect(reviewPrompt).toContain("No bloquees por palabras sueltas");
     expect(reviewPrompt).toContain("modelo de la idea");
+    expect(copyPrompt).toContain("palabras cortadas");
+    expect(copyPrompt).toContain("espacios insertados dentro de palabras");
     expect(prompt).toContain("mandatoryCaseScreening");
     expect(prompt).toContain("Generar exactamente 1 idea");
     expect(prompt).toContain("referencia principal");
@@ -700,29 +704,14 @@ describe("Diagnostico", () => {
       cleanIdeationOutputForDisplay(
         buildIdeationOutputForTest(ideationInput, {
           supuestoQueRompe:
-            "Rompe el upue to de que el servicio de mantenimiento debe cobrarse por visita.",
+            "Rompe el supuesto de que el servicio de mantenimiento debe cobrarse por visita.",
           mecanicaConcreta:
-            "Conecta actua como re pon able y e tablece una tarifa ba ada en operacion egura de a cen ore y e calera electrica.",
+            "Conecta actua como responsable y establece una tarifa basada en operacion segura.",
           porQueFunciona:
-            "Alinea incentivo entre proveedor y cliente hacia el re ultado de eado con operacion egura y menor reproce o.",
+            "Alinea incentivos entre proveedor y cliente hacia el resultado deseado.",
         }),
       ).ideas[0]?.supuestoQueRompe,
     ).toBe("El servicio de mantenimiento debe cobrarse por visita.");
-    const repaired = cleanIdeationOutputForDisplay(
-      buildIdeationOutputForTest(ideationInput, {
-        mecanicaConcreta:
-          "Conecta actua como re pon able y e tablece una tarifa ba ada en operacion egura de a cen ore y e calera electrica.",
-        porQueFunciona:
-          "Alinea incentivo entre proveedor y cliente hacia el re ultado de eado con operacion egura y menor reproce o.",
-      }),
-    );
-    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("responsable");
-    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("establece");
-    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("basada");
-    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("segura");
-    expect(repaired.ideas[0]?.mecanicaConcreta).toContain("ascensores");
-    expect(repaired.ideas[0]?.porQueFunciona).toContain("resultado deseado");
-    expect(repaired.ideas[0]?.porQueFunciona).toContain("reproceso");
     expect(cleaned.ideas[0]?.antiPatronesAEvitar).toEqual([
       "No convertirlo en otro checklist burocratico.",
       "No saltar directo a una solucion de software.",

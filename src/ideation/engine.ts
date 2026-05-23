@@ -64,8 +64,8 @@ export class OpenAiIdeationEngine implements IdeationEngine {
 
   async generate(input: IdeationGenerationInput) {
     const caseScreening = await this.runCaseScreening(input);
-    const output = await this.runStructured(
-      buildIdeationUserPayload(input, caseScreening),
+    const output = await this.copyEditOutput(
+      await this.runStructured(buildIdeationUserPayload(input, caseScreening)),
     );
     const violations = validateIdeationOutput(input, output);
 
@@ -152,14 +152,16 @@ export class OpenAiIdeationEngine implements IdeationEngine {
     output: IdeationOutput,
     violations: IdeationContractViolation[],
   ) {
-    return this.runStructured({
-      instruction:
-        "Repara la ideacion por incumplimiento contractual. No cambies gap, insight, tipo de ruptura ni los casos ya seleccionados en caseScreening. Reformula solo la idea afectada y conserva exactamente 1 idea.",
-      violations,
-      mandatoryCaseScreening: caseScreening,
-      originalOutput: output,
-      originalPayload: buildIdeationUserPayload(input, caseScreening),
-    });
+    return this.copyEditOutput(
+      await this.runStructured({
+        instruction:
+          "Repara la ideacion por incumplimiento contractual. No cambies gap, insight, tipo de ruptura ni los casos ya seleccionados en caseScreening. Reformula solo la idea afectada y conserva exactamente 1 idea.",
+        violations,
+        mandatoryCaseScreening: caseScreening,
+        originalOutput: output,
+        originalPayload: buildIdeationUserPayload(input, caseScreening),
+      }),
+    );
   }
 
   private async repairConceptViolations(
@@ -168,14 +170,16 @@ export class OpenAiIdeationEngine implements IdeationEngine {
     output: IdeationOutput,
     conceptReview: IdeationConceptReview,
   ) {
-    return this.runStructured({
-      instruction:
-        "Repara la ideacion por incumplimiento conceptual de anti-patrones. No cambies gap, insight, tipo de ruptura ni los casos seleccionados. Reformula solo las ideas marcadas como generic_or_antipattern desde el mecanismo del caso seleccionado.",
-      conceptReview,
-      mandatoryCaseScreening: caseScreening,
-      originalOutput: output,
-      originalPayload: buildIdeationUserPayload(input, caseScreening),
-    });
+    return this.copyEditOutput(
+      await this.runStructured({
+        instruction:
+          "Repara la ideacion por incumplimiento conceptual de anti-patrones. No cambies gap, insight, tipo de ruptura ni los casos seleccionados. Reformula solo las ideas marcadas como generic_or_antipattern desde el mecanismo del caso seleccionado.",
+        conceptReview,
+        mandatoryCaseScreening: caseScreening,
+        originalOutput: output,
+        originalPayload: buildIdeationUserPayload(input, caseScreening),
+      }),
+    );
   }
 
   private async runCaseScreening(input: IdeationGenerationInput) {
@@ -240,6 +244,33 @@ export class OpenAiIdeationEngine implements IdeationEngine {
     }
 
     return parsed as IdeationConceptReview;
+  }
+
+  private async copyEditOutput(output: IdeationOutput) {
+    const completion = await this.client.beta.chat.completions.parse({
+      model: this.model,
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: buildCopyEditSystemPrompt(),
+        },
+        {
+          role: "user",
+          content: JSON.stringify({ output }, null, 2),
+        },
+      ],
+      response_format: zodResponseFormat(ideationOutputSchema, "ideation_output"),
+    });
+    const parsed = completion.choices[0]?.message.parsed;
+
+    if (!parsed) {
+      throw new Error("OpenAI no devolvio una edicion de copia valida");
+    }
+
+    return cleanIdeationOutputForDisplay(
+      parsed as z.infer<typeof ideationOutputSchema>,
+    );
   }
 
   private async runStructured(payload: unknown) {
@@ -378,15 +409,15 @@ export function cleanIdeationOutputForDisplay(
           "Supuesto que rompe",
         ]),
       ),
-      mecanicaConcreta: limitSentences(repairSpanishText(stripPilotFromMechanic(
+      mecanicaConcreta: limitSentences(stripPilotFromMechanic(
         stripLeadingFieldLabel(idea.mecanicaConcreta, [
           "Mecanica concreta",
           "Mecánica concreta",
           "La mecanica concreta consiste en",
           "La mecánica concreta consiste en",
         ]),
-      )), 2),
-      porQueFunciona: limitSentences(repairSpanishText(idea.porQueFunciona), 2),
+      ), 2),
+      porQueFunciona: limitSentences(idea.porQueFunciona, 2),
       antiPatronesAEvitar: idea.antiPatronesAEvitar
         .map(stripInternalAntiPatternCode)
         .filter((item) => item.length > 0),
@@ -395,36 +426,14 @@ export function cleanIdeationOutputForDisplay(
 }
 
 function cleanAssumption(value: string) {
-  const withoutPrefix = repairSpanishText(value)
+  const withoutPrefix = value
     .trim()
-    .replace(/^rompe\s+el\s+upue\s*to\s+de\s+que\s+/i, "")
-    .replace(/^rompe\s+el\s+supue\s*to\s+de\s+que\s+/i, "")
     .replace(/^[\s"'“”‘’]*(?:rompe|romper)\s+[\s\S]{0,90}?\s+de\s+que\s+/i, "")
     .replace(/^rompe\s+(?:el\s+)?supuesto\s+de\s+que\s+/i, "")
     .replace(/^rompe\s+(?:la\s+)?creencia\s+de\s+que\s+/i, "")
     .replace(/^el\s+supuesto\s+que\s+rompe\s+es\s+que\s+/i, "")
     .replace(/^la\s+creencia\s+que\s+rompe\s+es\s+que\s+/i, "");
   return limitSentences(uppercaseFirst(withoutPrefix), 1);
-}
-
-function repairSpanishText(value: string) {
-  return value
-    .replace(/\bupue\s*to\b/gi, "supuesto")
-    .replace(/\bervicio\b/gi, "servicio")
-    .replace(/\bai\s*lada\b/gi, "aislada")
-    .replace(/\ba\s*umiendo\b/gi, "asumiendo")
-    .replace(/\brie\s*go\b/gi, "riesgo")
-    .replace(/\breproce\s*o\b/gi, "reproceso")
-    .replace(/\bre\s*pon\s*able\b/gi, "responsable")
-    .replace(/\be\s*tablece\b/gi, "establece")
-    .replace(/\bba\s*ada\b/gi, "basada")
-    .replace(/\begura\b/gi, "segura")
-    .replace(/\ba\s*cen\s*ore\b/gi, "ascensores")
-    .replace(/\be\s*calera\b/gi, "escalera")
-    .replace(/\bre\s*ultado\s+de\s*eado\b/gi, "resultado deseado")
-    .replace(/\bre\s*ultado\b/gi, "resultado")
-    .replace(/\bpre\s*encia\b/gi, "presencia")
-    .replace(/\bincentivo entre\b/gi, "incentivos entre");
 }
 
 function uppercaseFirst(value: string) {
@@ -511,6 +520,22 @@ export function buildConceptReviewSystemPrompt() {
     "",
     "SALIDA",
     "Devuelve passed=true solo si todas las ideas pasan conceptualmente.",
+  ].join("\n");
+}
+
+export function buildCopyEditSystemPrompt() {
+  return [
+    "Eres editor final de copia para Ideacion de Nucleo.",
+    "Tu tarea es prevenir texto roto antes de guardar la idea.",
+    "",
+    "REGLAS",
+    "- Corrige ortografia, letras faltantes, palabras cortadas y espacios insertados dentro de palabras.",
+    "- No cambies el concepto, la ruta, los casos analogos, ids, trace, gap, insight ni campos internos.",
+    "- supuestoQueRompe debe ser solo el supuesto, sin prefijos como 'Rompe el supuesto de que'.",
+    "- mecanicaConcreta debe quedar en maximo 2 frases concretas.",
+    "- porQueFunciona debe quedar en maximo 2 frases concretas.",
+    "- No agregues explicaciones nuevas ni hagas la idea mas optimista.",
+    "- Devuelve el mismo numero de ideas recibido.",
   ].join("\n");
 }
 

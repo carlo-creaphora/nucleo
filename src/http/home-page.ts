@@ -20,7 +20,7 @@ export function renderHomePage() {
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         color: var(--ink);
         background:
           radial-gradient(circle at 20% 0%, rgba(125, 178, 255, 0.34), transparent 34%),
@@ -833,7 +833,7 @@ export function renderHomePage() {
     </main>
 
     <script>
-      const storageKey = "nucleo-current-cycle-v2";
+      const storageKey = "nucleo-current-cycle-v3";
 
       const state = {
         registration: null,
@@ -2026,11 +2026,9 @@ export function renderHomePage() {
       }
 
       function cleanAssumptionForDisplay(value) {
-        const cleaned = repairSpanishTextForDisplay(String(value || ""))
+        const cleaned = String(value || "")
           .trim()
           .replace(/^supuesto\\s+que\\s+rompe\\s*:\\s*/i, "")
-          .replace(/^rompe\\s+el\\s+upue\\s*to\\s+de\\s+que\\s+/i, "")
-          .replace(/^rompe\\s+el\\s+supue\\s*to\\s+de\\s+que\\s+/i, "")
           .replace(/^[\\s"'“”‘’]*(?:rompe|romper)\\s+[\\s\\S]{0,90}?\\s+de\\s+que\\s+/i, "")
           .replace(/^rompe\\s+(?:el\\s+)?supuesto\\s+de\\s+que\\s+/i, "")
           .replace(/^rompe\\s+(?:la\\s+)?creencia\\s+de\\s+que\\s+/i, "")
@@ -2041,29 +2039,9 @@ export function renderHomePage() {
 
       function cleanIdeaFieldForDisplay(label, value) {
         if (label === "Supuesto que rompe") return cleanAssumptionForDisplay(value);
-        if (label === "Mecánica concreta") return cleanCompactTextForDisplay(repairSpanishTextForDisplay(value), 2);
-        if (label === "Por qué funciona") return cleanCompactTextForDisplay(repairSpanishTextForDisplay(value), 2);
-        return repairSpanishTextForDisplay(value);
-      }
-
-      function repairSpanishTextForDisplay(value) {
-        return String(value || "")
-          .replace(/\\bupue\\s*to\\b/gi, "supuesto")
-          .replace(/\\bervicio\\b/gi, "servicio")
-          .replace(/\\bai\\s*lada\\b/gi, "aislada")
-          .replace(/\\ba\\s*umiendo\\b/gi, "asumiendo")
-          .replace(/\\brie\\s*go\\b/gi, "riesgo")
-          .replace(/\\breproce\\s*o\\b/gi, "reproceso")
-          .replace(/\\bre\\s*pon\\s*able\\b/gi, "responsable")
-          .replace(/\\be\\s*tablece\\b/gi, "establece")
-          .replace(/\\bba\\s*ada\\b/gi, "basada")
-          .replace(/\\begura\\b/gi, "segura")
-          .replace(/\\ba\\s*cen\\s*ore\\b/gi, "ascensores")
-          .replace(/\\be\\s*calera\\b/gi, "escalera")
-          .replace(/\\bre\\s*ultado\\s+de\\s*eado\\b/gi, "resultado deseado")
-          .replace(/\\bre\\s*ultado\\b/gi, "resultado")
-          .replace(/\\bpre\\s*encia\\b/gi, "presencia")
-          .replace(/\\bincentivo entre\\b/gi, "incentivos entre");
+        if (label === "Mecánica concreta") return cleanCompactTextForDisplay(value, 2);
+        if (label === "Por qué funciona") return cleanCompactTextForDisplay(value, 2);
+        return String(value || "");
       }
 
       function cleanCompactTextForDisplay(value, maxSentences) {
