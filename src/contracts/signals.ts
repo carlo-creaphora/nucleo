@@ -8,6 +8,7 @@ export const signalLensSchema = z.enum([
   "SOCIAL_LISTENING",
   "TREND",
   "COMPETITOR",
+  "CUSTOMER_INSIGHT",
 ]);
 
 export const signalConfidenceSchema = z.enum(["HIGH", "MEDIUM", "LOW"]);
@@ -107,6 +108,17 @@ export const signalsSynthesisForAiSchema = z.object({
   analisisTendencias: signalsAnalysisSectionForAiSchema,
   analisisCompetidores: signalsAnalysisSectionForAiSchema,
   gaps: z.array(signalGapSchema).length(2),
+  insights: z.array(signalInsightSchema).length(2),
+});
+
+export const signalGapSynthesisForAiSchema = z.object({
+  analisisSocialListening: signalsAnalysisSectionForAiSchema,
+  analisisTendencias: signalsAnalysisSectionForAiSchema,
+  analisisCompetidores: signalsAnalysisSectionForAiSchema,
+  gaps: z.array(signalGapSchema).length(2),
+});
+
+export const signalInsightSynthesisForAiSchema = z.object({
   insights: z.array(signalInsightSchema).length(2),
 });
 

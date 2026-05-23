@@ -216,11 +216,13 @@ Reglas:
 
 Metodo:
 
-- Ejecutar 3 busquedas reales y explicitas por lente: social listening, tendencias y competidores.
-- Cada busqueda debe ser agresiva y orientada a fricciones, contradicciones y senales negativas.
+- Ejecutar busquedas reales y explicitas por lente: social listening, tendencias, competidores y customer insight.
+- Social listening, tendencias y competidores alimentan principalmente gaps.
+- Customer insight alimenta insights y busca motivaciones, deseos, verdades incomodas, riesgos politicos, miedo reputacional, criterios de compra, aversion al cambio, necesidad de control y rituales de decision del comprador declarado.
+- Cada busqueda debe ser agresiva y orientada a fricciones, contradicciones, senales negativas o motivaciones ocultas del comprador.
 - Extraer maximo 5 evidencias textuales por lente.
-- Rankear evidencias por utilidad para Ideacion: contradiccion con diagnostico, friccion negativa, impacto en compra/adopcion/ejecucion, competidor/categoria y tension interna.
-- Sintetizar exactamente 2 gaps y 2 insights desde las evidencias priorizadas.
+- Rankear evidencias por utilidad para Ideacion.
+- Sintetizar exactamente 2 gaps desde evidencia de mercado y exactamente 2 insights desde evidencia del comprador.
 
 ## Ideacion
 

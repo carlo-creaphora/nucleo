@@ -7,8 +7,9 @@ import {
   type SignalLens,
   type SignalsInput,
   type SignalsOutput,
+  signalGapSynthesisForAiSchema,
   signalEvidenceForAiSchema,
-  signalsSynthesisForAiSchema,
+  signalInsightSynthesisForAiSchema,
   signalsOutputSchema,
 } from "../contracts/signals.js";
 
@@ -42,12 +43,18 @@ export class OpenAiSignalsEngine implements SignalsEngine {
       this.searchLens(input, "SOCIAL_LISTENING"),
       this.searchLens(input, "TREND"),
       this.searchLens(input, "COMPETITOR"),
+      this.searchLens(input, "CUSTOMER_INSIGHT"),
     ]);
     const senalesBase = rankEvidence(searchResults.flat()).map((signal, index) => ({
       ...signal,
       id: `sig_${index + 1}`,
     }));
-    const synthesis = await this.synthesize(input, senalesBase);
+    const gapSynthesis = await this.synthesizeGaps(input, senalesBase);
+    const insightSynthesis = await this.synthesizeInsights(
+      input,
+      senalesBase,
+      gapSynthesis.gaps,
+    );
     const fuentesConsultadas = Array.from(
       new Set(
         senalesBase
@@ -59,10 +66,12 @@ export class OpenAiSignalsEngine implements SignalsEngine {
       ["SOCIAL_LISTENING", "No se encontro social listening defendible con voz textual."],
       ["TREND", "No se encontraron tendencias trazables suficientes."],
       ["COMPETITOR", "No se encontraron senales competitivas trazables suficientes."],
+      ["CUSTOMER_INSIGHT", "No se encontraron senales defendibles de motivaciones del comprador."],
     ] as const;
 
     return signalsOutputSchema.parse({
-      ...synthesis,
+      ...gapSynthesis,
+      ...insightSynthesis,
       searchDepth: "standard",
       generatedAt: new Date().toISOString(),
       memoriaEmpresa: input.ideationInput.memory,
@@ -110,28 +119,28 @@ export class OpenAiSignalsEngine implements SignalsEngine {
     return normalizeEvidence(parsed.output_parsed?.signals ?? [], lens);
   }
 
-  private async synthesize(input: SignalsInput, evidence: SignalEvidence[]) {
+  private async synthesizeGaps(input: SignalsInput, evidence: SignalEvidence[]) {
     const completion = await this.client.beta.chat.completions.parse({
       model: this.model,
       temperature: 0.15,
       messages: [
         {
           role: "system",
-          content: buildSynthesisSystemPrompt(),
+          content: buildGapSynthesisSystemPrompt(),
         },
         {
           role: "user",
           content: JSON.stringify(
             {
               instruction:
-                "Analiza solo estas senales base. Produce obligatoriamente exactamente 2 gaps y exactamente 2 insights. GAP = diferencia entre estado actual de la empresa y potencial/expectativa/movimiento del mercado. INSIGHT = revelacion sobre comportamiento, motivacion, miedo o deseo del cliente/comprador declarado. Rechaza cualquier salida que solo parafrasee el diagnostico interno o que repita un gap con otras palabras.",
+                "Analiza solo estas senales base de mercado. Produce exactamente 2 gaps. GAP = diferencia entre estado actual de la empresa y potencial/expectativa/movimiento del mercado.",
               diagnosis: input.ideationInput.diagnosis,
               registration: input.registration,
               buyer: inferBuyer(input),
               bannedParaphraseSource:
                 "No repitas coordinacion operativa, estandarizacion, falta de personal, diferencias normativas o tensiones internas salvo como estadoActualEmpresa; el valor debe venir del mercado o del cliente.",
               memory: input.ideationInput.memory,
-              evidence,
+              evidence: evidence.filter((signal) => signal.lens !== "CUSTOMER_INSIGHT"),
             },
             null,
             2,
@@ -139,15 +148,64 @@ export class OpenAiSignalsEngine implements SignalsEngine {
         },
       ],
       response_format: zodResponseFormat(
-        signalsSynthesisForAiSchema,
-        "signals_synthesis",
+        signalGapSynthesisForAiSchema,
+        "signals_gap_synthesis",
       ),
     });
 
     const parsed = completion.choices[0]?.message.parsed;
 
     if (!parsed) {
-      throw new Error("OpenAI no devolvio sintesis valida para Senales");
+      throw new Error("OpenAI no devolvio gaps validos para Senales");
+    }
+
+    return parsed;
+  }
+
+  private async synthesizeInsights(
+    input: SignalsInput,
+    evidence: SignalEvidence[],
+    gaps: unknown,
+  ) {
+    const customerEvidence = evidence.filter(
+      (signal) => signal.lens === "CUSTOMER_INSIGHT",
+    );
+    const fallbackEvidence = customerEvidence.length ? customerEvidence : evidence;
+    const completion = await this.client.beta.chat.completions.parse({
+      model: this.model,
+      temperature: 0.18,
+      messages: [
+        {
+          role: "system",
+          content: buildInsightSynthesisSystemPrompt(),
+        },
+        {
+          role: "user",
+          content: JSON.stringify(
+            {
+              instruction:
+                "Produce exactamente 2 insights desde evidencia del comprador. No resumas gaps. No repitas mercado, costos ocultos, incumplimiento o desconfianza como insight si ya aparecen en gaps. El insight debe revelar que intenta proteger, conseguir, justificar o evitar el cliente.",
+              buyer: inferBuyer(input),
+              declaredCustomer: input.registration.contextForDiagnosis.company.sellsTo,
+              category: input.registration.contextForDiagnosis.company.sectorCategory,
+              gaps,
+              evidence: fallbackEvidence,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+      response_format: zodResponseFormat(
+        signalInsightSynthesisForAiSchema,
+        "signals_insight_synthesis",
+      ),
+    });
+
+    const parsed = completion.choices[0]?.message.parsed;
+
+    if (!parsed) {
+      throw new Error("OpenAI no devolvio insights validos para Senales");
     }
 
     return parsed;
@@ -229,6 +287,19 @@ export class HeuristicSignalsEngine implements SignalsEngine {
         isNegative: true,
         confidence: "LOW",
       },
+      {
+        id: "sig_4",
+        lens: "CUSTOMER_INSIGHT",
+        title: "El comprador protege su exposicion ante terceros",
+        observedText:
+          "En modo heuristico, el insight se modela como una hipotesis de comprador, no como evidencia real.",
+        sourceLabel: "Modo heuristico local",
+        frictionType: "riesgo reputacional del comprador",
+        relationToDiagnosis: "La compra depende de reducir exposicion del decisor ante terceros.",
+        usefulnessForIdeation: "Obliga a disenar pruebas defendibles para el comprador, no solo mejoras operativas.",
+        isNegative: true,
+        confidence: "LOW",
+      },
     ];
 
     return signalsOutputSchema.parse({
@@ -292,12 +363,12 @@ export class HeuristicSignalsEngine implements SignalsEngine {
           title: "La ausencia de evidencia tambien es criterio",
           cliente: input.registration.contextForDiagnosis.company.sellsTo,
           comportamientoObservado:
-            "Si no aparece voz publica defendible, la primera idea no debe asumir que el mercado ya reconoce el dolor.",
+            "El comprador tiende a pedir evidencia que pueda defender ante terceros antes de aceptar una promesa de mejora.",
           motivacionODeseo:
-            "El comprador necesita reducir incertidumbre antes de creer en una promesa de mejora.",
+            "Quiere reducir exposicion personal, politica o reputacional si la solucion falla.",
           verdadAccionable:
-            "La ideacion debe crear mecanismos que produzcan evidencia temprana, no solo soluciones completas.",
-          evidenceIds: ["sig_1"],
+            "La idea debe darle al comprador una prueba defendible, no solo una mejora funcional.",
+          evidenceIds: ["sig_4"],
           evidenceBase: "indirecta",
           promptParaIdeacion:
             `Que idea permite probar ${challenge} sin asumir que el mercado ya lo entiende?`,
@@ -306,12 +377,12 @@ export class HeuristicSignalsEngine implements SignalsEngine {
           title: "La promesa no es diferenciacion hasta que supera friccion",
           cliente: input.registration.contextForDiagnosis.company.sellsTo,
           comportamientoObservado:
-            "Una idea util debe atacar la friccion que impide creer, comprar o ejecutar, no solo formular una oferta mas clara.",
+            "Cuando el cambio aumenta riesgo de reclamos o perdida de control, el comprador prefiere tolerar una solucion mediocre.",
           motivacionODeseo:
-            "El comprador busca evidencia de confiabilidad antes de comprometerse con una solucion.",
+            "Busca continuidad, control y trazabilidad para justificar la decision si aparece un reclamo.",
           verdadAccionable:
-            "La ideacion debe convertir la friccion en una prueba observable de confianza.",
-          evidenceIds: ["sig_2", "sig_3"],
+            "La idea debe bajar el riesgo percibido de cambiar, no solo prometer un resultado mejor.",
+          evidenceIds: ["sig_4"],
           evidenceBase: "indirecta",
           promptParaIdeacion:
             `Que idea demuestra ${challenge} antes de pedir adopcion completa?`,
@@ -378,6 +449,16 @@ function buildSearchSystemPrompt(lens: SignalLens) {
     );
   }
 
+  if (lens === "CUSTOMER_INSIGHT") {
+    shared.push(
+      "Este lente es exclusivo para insights del comprador. No busques gaps de mercado ni promesas de competidores.",
+      "Busca motivaciones, deseos, verdades incomodas, riesgos politicos, miedo reputacional, criterios de compra, aversion al cambio, necesidad de control y rituales de decision.",
+      "La evidencia debe explicar que intenta proteger, conseguir, justificar o evitar el comprador declarado.",
+      "Busca frases y patrones como: vendor selection criteria, switching provider risk, approval process, tenant complaints, liability, board approval, maintenance reporting, control, accountability.",
+      "Para administradores de edificios o centros comerciales, prioriza residentes, arrendatarios, comites, juntas, gerencia, reclamos, continuidad operativa y exposicion del administrador.",
+    );
+  }
+
   return shared.join(" ");
 }
 
@@ -404,26 +485,39 @@ function buildSearchUserPrompt(input: SignalsInput, lens: SignalLens) {
     "",
     "Objetivo: encontrar la diferencia entre el estado actual de la empresa y el potencial del mercado, y descubrir comportamiento/motivacion/deseo del comprador.",
     "No devuelvas causas internas que ya declaro el perfil como si fueran senales.",
+    lens === "CUSTOMER_INSIGHT"
+      ? "Para este lente, busca solo motivaciones, deseos, verdades ocultas, temores, criterios de decision y riesgos percibidos del comprador."
+      : "Para este lente, busca potencial de mercado, fricciones externas, promesas competitivas o expectativas nuevas.",
     "Devuelve maximo 5 senales. Prefiere menos senales, pero mas utiles.",
   ].join("\n");
 }
 
-function buildSynthesisSystemPrompt() {
+function buildGapSynthesisSystemPrompt() {
   return [
     "Eres la etapa de analisis de Senales de Nucleo.",
-    "Tu trabajo es convertir evidencia publica en exactamente 2 gaps y exactamente 2 insights para Ideacion.",
+    "Tu trabajo es convertir evidencia publica en exactamente 2 gaps para Ideacion.",
     "No diagnostiques de nuevo y no propongas ideas.",
     "No seas optimista por defecto ni conviertas todo en oportunidad.",
     "Si el mercado contradice al usuario o debilita el diagnostico, dilo.",
     "Un gap debe comparar estadoActualEmpresa contra potencialMercado; no puede ser solo una causa interna.",
-    "Un insight debe revelar comportamiento, motivacion, miedo o deseo del cliente/comprador; no puede hablar principalmente de la empresa.",
-    "Los insights no pueden repetir el mismo fenomeno de los gaps con otra redaccion. Si un gap habla de costos ocultos, incumplimiento o desconfianza, el insight debe ir a una capa distinta: criterio de compra, temor reputacional, costo politico, aversion al cambio, deseo de control, necesidad de prueba o ritual de decision.",
-    "Cada insight debe responder: que esta intentando proteger o conseguir el cliente que no aparece literalmente en el gap.",
     "Si una frase podria salir solo del diagnostico, rechazala y formula desde mercado/cliente.",
     "Competidores deben analizar promesa visible versus friccion evidenciada.",
-    "Debes entregar exactamente 2 gaps y 2 insights. Si la evidencia es debil, marca evidenceBase como indirecta.",
+    "Debes entregar exactamente 2 gaps. Si la evidencia es debil, marca evidenceBase como indirecta.",
     "Prioriza: potencial de mercado, expectativa nueva del comprador, friccion negativa, comportamiento de compra/adopcion, promesa competitiva incumplida.",
     "Todo gap e insight debe referenciar evidenceIds existentes.",
+  ].join(" ");
+}
+
+function buildInsightSynthesisSystemPrompt() {
+  return [
+    "Eres la etapa de insight de comprador de Nucleo.",
+    "Tu trabajo es producir exactamente 2 insights para Ideacion desde evidencia del comprador o cliente declarado.",
+    "No produzcas gaps. No describas el mercado. No repitas promesas competitivas ni fricciones externas como insight.",
+    "Un insight debe revelar comportamiento, motivacion, miedo, deseo, criterio de compra, costo politico, ritual de decision o tension oculta del comprador.",
+    "El insight debe responder que intenta proteger, conseguir, justificar o evitar el comprador.",
+    "Si un gap habla de costos ocultos, incumplimiento o desconfianza, el insight debe ir a una capa distinta: temor reputacional, aprobacion ante terceros, continuidad operativa, aversion al cambio, deseo de control, necesidad de prueba o trazabilidad defendible.",
+    "No uses la misma frase, causa o fenomeno central de los gaps. Si se parece al gap, rehazlo desde motivacion del comprador.",
+    "Cada insight debe referenciar evidenceIds existentes.",
   ].join(" ");
 }
 
@@ -450,6 +544,7 @@ function normalizeEvidence(
 
 function rankEvidence(signals: Omit<SignalEvidence, "id">[]) {
   const lensWeight: Record<SignalLens, number> = {
+    CUSTOMER_INSIGHT: 4,
     SOCIAL_LISTENING: 3,
     COMPETITOR: 2,
     TREND: 1,

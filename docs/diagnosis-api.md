@@ -104,11 +104,12 @@ Cuando `OPENAI_API_KEY` esta configurada, ejecuta busqueda web real por lentes s
 - social listening
 - tendencias
 - competidores
+- customer insight
 
-Luego sintetiza solo sobre la evidencia encontrada. Devuelve:
+Luego sintetiza gaps e insights por separado:
 
-- exactamente 2 `gaps`
-- exactamente 2 `insights`
+- exactamente 2 `gaps` desde evidencia de mercado
+- exactamente 2 `insights` desde evidencia del comprador/cliente
 - `analisisSocialListening`
 - `analisisTendencias`
 - `analisisCompetidores`
