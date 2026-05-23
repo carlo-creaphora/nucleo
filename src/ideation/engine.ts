@@ -397,6 +397,7 @@ export function cleanIdeationOutputForDisplay(
 function cleanAssumption(value: string) {
   const withoutPrefix = value
     .trim()
+    .replace(/^[\s"'“”‘’]*(?:rompe|romper)\s+[\s\S]{0,90}?\s+de\s+que\s+/i, "")
     .replace(/^rompe\s+(?:el\s+)?supuesto\s+de\s+que\s+/i, "")
     .replace(/^rompe\s+(?:la\s+)?creencia\s+de\s+que\s+/i, "")
     .replace(/^el\s+supuesto\s+que\s+rompe\s+es\s+que\s+/i, "")

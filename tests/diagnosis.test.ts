@@ -696,6 +696,14 @@ describe("Diagnostico", () => {
     expect(cleaned.ideas[0]?.porQueFunciona).toBe(
       "Funciona porque reduce ambiguedad en campo. Tambien mejora la supervision.",
     );
+    expect(
+      cleanIdeationOutputForDisplay(
+        buildIdeationOutputForTest(ideationInput, {
+          supuestoQueRompe:
+            "Rompe el upue to de que el servicio de mantenimiento debe cobrarse por visita.",
+        }),
+      ).ideas[0]?.supuestoQueRompe,
+    ).toBe("El servicio de mantenimiento debe cobrarse por visita.");
     expect(cleaned.ideas[0]?.antiPatronesAEvitar).toEqual([
       "No convertirlo en otro checklist burocratico.",
       "No saltar directo a una solucion de software.",

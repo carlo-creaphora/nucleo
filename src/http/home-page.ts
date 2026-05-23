@@ -560,7 +560,7 @@ export function renderHomePage() {
         flex-wrap: nowrap;
         justify-content: center;
         align-items: flex-start;
-        gap: 20px;
+        gap: 28px;
       }
       .idea-set {
         flex: 0 0 760px;
@@ -602,6 +602,34 @@ export function renderHomePage() {
         background: white;
         padding: 16px;
       }
+      .idea-set .route-summary {
+        margin-bottom: 0;
+        border-radius: 16px 16px 0 0;
+        padding: 18px 20px;
+      }
+      .idea-set .route-summary strong {
+        color: #09090b;
+        font-size: 18px;
+        font-weight: 750;
+      }
+      .idea-set .route-summary div {
+        color: #57534e;
+        font-size: 15px;
+        line-height: 1.45;
+      }
+      .idea-set .idea-card {
+        border-radius: 16px;
+        padding: 24px 22px;
+      }
+      .idea-set .route-summary + .idea-card {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        margin-top: -1px;
+      }
+      .idea-set .idea-card h3 {
+        font-size: 24px;
+        line-height: 1.2;
+      }
       .manual-idea-form textarea {
         min-height: 70px;
         resize: vertical;
@@ -626,6 +654,7 @@ export function renderHomePage() {
       }
       .idea-set > .btn {
         margin-top: 12px;
+        width: 100%;
       }
       .workflow-action .btn:disabled,
       .idea-set > .btn:disabled {
@@ -2000,6 +2029,7 @@ export function renderHomePage() {
         const cleaned = String(value || "")
           .trim()
           .replace(/^supuesto\s+que\s+rompe\s*:\s*/i, "")
+          .replace(/^[\s"'“”‘’]*(?:rompe|romper)\s+[\s\S]{0,90}?\s+de\s+que\s+/i, "")
           .replace(/^rompe\s+(?:el\s+)?supuesto\s+de\s+que\s+/i, "")
           .replace(/^rompe\s+(?:la\s+)?creencia\s+de\s+que\s+/i, "")
           .replace(/^el\s+supuesto\s+que\s+rompe\s+es\s+que\s+/i, "")
