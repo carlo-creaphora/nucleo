@@ -326,9 +326,116 @@ export function renderHomePage() {
         word-break: break-word;
       }
       .ideation-canvas {
-        display: grid;
-        gap: 14px;
+        position: relative;
       }
+      .ideation-flow-frame {
+        position: relative;
+        height: min(760px, calc(100vh - 170px));
+        min-height: 620px;
+        overflow: auto;
+        border: 1px solid rgba(5, 6, 15, 0.12);
+        border-radius: 18px;
+        background-color: white;
+        background-image: radial-gradient(rgba(120, 113, 108, 0.28) 1.1px, transparent 1.1px);
+        background-size: 22px 22px;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.7), 0 18px 44px rgba(15, 23, 42, 0.08);
+      }
+      .ideation-flow-viewport {
+        width: 760px;
+        margin: 72px auto 120px;
+        transform-origin: top center;
+        transition: transform 180ms ease;
+      }
+      .workflow-node {
+        position: relative;
+        width: 760px;
+        margin: 0 auto;
+      }
+      .workflow-node + .workflow-node { margin-top: 58px; }
+      .workflow-shell {
+        border-radius: 16px;
+        background: rgba(255,255,255,0.84);
+        padding: 14px;
+        backdrop-filter: blur(6px);
+      }
+      .workflow-inner {
+        border-radius: 14px;
+        background: rgba(255,255,255,0.86);
+        padding: 18px;
+      }
+      .workflow-handle {
+        position: absolute;
+        left: 50%;
+        z-index: 2;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(168, 162, 158, 0.62);
+        border-radius: 50%;
+        background: white;
+        transform: translateX(-50%);
+      }
+      .workflow-handle.top { top: -7px; }
+      .workflow-handle.bottom { bottom: -7px; }
+      .workflow-connector {
+        width: 2px;
+        height: 58px;
+        margin: 0 auto;
+        background: rgba(168, 162, 158, 0.42);
+      }
+      .workflow-context {
+        margin-bottom: 18px;
+        border-bottom: 1px solid rgba(5, 6, 15, 0.12);
+        padding-bottom: 16px;
+      }
+      .workflow-eyebrow, .workflow-context strong {
+        display: block;
+        color: rgba(5, 6, 15, 0.38);
+        font-size: 12px;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+      .workflow-context div {
+        margin-top: 8px;
+        color: rgba(5, 6, 15, 0.70);
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      .workflow-prompt {
+        margin: 8px 0 0;
+        color: var(--ink);
+        font-size: 28px;
+        font-weight: 850;
+        line-height: 1.16;
+      }
+      .workflow-output {
+        margin-top: 10px;
+        color: rgba(5, 6, 15, 0.54);
+        font-size: 13px;
+        font-weight: 750;
+      }
+      .flow-controls {
+        position: sticky;
+        left: 18px;
+        bottom: 18px;
+        z-index: 4;
+        display: inline-grid;
+        overflow: hidden;
+        border: 1px solid rgba(5, 6, 15, 0.12);
+        border-radius: 10px;
+        background: white;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10);
+      }
+      .flow-controls button {
+        width: 38px;
+        height: 36px;
+        border: 0;
+        border-bottom: 1px solid rgba(5, 6, 15, 0.10);
+        background: white;
+        color: rgba(5, 6, 15, 0.72);
+        font-size: 24px;
+        line-height: 1;
+      }
+      .flow-controls button:last-child { border-bottom: 0; font-size: 18px; }
       .challenge-card, .route-summary, .idea-card {
         border: 1px solid var(--line);
         border-radius: 14px;
@@ -348,7 +455,8 @@ export function renderHomePage() {
       .choice-board {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
+        gap: 14px;
+        margin-top: 22px;
       }
       .choice-column {
         display: grid;
@@ -360,31 +468,34 @@ export function renderHomePage() {
         font-size: 13px;
       }
       .choice-card {
-        min-height: 132px;
+        min-height: 158px;
         border: 1px solid var(--line);
-        border-radius: 12px;
-        background: rgba(255,255,255,0.72);
+        border-radius: 16px;
+        background: white;
         color: var(--ink);
-        padding: 12px;
+        padding: 18px;
         text-align: left;
+        box-shadow: 0 2px 9px rgba(15, 23, 42, 0.08);
       }
       .choice-card.active {
-        background: #05060f;
         border-color: #05060f;
-        color: white;
+        box-shadow: inset 0 0 0 2px #05060f, 0 14px 32px rgba(15, 23, 42, 0.12);
       }
       .choice-card strong {
         display: block;
-        margin-bottom: 6px;
-        font-size: 13px;
+        min-height: 48px;
+        border-bottom: 1px solid rgba(5, 6, 15, 0.12);
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        font-size: 21px;
+        line-height: 1.25;
       }
       .choice-card span {
         display: block;
         color: var(--muted);
-        font-size: 12px;
-        line-height: 1.42;
+        font-size: 16px;
+        line-height: 1.45;
       }
-      .choice-card.active span { color: rgba(255,255,255,0.72); }
       .ideas-grid {
         display: grid;
         gap: 12px;
@@ -414,12 +525,25 @@ export function renderHomePage() {
         font-size: 14px;
         line-height: 1.5;
       }
+      .workflow-node.output-node .idea-card {
+        background: white;
+      }
+      .workflow-node.output-node .idea-card + .idea-card {
+        margin-top: 12px;
+      }
+      .workflow-action {
+        display: flex;
+        justify-content: flex-start;
+        margin-top: 18px;
+      }
       @media (max-width: 920px) {
         .layout, .chat-layout, .signals-layout, .grid, .choice-board { grid-template-columns: 1fr; }
         .sidebar { position: static; }
         .section-head { display: block; }
         .composer { grid-template-columns: 1fr; }
         .msg { max-width: 100%; }
+        .ideation-flow-viewport, .workflow-node { width: min(760px, calc(100vw - 72px)); }
+        .workflow-prompt { font-size: 24px; }
       }
     </style>
   </head>
@@ -599,6 +723,7 @@ export function renderHomePage() {
           gapTitle: null,
           insightTitle: null
         },
+        ideationZoom: 0.88,
         ideation: null,
         criticalMissing: [],
         correctedSections: [],
@@ -1170,9 +1295,9 @@ export function renderHomePage() {
           const data = await parseResponse(response);
           state.ideationOptions = data.options;
           state.ideationSelection = {
-            ruptureType: state.ideationSelection.ruptureType || data.options.ruptureTypes[0]?.id || null,
-            gapTitle: state.ideationSelection.gapTitle || data.options.gaps[0]?.title || null,
-            insightTitle: state.ideationSelection.insightTitle || data.options.insights[0]?.title || null
+            ruptureType: state.ideationSelection.ruptureType || null,
+            gapTitle: state.ideationSelection.gapTitle || null,
+            insightTitle: state.ideationSelection.insightTitle || null
           };
           renderIdeationCanvas();
         } catch (error) {
@@ -1196,65 +1321,230 @@ export function renderHomePage() {
           return;
         }
 
-        const challenge = document.createElement("div");
-        challenge.className = "challenge-card";
-        const challengeTitle = document.createElement("strong");
-        challengeTitle.textContent = "Reto recomendado";
-        const challengeText = document.createElement("div");
-        challengeText.textContent = state.diagnosis?.recommendedChallenge || "Sin reto recomendado.";
-        challenge.append(challengeTitle, challengeText);
-        canvas.appendChild(challenge);
+        $("ideation-result").innerHTML = "";
+        const frame = document.createElement("div");
+        frame.className = "ideation-flow-frame";
+        const viewport = document.createElement("div");
+        viewport.className = "ideation-flow-viewport";
+        viewport.style.transform = "scale(" + state.ideationZoom + ")";
 
-        const board = document.createElement("div");
-        board.className = "choice-board";
-        board.appendChild(renderChoiceColumn(
-          "Nivel 1 · Ruptura",
-          options.ruptureTypes,
-          "ruptureType",
-          (item) => item.id,
-          (item) => item.title,
-          (item) => item.verb + " · " + item.guidingQuestion + " " + item.description
-        ));
-        board.appendChild(renderChoiceColumn(
-          "Nivel 2 · Gap",
-          options.gaps,
-          "gapTitle",
-          (item) => item.title,
-          (item) => item.title,
-          (item) => item.brecha + " Implicación: " + item.implicationForIdeation
-        ));
-        board.appendChild(renderChoiceColumn(
-          "Nivel 3 · Insight",
-          options.insights,
-          "insightTitle",
-          (item) => item.title,
-          (item) => item.title,
-          (item) => item.cliente + ": " + item.comportamientoObservado + " Motivación: " + item.motivacionODeseo
-        ));
-        canvas.appendChild(board);
+        viewport.appendChild(renderWorkflowNode({
+          contextLabel: "Reto recomendado",
+          contextValue: state.diagnosis?.recommendedChallenge || "Sin reto recomendado.",
+          eyebrow: "Ruptura",
+          prompt: "Selecciona qué tan lejos debe moverse la solución.",
+          output: getSelectedRoute()?.title || "Ideation route",
+          complete: Boolean(state.ideationSelection.ruptureType),
+          options: options.ruptureTypes.map((route) => ({
+            id: route.id,
+            title: route.title === "Ruptura radical controlada" ? "Ruptura radical pero controlada" : route.title,
+            description: ruptureCanvasDescription(route.id, route.description),
+            active: state.ideationSelection.ruptureType === route.id,
+            onSelect: () => {
+              state.ideationSelection.ruptureType = route.id;
+              state.ideationSelection.gapTitle = null;
+              state.ideationSelection.insightTitle = null;
+              state.ideation = null;
+              renderIdeationCanvas();
+              persistDraft();
+            }
+          }))
+        }));
 
-        const summary = document.createElement("div");
-        summary.className = "route-summary";
-        const summaryTitle = document.createElement("strong");
-        summaryTitle.textContent = "Ruta que se enviará a OpenAI";
-        const summaryText = document.createElement("div");
-        summaryText.textContent = buildRouteSummary();
-        summary.append(summaryTitle, summaryText);
-        canvas.appendChild(summary);
+        if (state.ideationSelection.ruptureType) {
+          viewport.appendChild(renderWorkflowConnector());
+          viewport.appendChild(renderWorkflowNode({
+            eyebrow: "Gap",
+            prompt: "Selecciona la brecha que el set de ideas debe atacar.",
+            output: getSelectedGap()?.title || "Gap",
+            complete: Boolean(state.ideationSelection.gapTitle),
+            options: options.gaps.map((gap) => ({
+              id: gap.title,
+              title: gap.title,
+              description: gap.implicationForIdeation || gap.brecha,
+              active: state.ideationSelection.gapTitle === gap.title,
+              onSelect: () => {
+                state.ideationSelection.gapTitle = gap.title;
+                state.ideationSelection.insightTitle = null;
+                state.ideation = null;
+                renderIdeationCanvas();
+                persistDraft();
+              }
+            }))
+          }));
+        }
 
-        const actions = document.createElement("div");
-        actions.className = "actions";
-        const generateButton = document.createElement("button");
-        generateButton.id = "generate-ideation";
-        generateButton.className = "btn primary";
-        generateButton.type = "button";
-        generateButton.textContent = state.ideation ? "Regenerar 3 ideas" : "Generar 3 ideas";
-        generateButton.disabled = !isIdeationSelectionComplete();
-        generateButton.addEventListener("click", generateIdeation);
-        actions.appendChild(generateButton);
-        canvas.appendChild(actions);
+        if (state.ideationSelection.gapTitle) {
+          viewport.appendChild(renderWorkflowConnector());
+          viewport.appendChild(renderWorkflowNode({
+            eyebrow: "Insight",
+            prompt: "Elige la verdad accionable que debe orientar la ideación.",
+            output: getSelectedInsight()?.title || "Insight",
+            complete: Boolean(state.ideationSelection.insightTitle),
+            options: options.insights.map((insight) => ({
+              id: insight.title,
+              title: insight.title,
+              description: insight.promptParaIdeacion || insight.verdadAccionable || insight.motivacionODeseo,
+              active: state.ideationSelection.insightTitle === insight.title,
+              onSelect: () => {
+                state.ideationSelection.insightTitle = insight.title;
+                state.ideation = null;
+                renderIdeationCanvas();
+                persistDraft();
+              }
+            }))
+          }));
+        }
 
-        if (state.ideation) renderIdeationResult(state.ideation);
+        if (state.ideationSelection.insightTitle) {
+          viewport.appendChild(renderWorkflowConnector());
+          viewport.appendChild(renderWorkflowNode({
+            eyebrow: "Ruta de ideación",
+            prompt: buildRouteSummary(),
+            output: state.ideation ? "Generated idea set" : "Pending generation",
+            complete: Boolean(state.ideation),
+            actionLabel: state.ideation ? "Regenerar 3 ideas" : "Generar 3 ideas",
+            onAction: generateIdeation
+          }));
+        }
+
+        if (state.ideation) {
+          viewport.appendChild(renderWorkflowConnector());
+          viewport.appendChild(renderWorkflowOutputNode(state.ideation));
+        }
+
+        frame.appendChild(viewport);
+        frame.appendChild(renderFlowControls());
+        canvas.appendChild(frame);
+      }
+
+      function renderWorkflowNode(data) {
+        const node = document.createElement("section");
+        node.className = "workflow-node";
+        const topHandle = document.createElement("span");
+        topHandle.className = "workflow-handle top";
+        const bottomHandle = document.createElement("span");
+        bottomHandle.className = "workflow-handle bottom";
+        const shell = document.createElement("div");
+        shell.className = "workflow-shell";
+        const inner = document.createElement("div");
+        inner.className = "workflow-inner";
+
+        if (data.contextLabel) {
+          const context = document.createElement("div");
+          context.className = "workflow-context";
+          const label = document.createElement("strong");
+          label.textContent = data.contextLabel;
+          const value = document.createElement("div");
+          value.textContent = data.contextValue;
+          context.append(label, value);
+          inner.appendChild(context);
+        }
+
+        const eyebrow = document.createElement("span");
+        eyebrow.className = "workflow-eyebrow";
+        eyebrow.textContent = data.eyebrow;
+        const prompt = document.createElement("p");
+        prompt.className = "workflow-prompt";
+        prompt.textContent = data.prompt;
+        const output = document.createElement("div");
+        output.className = "workflow-output";
+        output.textContent = data.output;
+        inner.append(eyebrow, prompt, output);
+
+        if (data.options) {
+          const board = document.createElement("div");
+          board.className = "choice-board";
+          for (const option of data.options) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "choice-card" + (option.active ? " active" : "");
+            button.addEventListener("click", option.onSelect);
+            const label = document.createElement("strong");
+            label.textContent = option.title;
+            const description = document.createElement("span");
+            description.textContent = option.description;
+            button.append(label, description);
+            board.appendChild(button);
+          }
+          inner.appendChild(board);
+        }
+
+        if (data.actionLabel) {
+          const action = document.createElement("div");
+          action.className = "workflow-action";
+          const button = document.createElement("button");
+          button.id = "generate-ideation";
+          button.type = "button";
+          button.className = "btn primary";
+          button.textContent = data.actionLabel;
+          button.disabled = !isIdeationSelectionComplete();
+          button.addEventListener("click", data.onAction);
+          action.appendChild(button);
+          inner.appendChild(action);
+        }
+
+        shell.appendChild(inner);
+        node.append(topHandle, shell, bottomHandle);
+        return node;
+      }
+
+      function renderWorkflowConnector() {
+        const connector = document.createElement("div");
+        connector.className = "workflow-connector";
+        return connector;
+      }
+
+      function renderWorkflowOutputNode(output) {
+        const node = renderWorkflowNode({
+          eyebrow: "Output",
+          prompt: "Disruptive idea recommendations",
+          output: output.route.title,
+          complete: true
+        });
+        node.classList.add("output-node");
+        const inner = node.querySelector(".workflow-inner");
+        for (const idea of output.ideas || []) {
+          const card = document.createElement("article");
+          card.className = "idea-card";
+          const title = document.createElement("h3");
+          title.textContent = idea.idea;
+          card.appendChild(title);
+          appendIdeaField(card, "Supuesto que rompe", idea.supuestoQueRompe);
+          appendIdeaField(card, "Mecánica concreta", idea.mecanicaConcreta);
+          appendIdeaField(card, "Por qué funciona", idea.porQueFunciona);
+          appendIdeaField(card, "Caso análogo", idea.casoAnalogo);
+          appendIdeaField(card, "Métrica que mueve", idea.metricaQueMueve);
+          appendIdeaField(card, "Primer paso ejecutable", idea.primerPasoEjecutable);
+          appendIdeaField(card, "Anti-patrones a evitar al ejecutar", idea.antiPatronesAEvitar);
+          inner.appendChild(card);
+        }
+        return node;
+      }
+
+      function renderFlowControls() {
+        const controls = document.createElement("div");
+        controls.className = "flow-controls";
+        const zoomIn = document.createElement("button");
+        zoomIn.type = "button";
+        zoomIn.textContent = "+";
+        zoomIn.addEventListener("click", () => setIdeationZoom(Math.min(1.18, state.ideationZoom + 0.1)));
+        const zoomOut = document.createElement("button");
+        zoomOut.type = "button";
+        zoomOut.textContent = "−";
+        zoomOut.addEventListener("click", () => setIdeationZoom(Math.max(0.52, state.ideationZoom - 0.1)));
+        const fit = document.createElement("button");
+        fit.type = "button";
+        fit.textContent = "⛶";
+        fit.addEventListener("click", () => setIdeationZoom(0.88));
+        controls.append(zoomIn, zoomOut, fit);
+        return controls;
+      }
+
+      function setIdeationZoom(value) {
+        state.ideationZoom = Number(value.toFixed(2));
+        renderIdeationCanvas();
+        persistDraft();
       }
 
       function renderChoiceColumn(title, items, selectionKey, getValue, getTitle, getDescription) {
@@ -1290,14 +1580,39 @@ export function renderHomePage() {
         if (!options || !isIdeationSelectionComplete()) {
           return "Selecciona ruptura, gap e insight para construir la ruta.";
         }
-        const route = options.ruptureTypes.find((item) => item.id === state.ideationSelection.ruptureType);
-        const gap = options.gaps.find((item) => item.title === state.ideationSelection.gapTitle);
-        const insight = options.insights.find((item) => item.title === state.ideationSelection.insightTitle);
+        const route = getSelectedRoute();
+        const gap = getSelectedGap();
+        const insight = getSelectedInsight();
         return (route?.title || "Ruta") + " para " + (route?.verb || "idear") + " sobre el gap “" + (gap?.title || "") + "”, usando el insight “" + (insight?.title || "") + "”.";
       }
 
       function isIdeationSelectionComplete() {
         return Boolean(state.ideationSelection.ruptureType && state.ideationSelection.gapTitle && state.ideationSelection.insightTitle);
+      }
+
+      function getSelectedRoute() {
+        return state.ideationOptions?.ruptureTypes?.find((item) => item.id === state.ideationSelection.ruptureType);
+      }
+
+      function getSelectedGap() {
+        return state.ideationOptions?.gaps?.find((item) => item.title === state.ideationSelection.gapTitle);
+      }
+
+      function getSelectedInsight() {
+        return state.ideationOptions?.insights?.find((item) => item.title === state.ideationSelection.insightTitle);
+      }
+
+      function ruptureCanvasDescription(id, fallback) {
+        if (id === "RUPTURA_MODERADA") {
+          return "Mejora el sistema actual sin cambiar demasiado roles, tiempos ni operación diaria.";
+        }
+        if (id === "RUPTURA_FUERTE") {
+          return "Transforma reglas, incentivos o formas de decidir para cambiar el comportamiento del sistema.";
+        }
+        if (id === "RUPTURA_RADICAL_CONTROLADA") {
+          return "Busca que el problema pierda relevancia porque el sistema deja de depender del punto débil.";
+        }
+        return fallback;
       }
 
       async function generateIdeation() {
@@ -1443,6 +1758,7 @@ export function renderHomePage() {
           signals: state.signals,
           ideationOptions: state.ideationOptions,
           ideationSelection: state.ideationSelection,
+          ideationZoom: state.ideationZoom,
           ideation: state.ideation,
           criticalMissing: state.criticalMissing,
           correctedSections: state.correctedSections,
@@ -1466,6 +1782,7 @@ export function renderHomePage() {
           if (draft.signals) state.signals = draft.signals;
           if (draft.ideationOptions) state.ideationOptions = draft.ideationOptions;
           if (draft.ideationSelection) state.ideationSelection = draft.ideationSelection;
+          if (draft.ideationZoom) state.ideationZoom = draft.ideationZoom;
           if (draft.ideation) state.ideation = draft.ideation;
           if (Array.isArray(draft.criticalMissing)) state.criticalMissing = draft.criticalMissing;
           if (Array.isArray(draft.correctedSections)) state.correctedSections = draft.correctedSections;
