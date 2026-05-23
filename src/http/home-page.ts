@@ -7,13 +7,13 @@ export function renderHomePage() {
     <title>Nucleo</title>
     <style>
       :root {
-        --ink: #05060f;
-        --muted: rgba(5, 6, 15, 0.62);
-        --line: rgba(5, 6, 15, 0.12);
-        --panel: rgba(255, 255, 255, 0.78);
-        --warm: #f7f4ee;
-        --accent: #111827;
-        --soft: #eef4ff;
+        --ink: #09090b;
+        --muted: #78716c;
+        --line: #e7e5e4;
+        --panel: #ffffff;
+        --warm: #faf9f5;
+        --accent: #0c0a09;
+        --soft: #f5f4ef;
       }
       * { box-sizing: border-box; }
       html { scroll-behavior: smooth; }
@@ -22,24 +22,32 @@ export function renderHomePage() {
         min-height: 100vh;
         font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         color: var(--ink);
-        background:
-          radial-gradient(circle at 20% 0%, rgba(125, 178, 255, 0.34), transparent 34%),
-          radial-gradient(circle at 84% 12%, rgba(116, 224, 239, 0.20), transparent 30%),
-          linear-gradient(180deg, #ffffff 0%, #f8fafc 44%, #f1f5f9 100%);
+        background: #faf9f5;
       }
       button, input, textarea { font: inherit; }
       button { cursor: pointer; }
       .shell {
-        width: min(1440px, calc(100% - 32px));
-        margin: 0 auto;
-        padding: 28px 0 56px;
+        display: grid;
+        grid-template-columns: 244px minmax(0, 1fr);
+        grid-template-rows: 76px minmax(0, 1fr);
+        width: 100%;
+        height: 100dvh;
+        min-height: 760px;
+        margin: 0;
+        padding: 0;
       }
       .topbar {
+        grid-column: 2;
+        grid-row: 1;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-        margin-bottom: 28px;
+        margin: 0;
+        border-bottom: 1px solid var(--line);
+        background: rgba(250, 249, 245, 0.92);
+        padding: 14px 22px;
+        backdrop-filter: blur(10px);
       }
       .brand {
         display: flex;
@@ -48,77 +56,121 @@ export function renderHomePage() {
       }
       .brand h1 {
         margin: 0;
-        font-size: clamp(42px, 7vw, 104px);
-        line-height: 0.88;
+        font-size: 22px;
+        line-height: 1.1;
         letter-spacing: 0;
-        font-weight: 900;
+        font-weight: 700;
       }
       .brand span {
         color: var(--muted);
-        font-size: 14px;
-        font-weight: 650;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
       }
       .status {
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 10px 14px;
-        background: rgba(255, 255, 255, 0.72);
-        color: var(--muted);
+        display: inline-flex;
+        min-width: 36px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 12px;
+        background: var(--accent);
+        color: white;
         font-size: 13px;
         font-weight: 700;
       }
       .layout {
-        display: grid;
-        grid-template-columns: 340px minmax(0, 1fr);
-        gap: 18px;
-        align-items: start;
+        display: contents;
       }
       .sidebar, .workspace, .panel {
         border: 1px solid var(--line);
         background: var(--panel);
-        backdrop-filter: blur(14px);
-        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       }
-      .sidebar, .workspace { border-radius: 18px; }
-      .sidebar { padding: 18px; position: sticky; top: 18px; }
+      .sidebar, .workspace { border-radius: 0; }
+      .sidebar {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        min-height: 0;
+        overflow: auto;
+        border-width: 0 1px 0 0;
+        background: #f5f4ef;
+        padding: 18px 12px;
+        position: static;
+      }
+      .sidebar::before {
+        content: "Innovación";
+        display: block;
+        margin: 0 4px 28px;
+        color: #1c1917;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .sidebar-kicker {
+        margin: 0 8px 8px;
+        color: #a8a29e;
+        font-size: 12px;
+        font-weight: 600;
+      }
       .step {
         width: 100%;
         display: grid;
-        grid-template-columns: 34px 1fr;
-        gap: 12px;
-        align-items: center;
-        border: 0;
-        border-radius: 12px;
-        padding: 12px;
+        grid-template-columns: 24px 1fr;
+        gap: 10px;
+        align-items: start;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 10px 8px;
         background: transparent;
         text-align: left;
-        color: var(--muted);
+        color: #d6d3d1;
       }
-      .step + .step { margin-top: 6px; }
-      .step strong { display: block; color: var(--ink); font-size: 14px; }
-      .step span:last-child { font-size: 12px; }
+      .step + .step { margin-top: 4px; }
+      .step strong { display: block; color: inherit; font-size: 13px; font-weight: 650; }
+      .step span:last-child { font-size: 12px; color: inherit; }
       .num {
         display: grid;
         place-items: center;
-        width: 34px;
-        height: 34px;
+        width: 20px;
+        height: 20px;
         border-radius: 50%;
-        background: #edf0f6;
-        font-weight: 800;
-        color: var(--ink);
+        border: 1px solid currentColor;
+        background: transparent;
+        font-size: 11px;
+        font-weight: 700;
+        color: inherit;
       }
-      .step.active { background: #f3f6fb; }
-      .step.done .num { background: #111827; color: white; }
+      .step.active {
+        border-color: #d6d3d1;
+        background: white;
+        color: #0c0a09;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+      }
+      .step.done { color: #44403c; }
+      .step.done .num { background: #0c0a09; border-color: #0c0a09; color: white; }
       .sidebar-note {
-        margin: 18px 4px 0;
+        margin: 24px 8px 0;
         color: var(--muted);
-        font-size: 13px;
+        font-size: 12px;
         line-height: 1.5;
       }
-      .workspace { min-height: 680px; overflow: hidden; }
+      .workspace {
+        grid-column: 2;
+        grid-row: 2;
+        min-height: 0;
+        overflow: auto;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+      }
       .section {
         display: none;
-        padding: clamp(18px, 3vw, 34px);
+        width: min(1440px, calc(100% - 64px));
+        margin: 0 auto;
+        padding: 28px 0 40px;
       }
       .section.active { display: block; }
       .section-head {
@@ -126,19 +178,22 @@ export function renderHomePage() {
         align-items: end;
         justify-content: space-between;
         gap: 24px;
+        border-bottom: 1px solid var(--line);
         margin-bottom: 24px;
+        padding-bottom: 20px;
       }
       .section h2 {
         margin: 0;
-        font-size: clamp(28px, 4vw, 54px);
-        line-height: 0.98;
+        font-size: clamp(28px, 3vw, 36px);
+        line-height: 1.08;
         letter-spacing: 0;
+        font-weight: 700;
       }
       .section p {
         margin: 10px 0 0;
         max-width: 740px;
         color: var(--muted);
-        font-size: 16px;
+        font-size: 14px;
         line-height: 1.6;
       }
       .grid {
@@ -157,9 +212,9 @@ export function renderHomePage() {
       input, textarea {
         width: 100%;
         margin-top: 8px;
-        border: 1px solid rgba(5, 6, 15, 0.14);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
         color: var(--ink);
         padding: 12px 13px;
         outline: none;
@@ -189,9 +244,10 @@ export function renderHomePage() {
         background: white;
         color: var(--ink);
         padding: 0 18px;
-        font-weight: 800;
+        font-size: 14px;
+        font-weight: 650;
       }
-      .btn.primary { background: #05060f; color: white; border-color: #05060f; }
+      .btn.primary { background: #0c0a09; color: white; border-color: #0c0a09; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08); }
       .btn:disabled { opacity: 0.48; cursor: not-allowed; }
       .chat-layout {
         display: grid;
@@ -200,7 +256,7 @@ export function renderHomePage() {
       }
       .panel {
         border-radius: 16px;
-        padding: 16px;
+        padding: 18px;
       }
       .messages {
         height: 430px;
@@ -215,8 +271,8 @@ export function renderHomePage() {
         line-height: 1.48;
         font-size: 15px;
       }
-      .msg.assistant { background: #eef4ff; }
-      .msg.user { margin-left: auto; background: #05060f; color: white; }
+      .msg.assistant { background: #f5f4ef; border: 1px solid var(--line); }
+      .msg.user { margin-left: auto; background: #0c0a09; color: white; }
       .composer {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -302,6 +358,55 @@ export function renderHomePage() {
         color: var(--muted);
         font-size: 13px;
         line-height: 1.45;
+      }
+      .intro-card {
+        position: relative;
+        display: grid;
+        gap: 18px;
+        min-height: 360px;
+        align-content: center;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background:
+          radial-gradient(circle at 85% 12%, rgba(214, 211, 209, 0.62), transparent 24%),
+          linear-gradient(180deg, #ffffff 0%, #faf9f5 100%);
+        margin-bottom: 24px;
+        overflow: hidden;
+        padding: clamp(28px, 5vw, 64px);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+      .intro-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(#d6d3d1 0.65px, transparent 0.65px);
+        background-size: 22px 22px;
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      .intro-card > * { position: relative; z-index: 1; }
+      .intro-eyebrow {
+        color: #a8a29e;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .intro-card h2 {
+        max-width: 820px;
+        font-size: clamp(44px, 7vw, 96px);
+        line-height: 0.9;
+        letter-spacing: 0;
+      }
+      .intro-card p {
+        max-width: 620px;
+        color: #57534e;
+        font-size: 16px;
+        line-height: 1.65;
+      }
+      .intro-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
       }
       .signals-layout {
         display: grid;
@@ -662,13 +767,18 @@ export function renderHomePage() {
         color: #78716c;
       }
       @media (max-width: 920px) {
+        .shell { display: block; height: auto; min-height: 100vh; }
+        .topbar { position: sticky; top: 0; z-index: 10; }
+        .layout { display: block; }
         .layout, .chat-layout, .signals-layout, .grid, .choice-board { grid-template-columns: 1fr; }
         .sidebar { position: static; }
         .section-head { display: block; }
+        .section { width: min(100% - 28px, 1440px); }
         .composer { grid-template-columns: 1fr; }
         .msg { max-width: 100%; }
         .ideation-flow-viewport, .workflow-node { width: min(760px, calc(100vw - 72px)); }
         .workflow-prompt { font-size: 24px; }
+        .intro-card { min-height: 320px; }
       }
     </style>
   </head>
@@ -676,14 +786,15 @@ export function renderHomePage() {
     <main class="shell">
       <header class="topbar">
         <div class="brand">
-          <h1>Núcleo</h1>
-          <span>Registro + Diagnóstico + Señales + Ideación</span>
+          <span>Sistema de innovación</span>
+          <h1>Chat estratégico</h1>
         </div>
-        <div class="status">IA real en producción</div>
+        <div id="phase-status" class="status">1</div>
       </header>
 
       <div class="layout">
         <aside class="sidebar">
+          <p class="sidebar-kicker">Fases</p>
           <button id="step-registration" class="step active" type="button">
             <span class="num">1</span>
             <span><strong>Registro</strong><span>Perfil, empresa y categoría</span></span>
@@ -705,12 +816,19 @@ export function renderHomePage() {
 
         <section class="workspace">
           <div id="registration-section" class="section active">
+            <div class="intro-card">
+              <span class="intro-eyebrow">Núcleo</span>
+              <h2>Diseña una ruta real de innovación.</h2>
+              <p>Registro, diagnóstico, señales e ideación en un flujo guiado. La visual replica el demo original; la lógica sigue siendo la nueva, limpia y conectada a OpenAI.</p>
+              <div class="intro-actions">
+                <button id="fill-demo" class="btn primary" type="button">Iniciar demo</button>
+              </div>
+            </div>
             <div class="section-head">
               <div>
-                <h2>Contexto inicial</h2>
+                <h2>Registro</h2>
                 <p>Completa el perfil de licencia, empresa y categoría. Estos datos viajan al diagnóstico para que la IA no empiece desde cero.</p>
               </div>
-              <button id="fill-demo" class="btn" type="button">Llenar demo</button>
             </div>
             <form id="registration-form" class="grid">
               <div class="group-title">Perfil / licencia</div>
@@ -978,6 +1096,8 @@ export function renderHomePage() {
         $("step-diagnosis").classList.toggle("done", Boolean(state.diagnosis) && canAdvanceToSignals());
         $("step-signals").classList.toggle("done", Boolean(state.signals));
         $("step-ideation").classList.toggle("done", Boolean(state.ideation) || state.ideationSets.length > 0);
+        const phaseNumber = { registration: "1", diagnosis: "2", signals: "3", ideation: "4" }[step] || "1";
+        $("phase-status").textContent = phaseNumber;
         persistDraft();
       }
 
