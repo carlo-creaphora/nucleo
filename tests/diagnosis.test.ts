@@ -674,9 +674,11 @@ describe("Diagnostico", () => {
     });
     const output = buildIdeationOutputForTest(ideationInput, {
       supuestoQueRompe:
-        "Supuesto que rompe: Que el estandar se adopta solo porque esta escrito.",
+        "Supuesto que rompe: Rompe el supuesto de que el estandar se adopta solo porque esta escrito. Cambia la unidad economica de la operacion.",
       mecanicaConcreta:
         "La mecanica concreta consiste en usar tarjetas fisicas de decision en campo antes de cerrar tareas. El piloto consiste en probarlo durante 30 dias con seis tecnicos.",
+      porQueFunciona:
+        "Funciona porque reduce ambiguedad en campo. Tambien mejora la supervision. Esta tercera frase no debe quedar.",
       antiPatronesAEvitar: [
         "No convertirlo en otro checklist burocratico. (evitar D4).",
         "No saltar directo a una solucion de software. (evitar D3).",
@@ -686,10 +688,13 @@ describe("Diagnostico", () => {
     const cleaned = cleanIdeationOutputForDisplay(output);
 
     expect(cleaned.ideas[0]?.supuestoQueRompe).toBe(
-      "Que el estandar se adopta solo porque esta escrito.",
+      "El estandar se adopta solo porque esta escrito.",
     );
     expect(cleaned.ideas[0]?.mecanicaConcreta).toBe(
       "usar tarjetas fisicas de decision en campo antes de cerrar tareas.",
+    );
+    expect(cleaned.ideas[0]?.porQueFunciona).toBe(
+      "Funciona porque reduce ambiguedad en campo. Tambien mejora la supervision.",
     );
     expect(cleaned.ideas[0]?.antiPatronesAEvitar).toEqual([
       "No convertirlo en otro checklist burocratico.",

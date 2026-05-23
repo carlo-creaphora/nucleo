@@ -330,17 +330,17 @@ export function renderHomePage() {
       }
       .ideation-flow-frame {
         position: relative;
-        height: min(760px, calc(100vh - 170px));
-        min-height: 620px;
+        height: 760px;
+        min-height: 640px;
         overflow: hidden;
         touch-action: none;
         cursor: grab;
-        border: 1px solid rgba(5, 6, 15, 0.12);
-        border-radius: 18px;
+        border: 1px solid #e7e5e4;
+        border-radius: 16px;
         background-color: white;
-        background-image: radial-gradient(rgba(120, 113, 108, 0.28) 1.1px, transparent 1.1px);
+        background-image: radial-gradient(#d6d3d1 0.65px, transparent 0.65px);
         background-size: 22px 22px;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.7), 0 18px 44px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       }
       .ideation-flow-viewport {
         width: 920px;
@@ -355,20 +355,20 @@ export function renderHomePage() {
       }
       .workflow-node {
         position: relative;
-        width: min(920px, calc(100vw - 96px));
+        width: 760px;
         margin: 0 auto;
       }
       .workflow-node + .workflow-node { margin-top: 58px; }
       .workflow-shell {
         border-radius: 16px;
-        background: rgba(255,255,255,0.84);
-        padding: 14px;
-        backdrop-filter: blur(6px);
+        background: rgba(255,255,255,0.80);
+        padding: 12px;
+        backdrop-filter: blur(4px);
       }
       .workflow-inner {
         border-radius: 14px;
-        background: rgba(255,255,255,0.86);
-        padding: 18px;
+        background: rgba(255,255,255,0.72);
+        padding: 16px;
       }
       .workflow-handle {
         position: absolute;
@@ -390,35 +390,35 @@ export function renderHomePage() {
         background: rgba(168, 162, 158, 0.42);
       }
       .workflow-context {
-        margin-bottom: 18px;
-        border-bottom: 1px solid rgba(5, 6, 15, 0.12);
+        margin-bottom: 16px;
+        border-bottom: 1px solid #e7e5e4;
         padding-bottom: 16px;
       }
       .workflow-eyebrow, .workflow-context strong {
         display: block;
-        color: rgba(5, 6, 15, 0.38);
-        font-size: 12px;
-        font-weight: 850;
+        color: #a8a29e;
+        font-size: 11px;
+        font-weight: 700;
         text-transform: uppercase;
       }
       .workflow-context div {
-        margin-top: 8px;
-        color: rgba(5, 6, 15, 0.70);
-        font-size: 16px;
-        line-height: 1.5;
+        margin-top: 4px;
+        color: #44403c;
+        font-size: 14px;
+        line-height: 1.7;
       }
       .workflow-prompt {
-        margin: 8px 0 0;
+        margin: 4px 0 0;
         color: var(--ink);
-        font-size: 28px;
-        font-weight: 850;
-        line-height: 1.16;
+        font-size: 20px;
+        font-weight: 700;
+        line-height: 1.35;
       }
       .workflow-output {
-        margin-top: 10px;
-        color: rgba(5, 6, 15, 0.54);
+        margin-top: 8px;
+        color: #78716c;
         font-size: 13px;
-        font-weight: 750;
+        font-weight: 500;
       }
       .flow-controls {
         position: sticky;
@@ -444,10 +444,11 @@ export function renderHomePage() {
       }
       .flow-controls button:last-child { border-bottom: 0; font-size: 18px; }
       .challenge-card, .route-summary, .idea-card {
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: rgba(255,255,255,0.78);
-        padding: 14px;
+        border: 1px solid #e7e5e4;
+        border-radius: 16px;
+        background: white;
+        padding: 16px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       }
       .challenge-card strong, .route-summary strong, .idea-card strong {
         display: block;
@@ -462,8 +463,8 @@ export function renderHomePage() {
       .choice-board {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-        margin-top: 22px;
+        gap: 12px;
+        margin-top: 16px;
       }
       .choice-column {
         display: grid;
@@ -475,32 +476,45 @@ export function renderHomePage() {
         font-size: 13px;
       }
       .choice-card {
-        min-height: 158px;
-        border: 1px solid var(--line);
+        display: flex;
+        min-height: 248px;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid #e7e5e4;
         border-radius: 16px;
         background: white;
         color: var(--ink);
-        padding: 18px;
+        padding: 16px;
         text-align: left;
-        box-shadow: 0 2px 9px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+        transition: border-color 160ms ease, box-shadow 160ms ease;
       }
       .choice-card.active {
-        border-color: #05060f;
-        box-shadow: inset 0 0 0 2px #05060f, 0 14px 32px rgba(15, 23, 42, 0.12);
+        border-color: #0c0a09;
+        box-shadow: inset 0 0 0 1px #0c0a09, 0 10px 24px rgba(15, 23, 42, 0.10);
+      }
+      .choice-card:hover {
+        border-color: #d6d3d1;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
       }
       .choice-card strong {
         display: block;
-        min-height: 48px;
-        border-bottom: 1px solid rgba(5, 6, 15, 0.12);
-        margin-bottom: 14px;
+        max-height: 72px;
+        overflow: hidden;
+        border-bottom: 1px solid #e7e5e4;
+        margin-bottom: 12px;
         padding-bottom: 12px;
-        font-size: 21px;
-        line-height: 1.25;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.5;
       }
       .choice-card span {
         display: block;
-        color: var(--muted);
-        font-size: 16px;
+        min-height: 0;
+        flex: 1;
+        overflow-y: auto;
+        color: #57534e;
+        font-size: 14px;
         line-height: 1.45;
       }
       .ideas-grid {
@@ -509,28 +523,31 @@ export function renderHomePage() {
         margin-top: 14px;
       }
       .idea-card h3 {
-        margin: 0 0 12px;
-        font-size: 18px;
-        line-height: 1.25;
+        margin: 0 0 14px;
+        color: #09090b;
+        font-size: 20px;
+        font-weight: 750;
+        line-height: 1.28;
+        letter-spacing: 0;
       }
       .idea-field {
-        border-top: 1px solid var(--line);
-        padding-top: 10px;
-        margin-top: 10px;
+        border-top: 1px solid #e7e5e4;
+        padding-top: 12px;
+        margin-top: 12px;
       }
       .idea-field span {
         display: block;
-        color: rgba(5, 6, 15, 0.54);
+        color: #78716c;
         font-size: 12px;
-        font-weight: 850;
-        margin-bottom: 4px;
+        font-weight: 800;
+        margin-bottom: 6px;
         text-transform: uppercase;
       }
       .idea-field div, .idea-field ul {
         margin: 0;
-        color: var(--muted);
+        color: #57534e;
         font-size: 14px;
-        line-height: 1.5;
+        line-height: 1.55;
       }
       .workflow-node.output-node .idea-card {
         background: white;
@@ -546,8 +563,8 @@ export function renderHomePage() {
         gap: 20px;
       }
       .idea-set {
-        flex: 0 0 560px;
-        width: 560px;
+        flex: 0 0 760px;
+        width: 760px;
       }
       .workflow-node.output-node {
         left: 50%;
@@ -563,22 +580,27 @@ export function renderHomePage() {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
-        gap: 12px;
+        gap: 16px;
       }
       .idea-select {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        color: var(--muted);
+        color: #57534e;
         font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
         white-space: nowrap;
       }
+      .idea-select input { accent-color: #0c0a09; }
       .manual-idea-form {
         display: grid;
         gap: 10px;
-        margin-top: 14px;
-        padding-top: 14px;
-        border-top: 1px solid var(--line);
+        margin-top: 12px;
+        border: 1px solid #e7e5e4;
+        border-radius: 16px;
+        background: white;
+        padding: 16px;
       }
       .manual-idea-form textarea {
         min-height: 70px;
@@ -589,8 +611,26 @@ export function renderHomePage() {
       }
       .workflow-action {
         display: flex;
-        justify-content: flex-start;
+        justify-content: flex-end;
         margin-top: 18px;
+      }
+      .workflow-action .btn,
+      .idea-set > .btn,
+      .manual-idea-form .btn {
+        border-radius: 999px;
+        background: #0c0a09;
+        color: white;
+        padding: 12px 18px;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .idea-set > .btn {
+        margin-top: 12px;
+      }
+      .workflow-action .btn:disabled,
+      .idea-set > .btn:disabled {
+        background: #e7e5e4;
+        color: #78716c;
       }
       @media (max-width: 920px) {
         .layout, .chat-layout, .signals-layout, .grid, .choice-board { grid-template-columns: 1fr; }
@@ -1583,7 +1623,9 @@ export function renderHomePage() {
         const title = document.createElement("strong");
         title.textContent = set.route.title + " · " + set.ideas.length + " idea(s)";
         const context = document.createElement("div");
-        context.textContent = set.selection.gapTitle + " · " + set.selection.insightTitle;
+        const gapTitle = set.selection.gapTitle || set.route.usesGapTitles?.[0] || "Gap sin nombre";
+        const insightTitle = set.selection.insightTitle || set.route.usesInsightTitles?.[0] || "Insight sin nombre";
+        context.textContent = gapTitle + " · " + insightTitle;
         header.append(title, context);
         wrapper.appendChild(header);
 

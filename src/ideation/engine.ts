@@ -348,14 +348,16 @@ export function buildIdeationSystemPrompt() {
     "La idea debe derivarse del gap seleccionado, insight seleccionado, reto recomendado, restricciones, tensiones y evidencias usadas.",
     "La idea debe tener exactamente esta estructura visible y en este orden:",
     "1. idea: debe empezar con 'Idea 1. [nombre distintivo]: [descripcion corta]'",
-    "2. supuestoQueRompe: contenido de 'Supuesto que rompe:'",
-    "3. mecanicaConcreta: contenido de 'Mecanica concreta:'",
-    "4. porQueFunciona: contenido de 'Por que funciona:'",
+    "2. supuestoQueRompe: solo el supuesto que rompe, en una frase corta. No empieces con 'Rompe el supuesto de que', no expliques beneficio, no agregues frases como 'Cambia...' o 'Esto permite...'.",
+    "3. mecanicaConcreta: mecanismo concreto en maximo 2 frases, sin piloto y sin explicar beneficios.",
+    "4. porQueFunciona: explicacion breve en maximo 2 frases.",
     "5. casoAnalogo: contenido de 'Caso analogo:' incluyendo nombre, ano, industria/pais, similitud y diferencia",
     "6. metricaQueMueve: contenido de 'Metrica que mueve:'",
     "7. primerPasoEjecutable: contenido de 'Primer paso ejecutable:'",
     "8. antiPatronesAEvitar: contenido de 'Anti-patrones a evitar al ejecutar:'",
     "No repitas el nombre del campo dentro del contenido: supuestoQueRompe no debe empezar con 'Supuesto que rompe:' y mecanicaConcreta no debe empezar con 'La mecanica concreta consiste en'.",
+    "supuestoQueRompe debe ser solo el supuesto, no una mini-explicacion de la idea.",
+    "mecanicaConcreta y porQueFunciona deben ser concretos: evita parrafos largos.",
     "La mecanica concreta debe nombrar actores, objetos/rituales/interacciones y regla de uso, pero no debe describir el piloto; el piloto va exclusivamente en primerPasoEjecutable.",
     "antiPatronesAEvitar debe estar escrito para el usuario final, sin codigos internos como D3, D4 o textos entre parentesis tipo '(evitar D4)'.",
     "",
@@ -371,22 +373,51 @@ export function cleanIdeationOutputForDisplay(
     ...output,
     ideas: output.ideas.map((idea) => ({
       ...idea,
-      supuestoQueRompe: stripLeadingFieldLabel(idea.supuestoQueRompe, [
-        "Supuesto que rompe",
-      ]),
-      mecanicaConcreta: stripPilotFromMechanic(
+      supuestoQueRompe: cleanAssumption(
+        stripLeadingFieldLabel(idea.supuestoQueRompe, [
+          "Supuesto que rompe",
+        ]),
+      ),
+      mecanicaConcreta: limitSentences(stripPilotFromMechanic(
         stripLeadingFieldLabel(idea.mecanicaConcreta, [
           "Mecanica concreta",
           "Mecánica concreta",
           "La mecanica concreta consiste en",
           "La mecánica concreta consiste en",
         ]),
-      ),
+      ), 2),
+      porQueFunciona: limitSentences(idea.porQueFunciona, 2),
       antiPatronesAEvitar: idea.antiPatronesAEvitar
         .map(stripInternalAntiPatternCode)
         .filter((item) => item.length > 0),
     })),
   };
+}
+
+function cleanAssumption(value: string) {
+  const withoutPrefix = value
+    .trim()
+    .replace(/^rompe\s+(?:el\s+)?supuesto\s+de\s+que\s+/i, "")
+    .replace(/^rompe\s+(?:la\s+)?creencia\s+de\s+que\s+/i, "")
+    .replace(/^el\s+supuesto\s+que\s+rompe\s+es\s+que\s+/i, "")
+    .replace(/^la\s+creencia\s+que\s+rompe\s+es\s+que\s+/i, "");
+  return limitSentences(uppercaseFirst(withoutPrefix), 1);
+}
+
+function uppercaseFirst(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed[0].toUpperCase() + trimmed.slice(1) : trimmed;
+}
+
+function limitSentences(value: string, maxSentences: number) {
+  const cleaned = value.replace(/\s+/g, " ").trim();
+  const sentences = cleaned.match(/[^.!?]+[.!?]?/g);
+
+  if (!sentences) {
+    return cleaned;
+  }
+
+  return sentences.slice(0, maxSentences).join(" ").replace(/\s+/g, " ").trim();
 }
 
 function stripLeadingFieldLabel(value: string, labels: string[]) {
