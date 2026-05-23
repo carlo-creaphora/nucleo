@@ -17,6 +17,7 @@ export function renderHomePage() {
         --warm: #faf9f5;
         --accent: #0c0a09;
         --soft: #f5f4ef;
+        --phase-width: 1020px;
       }
       * { box-sizing: border-box; }
       html { scroll-behavior: smooth; }
@@ -210,7 +211,7 @@ export function renderHomePage() {
       }
       .section {
         display: none;
-        width: min(1440px, calc(100% - 64px));
+        width: min(var(--phase-width), calc(100% - 64px));
         margin: 0 auto;
         padding: 28px 0 40px;
       }
@@ -307,7 +308,7 @@ export function renderHomePage() {
         gap: 16px;
       }
       .diagnosis-page {
-        width: min(930px, calc(100% - 64px));
+        width: min(var(--phase-width), calc(100% - 64px));
         padding-top: 24px;
       }
       .diagnosis-page.diagnosis-start-mode {
@@ -351,7 +352,7 @@ export function renderHomePage() {
         line-height: 24px;
       }
       .diagnosis-page.diagnosis-start-mode .diagnosis-chat-panel {
-        width: min(614px, calc(100vw - 260px));
+        width: min(var(--phase-width), calc(100vw - 260px));
         border: 0;
         border-radius: 0;
         background: transparent;
@@ -364,11 +365,12 @@ export function renderHomePage() {
       .diagnosis-page.diagnosis-start-mode .diagnosis-prompts {
         display: flex;
         justify-content: center;
-        gap: 6px;
+        gap: 8px;
         margin-bottom: 10px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
       }
       .diagnosis-prompt-chip {
+        flex: 1 1 0;
         min-height: 32px;
         border: 1px solid #e7e5e4;
         border-radius: 7px;
@@ -379,6 +381,7 @@ export function renderHomePage() {
         font-size: 12px;
         line-height: 16px;
         font-weight: 600;
+        white-space: nowrap;
       }
       .diagnosis-page.diagnosis-start-mode .composer {
         position: relative;
@@ -764,6 +767,50 @@ export function renderHomePage() {
         grid-template-columns: minmax(0, 1fr) minmax(300px, 0.7fr);
         gap: 16px;
       }
+      #signals-section,
+      #ideation-section {
+        width: min(var(--phase-width), calc(100% - 64px));
+        padding-top: 24px;
+      }
+      #signals-section .section-head,
+      #ideation-section .section-head {
+        align-items: flex-start;
+        border-bottom: 1px solid #e7e5e4;
+        margin-bottom: 24px;
+        padding-bottom: 20px;
+      }
+      #signals-section .section-head h2,
+      #ideation-section .section-head h2 {
+        color: #1c1917;
+        font-size: 30px;
+        line-height: 36px;
+        font-weight: 600;
+      }
+      #signals-section .section-head p,
+      #ideation-section .section-head p {
+        max-width: 760px;
+        color: #78716c;
+        font-size: 14px;
+        line-height: 24px;
+      }
+      #signals-section .panel {
+        border: 1px solid #e7e5e4;
+        border-radius: 24px;
+        background: white;
+        padding: 20px;
+        box-shadow: 0 18px 60px rgba(28, 25, 23, 0.07);
+      }
+      #ideation-section > .panel {
+        overflow: hidden;
+        border: 1px solid #e7e5e4;
+        border-radius: 16px;
+        background: white;
+        padding: 0;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+      #ideation-section .ideation-canvas > p {
+        padding: 20px;
+      }
       .signal-stack {
         display: grid;
         gap: 12px;
@@ -791,12 +838,12 @@ export function renderHomePage() {
         overflow: hidden;
         touch-action: none;
         cursor: grab;
-        border: 1px solid #e7e5e4;
-        border-radius: 16px;
+        border: 0;
+        border-radius: 0;
         background-color: white;
         background-image: radial-gradient(#d6d3d1 0.65px, transparent 0.65px);
         background-size: 22px 22px;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        box-shadow: none;
       }
       .ideation-flow-viewport {
         width: 920px;
@@ -1124,7 +1171,12 @@ export function renderHomePage() {
         .layout, .chat-layout, .signals-layout, .grid, .choice-board { grid-template-columns: 1fr; }
         .sidebar { position: static; }
         .section-head { display: block; }
-        .section { width: min(100% - 28px, 1440px); }
+        .section,
+        #signals-section,
+        #ideation-section { width: min(100% - 28px, var(--phase-width)); }
+        .diagnosis-page.diagnosis-start-mode .diagnosis-chat-panel { width: min(100%, var(--phase-width)); }
+        .diagnosis-page.diagnosis-start-mode .diagnosis-prompts { flex-wrap: wrap; }
+        .diagnosis-prompt-chip { flex-basis: auto; }
         .composer { grid-template-columns: 1fr; }
         .msg { max-width: 100%; }
         .ideation-flow-viewport, .workflow-node { width: min(760px, calc(100vw - 72px)); }
