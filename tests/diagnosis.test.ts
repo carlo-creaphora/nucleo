@@ -16,6 +16,7 @@ import {
 } from "../src/signals/engine.js";
 import { IdeationService } from "../src/ideation/service.js";
 import {
+  buildCaseScreeningSystemPrompt,
   buildIdeationSystemPrompt,
   createIdeationEngine,
 } from "../src/ideation/engine.js";
@@ -521,6 +522,31 @@ describe("Diagnostico", () => {
     ).toBe(true);
   });
 
+  it("no castiga una idea por mencionar anti-patrones en el campo de ejecucion", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation-avoid-list" });
+    await registerInput(input);
+    await service.complete(input);
+    const signalsResult = await signalsService.generate(input.cycleId);
+    const selectedGap = signalsResult.signals.output.gaps[0]?.title;
+    const selectedInsight = signalsResult.signals.output.insights[0]?.title;
+    const ideationInput = await ideationService.buildInput(input.cycleId, {
+      ruptureType: "RUPTURA_MODERADA",
+      gapTitle: selectedGap,
+      insightTitle: selectedInsight,
+    });
+    const output = buildIdeationOutputForTest(ideationInput, {
+      antiPatronesAEvitar: [
+        "No caer en D3. Solucion antes que problema.",
+        "No caer en D4. Beneficio sin mecanica.",
+      ],
+    });
+    const violations = validateIdeationOutput(ideationInput, output);
+
+    expect(
+      violations.some((violation) => violation.type === "ANTI_PATTERN"),
+    ).toBe(false);
+  });
+
   it("bloquea Ideacion sin Senales generadas", async () => {
     const input = buildInput({ cycleId: "cycle-ideation-blocked" });
     await registerInput(input);
@@ -537,10 +563,13 @@ describe("Diagnostico", () => {
 
   it("el prompt final de Ideacion fuerza uso criterio de casos y antipatrones", () => {
     const prompt = buildIdeationSystemPrompt();
+    const screeningPrompt = buildCaseScreeningSystemPrompt();
 
-    expect(prompt).toContain("Antes de idear, buscar en todos los casos disruptivos");
-    expect(prompt).toContain("No presentes los casos como resultado");
-    expect(prompt).toContain("reinterpretar su mecanismo");
+    expect(screeningPrompt).toContain("seleccionar casos disruptivos antes de generar ideas");
+    expect(screeningPrompt).toContain("Selecciona exactamente 3 casos");
+    expect(screeningPrompt).toContain("mecanismo transferible");
+    expect(prompt).toContain("mandatoryCaseScreening");
+    expect(prompt).toContain("una referencia distinta por idea");
     expect(prompt).toContain("Cruzar cada idea contra antipatrones");
     expect(prompt).toContain("No copiar el caso");
     expect(prompt).not.toContain("prototypeBrief");

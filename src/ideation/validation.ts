@@ -161,7 +161,6 @@ function ideaText(idea: IdeationOutput["ideas"][number]) {
     idea.casoAnalogo,
     idea.metricaQueMueve,
     idea.primerPasoEjecutable,
-    idea.antiPatronesAEvitar.join(" "),
   ].join("\n");
 }
 

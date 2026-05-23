@@ -15,6 +15,23 @@ export type IdeationEngine = {
   generate(input: IdeationGenerationInput): Promise<IdeationOutput>;
 };
 
+const ideationCaseScreeningSchema = z.object({
+  selectedCaseReferences: z.array(
+    z.object({
+      caseName: z.string().min(2),
+      transferableMechanism: z.string().min(20),
+      whyThisCaseFits: z.string().min(30),
+      reinterpretationForThisIdea: z.string().min(30),
+      antiPatternRisk: z.string().min(20),
+      caveat: z.string().min(8),
+    }),
+  ).length(3),
+  rejectedCaseFamilies: z.array(z.string().min(8)).default([]),
+  generationGuardrails: z.array(z.string().min(12)).min(3),
+});
+
+type IdeationCaseScreening = z.infer<typeof ideationCaseScreeningSchema>;
+
 export class OpenAiIdeationEngine implements IdeationEngine {
   private readonly client: OpenAI;
   private readonly model: string;
@@ -31,8 +48,9 @@ export class OpenAiIdeationEngine implements IdeationEngine {
   }
 
   async generate(input: IdeationGenerationInput) {
+    const caseScreening = await this.runCaseScreening(input);
     const output = await this.runStructured(
-      buildIdeationUserPayload(input),
+      buildIdeationUserPayload(input, caseScreening),
     );
     const violations = validateIdeationOutput(input, output);
 
@@ -42,6 +60,7 @@ export class OpenAiIdeationEngine implements IdeationEngine {
 
     const repaired = await this.repairContractViolations(
       input,
+      caseScreening,
       output,
       violations,
     );
@@ -60,16 +79,46 @@ export class OpenAiIdeationEngine implements IdeationEngine {
 
   private async repairContractViolations(
     input: IdeationGenerationInput,
+    caseScreening: IdeationCaseScreening,
     output: IdeationOutput,
     violations: IdeationContractViolation[],
   ) {
     return this.runStructured({
       instruction:
-        "Repara la ideacion por incumplimiento contractual. No cambies gap, insight ni tipo de ruptura. Reformula solo las ideas afectadas y conserva exactamente 3 ideas.",
+        "Repara la ideacion por incumplimiento contractual. No cambies gap, insight, tipo de ruptura ni los casos ya seleccionados en caseScreening. Reformula solo las ideas afectadas y conserva exactamente 3 ideas.",
       violations,
+      mandatoryCaseScreening: caseScreening,
       originalOutput: output,
-      originalPayload: buildIdeationUserPayload(input),
+      originalPayload: buildIdeationUserPayload(input, caseScreening),
     });
+  }
+
+  private async runCaseScreening(input: IdeationGenerationInput) {
+    const completion = await this.client.beta.chat.completions.parse({
+      model: this.model,
+      temperature: 0.18,
+      messages: [
+        {
+          role: "system",
+          content: buildCaseScreeningSystemPrompt(),
+        },
+        {
+          role: "user",
+          content: JSON.stringify(buildCaseScreeningPayload(input), null, 2),
+        },
+      ],
+      response_format: zodResponseFormat(
+        ideationCaseScreeningSchema,
+        "ideation_case_screening",
+      ),
+    });
+    const parsed = completion.choices[0]?.message.parsed;
+
+    if (!parsed) {
+      throw new Error("OpenAI no devolvio seleccion de casos valida");
+    }
+
+    return parsed as IdeationCaseScreening;
   }
 
   private async runStructured(payload: unknown) {
@@ -145,17 +194,17 @@ export function buildIdeationSystemPrompt() {
     "INPUT OBLIGATORIO",
     "El usuario ya selecciono tres niveles: tipo de ruptura, gap e insight. Solo puedes generar ideas para esa seleccion.",
     "Registro y Diagnostico son contexto invisible: usalos para entender empresa, restricciones, tension y reto recomendado; no los conviertas en secciones visibles.",
+    "Recibiras mandatoryCaseScreening. Esa seleccion de casos ya fue hecha antes de idear y es obligatoria: cada idea debe nacer de una referencia distinta de esa lista.",
     "",
     "PROCESO INTERNO OBLIGATORIO",
-    "1. Releer reto recomendado, gap seleccionado, insight seleccionado, restricciones y tensiones.",
-    "2. Antes de idear, buscar en todos los casos disruptivos cuales podrian funcionar para este reto, gap e insight. No elijas el primer caso conocido; compara por mecanismo transferible.",
-    "3. Clasificar mentalmente esos casos por mecanismo: cambio de cobro, quien paga, eliminacion de intermediario, experiencia diferida, activacion sensorial, interfaz fisica, variable contraintuitiva, capacidad ociosa, servitizacion, modelo psicologico, distribucion rara, operacion rara.",
-    "4. Identificar referencias analogas utiles. No presentes los casos como resultado; usa cada referencia para traducir o reinterpretar su mecanismo en una idea nueva.",
-    "5. Cada una de las 3 ideas debe apoyarse en una reinterpretacion distinta de la biblioteca de casos, no en tres variaciones de la misma logica.",
-    "6. Cruzar cada reinterpretacion con supuestos por industria: cada idea debe romper un supuesto explicitamente.",
-    "7. Cruzar cada idea contra antipatrones. Si coincide con un antipatron, no la presentes: reformulala hasta que tenga mecanica concreta o descartala.",
-    "8. Usar modelos de negocio raros solo como apoyo cuando mejoren la mecanica; no los presentes como idea abstracta.",
-    "9. Formular exactamente 3 ideas, cada una prototipable en un piloto acotado.",
+    "1. Releer mandatoryCaseScreening antes de escribir cualquier idea.",
+    "2. Usar exactamente las 3 referencias seleccionadas: una referencia distinta por idea.",
+    "3. Traducir el mecanismo transferible, no copiar el caso ni presentarlo como biblioteca.",
+    "4. Cruzar cada reinterpretacion con supuestos por industria: cada idea debe romper un supuesto explicitamente.",
+    "5. Cruzar cada idea contra antipatrones antes de responder. Si coincide con D3 Solucion antes que problema o D4 Beneficio sin mecanica, esta prohibida.",
+    "6. No basta decir el beneficio: la mecanica concreta debe incluir actor, objeto/ritual/interaccion, regla de uso, frecuencia o momento, y primer piloto.",
+    "7. Usar modelos de negocio raros solo como apoyo cuando mejoren la mecanica; no los presentes como idea abstracta.",
+    "8. Formular exactamente 3 ideas, cada una prototipable en un piloto acotado.",
     "",
     "CRITERIO PARA USAR CASOS DISRUPTIVOS",
     "- Preferir transferencia de mecanismo sobre similitud superficial de industria.",
@@ -186,11 +235,32 @@ export function buildIdeationSystemPrompt() {
     "La mecanica concreta debe nombrar actores, objetos/rituales/interacciones, regla de uso y primer piloto.",
     "",
     "SALIDA INTERNA",
-    "En internal.caseScreening.translatedCaseReferences deja rastro de las 3 referencias reinterpretadas, el mecanismo transferible, como se traduce a una idea y el caveat principal.",
+    "En internal.caseScreening.translatedCaseReferences copia las 3 referencias de mandatoryCaseScreening ya reinterpretadas, sin inventar otras nuevas.",
   ].join("\n");
 }
 
-function buildIdeationUserPayload(input: IdeationGenerationInput) {
+export function buildCaseScreeningSystemPrompt() {
+  return [
+    "Eres el filtro previo de Ideacion de Nucleo. Tu unica tarea es seleccionar casos disruptivos antes de generar ideas.",
+    "No generes ideas finales. No escribas propuestas al usuario.",
+    "",
+    "METODO OBLIGATORIO",
+    "1. Lee reto recomendado, gap, insight, restricciones, tensiones y memoria.",
+    "2. Revisa la biblioteca completa de casos disruptivos disponible en el payload.",
+    "3. Selecciona exactamente 3 casos cuyo mecanismo pueda traducirse al problema actual.",
+    "4. Elige por mecanismo transferible, no por parecido superficial de industria.",
+    "5. Cada caso debe habilitar una idea distinta; no aceptes tres variaciones de la misma logica.",
+    "6. Antes de aceptar cada caso, identifica el riesgo de anti-patron que podria producir: D3 solucion antes que problema, D4 beneficio sin mecanica, app generica, plataforma generica, dashboard, capacitacion, contenido, alianza o IA decorativa.",
+    "7. En generationGuardrails escribe reglas concretas para que la siguiente etapa no caiga en esos anti-patrones.",
+    "",
+    "CRITERIO DE SELECCION",
+    "- Prioriza mecanismos que cambian decision, incentivo, unidad economica, interfaz fisica, canal, acceso, pagador, variable optimizada o ritual operativo.",
+    "- Rechaza casos que solo inspiran marketing, comunicacion, contenido o tecnologia generica.",
+    "- La reinterpretacion debe decir como se convierte el mecanismo en una idea posible para este gap e insight.",
+  ].join("\n");
+}
+
+function buildCaseScreeningPayload(input: IdeationGenerationInput) {
   const selectedGap = input.signalsHandoff.gaps.find(
     (gap) => gap.title === input.selection.gapTitle,
   );
@@ -200,13 +270,59 @@ function buildIdeationUserPayload(input: IdeationGenerationInput) {
 
   return {
     instruction:
-      "Genera exactamente 3 ideas para la seleccion. Usa todos los casos disruptivos como biblioteca de analogias; no presentes casos, reinterpreta mecanismos y documenta las referencias usadas en internal.caseScreening.translatedCaseReferences.",
+      "Selecciona exactamente 3 casos disruptivos para reinterpretar despues. No generes ideas finales.",
     selection: input.selection,
     expectedRoute: buildRoute(
       input.selection.ruptureType,
       input.selection.gapTitle,
       input.selection.insightTitle,
     ),
+    selectedContext: {
+      challenge: input.diagnosisHandoff.selectedChallenge,
+      diagnosis: input.diagnosisHandoff.diagnosis,
+      registration: input.diagnosisHandoff.registration,
+      gap: selectedGap,
+      insight: selectedInsight,
+      evidence: input.signalsHandoff.evidence.filter((evidence) =>
+        [...(selectedGap?.evidenceIds ?? []), ...(selectedInsight?.evidenceIds ?? [])].includes(
+          evidence.id,
+        ),
+      ),
+      memory: {
+        diagnosisMemory: input.diagnosisHandoff.memory,
+        signalsMemory: input.signalsHandoff.memory,
+      },
+    },
+    knowledge: {
+      assumptionsByIndustry: input.knowledgePack.assumptionsByIndustry,
+      antiPatterns: input.knowledgePack.antiPatterns,
+      disruptiveCases: input.knowledgePack.disruptiveCases,
+      weirdBusinessModels: input.knowledgePack.weirdBusinessModels,
+    },
+  };
+}
+
+function buildIdeationUserPayload(
+  input: IdeationGenerationInput,
+  caseScreening: IdeationCaseScreening,
+) {
+  const selectedGap = input.signalsHandoff.gaps.find(
+    (gap) => gap.title === input.selection.gapTitle,
+  );
+  const selectedInsight = input.signalsHandoff.insights.find(
+    (insight) => insight.title === input.selection.insightTitle,
+  );
+
+  return {
+    instruction:
+      "Genera exactamente 3 ideas para la seleccion usando mandatoryCaseScreening. No hagas scouting nuevo de casos en esta etapa: traduce cada caso seleccionado en una idea concreta y evita los anti-patrones marcados.",
+    selection: input.selection,
+    expectedRoute: buildRoute(
+      input.selection.ruptureType,
+      input.selection.gapTitle,
+      input.selection.insightTitle,
+    ),
+    mandatoryCaseScreening: caseScreening,
     selectedContext: {
       challenge: input.diagnosisHandoff.selectedChallenge,
       diagnosis: input.diagnosisHandoff.diagnosis,
