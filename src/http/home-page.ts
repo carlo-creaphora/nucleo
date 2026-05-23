@@ -31,11 +31,11 @@ export function renderHomePage() {
       button { cursor: pointer; }
       .shell {
         display: grid;
-        grid-template-columns: 244px minmax(0, 1fr);
-        grid-template-rows: 76px minmax(0, 1fr);
+        grid-template-columns: 196px minmax(0, 1fr);
+        grid-template-rows: 64px minmax(0, 1fr);
         width: 100%;
         height: 100dvh;
-        min-height: 760px;
+        min-height: 0;
         margin: 0;
         padding: 0;
       }
@@ -67,7 +67,7 @@ export function renderHomePage() {
         margin: 0;
         border-bottom: 1px solid var(--line);
         background: rgba(250, 249, 245, 0.9);
-        padding: 12px 20px;
+        padding: 8px 16px;
         backdrop-filter: blur(10px);
       }
       .brand {
@@ -78,14 +78,14 @@ export function renderHomePage() {
       }
       .brand h1 {
         margin: 0;
-        font-size: 24px;
-        line-height: 1.25;
+        font-size: 22px;
+        line-height: 26px;
         letter-spacing: 0;
         font-weight: 600;
       }
       .brand span {
         color: var(--muted);
-        font-size: 12px;
+        font-size: 11px;
         line-height: 16px;
         font-weight: 500;
         text-transform: uppercase;
@@ -104,6 +104,28 @@ export function renderHomePage() {
         font-size: 13px;
         font-weight: 700;
       }
+      .phase-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .phase-copy {
+        display: grid;
+        justify-items: end;
+        gap: 2px;
+      }
+      .phase-copy strong {
+        color: #292524;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 650;
+      }
+      .phase-copy span {
+        color: #a8a29e;
+        font-size: 11px;
+        line-height: 14px;
+        font-weight: 400;
+      }
       .layout {
         display: contents;
       }
@@ -120,15 +142,15 @@ export function renderHomePage() {
         overflow: auto;
         border-width: 0 1px 0 0;
         background: #f5f4ef;
-        padding: 18px 12px;
+        padding: 12px 10px;
         position: static;
       }
       .sidebar::before {
         content: "Innovación";
         display: block;
-        margin: 0 4px 28px;
+        margin: 0 4px 36px;
         color: #1c1917;
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 700;
         letter-spacing: 0;
       }
@@ -140,22 +162,19 @@ export function renderHomePage() {
       }
       .step {
         width: 100%;
-        display: grid;
-        grid-template-columns: 24px 1fr;
-        gap: 10px;
-        align-items: start;
+        display: block;
         border: 1px solid transparent;
-        border-radius: 8px;
-        padding: 10px 8px;
+        border-radius: 5px;
+        padding: 8px 7px;
         background: transparent;
         text-align: left;
-        color: #d6d3d1;
+        color: #57534e;
       }
-      .step + .step { margin-top: 4px; }
-      .step strong { display: block; color: inherit; font-size: 13px; font-weight: 650; }
-      .step span:last-child { font-size: 12px; color: inherit; }
+      .step + .step { margin-top: 10px; }
+      .step strong { display: block; color: inherit; font-size: 12px; line-height: 16px; font-weight: 650; }
+      .step span:last-child { display: block; margin-top: 2px; font-size: 11px; line-height: 14px; color: #a8a29e; }
       .num {
-        display: grid;
+        display: none;
         place-items: center;
         width: 20px;
         height: 20px;
@@ -167,10 +186,10 @@ export function renderHomePage() {
         color: inherit;
       }
       .step.active {
-        border-color: #d6d3d1;
-        background: white;
+        border-color: transparent;
+        background: #ebe9e6;
         color: #0c0a09;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+        box-shadow: none;
       }
       .step.done { color: #44403c; }
       .step.done .num { background: #0c0a09; border-color: #0c0a09; color: white; }
@@ -290,6 +309,117 @@ export function renderHomePage() {
       .diagnosis-page {
         width: min(930px, calc(100% - 64px));
         padding-top: 24px;
+      }
+      .diagnosis-page.diagnosis-start-mode {
+        width: 100%;
+        min-height: calc(100dvh - 64px);
+        padding: 0 32px;
+      }
+      .diagnosis-page.diagnosis-start-mode .diagnosis-phase-head,
+      .diagnosis-page.diagnosis-start-mode #result,
+      .diagnosis-page.diagnosis-start-mode #critical-missing,
+      .diagnosis-page.diagnosis-start-mode .messages,
+      .diagnosis-page.diagnosis-start-mode #complete-diagnosis {
+        display: none;
+      }
+      .diagnosis-page.diagnosis-start-mode .diagnosis-layout {
+        min-height: calc(100dvh - 64px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .diagnosis-start-hero {
+        display: none;
+      }
+      .diagnosis-page.diagnosis-start-mode .diagnosis-start-hero {
+        display: block;
+        margin-bottom: 88px;
+        text-align: center;
+      }
+      .diagnosis-start-hero h2 {
+        margin: 0;
+        color: #292524;
+        font-size: 30px;
+        line-height: 36px;
+        font-weight: 650;
+      }
+      .diagnosis-start-hero p {
+        max-width: 620px;
+        margin: 14px auto 0;
+        color: #78716c;
+        font-size: 14px;
+        line-height: 24px;
+      }
+      .diagnosis-page.diagnosis-start-mode .diagnosis-chat-panel {
+        width: min(614px, calc(100vw - 260px));
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        padding: 0;
+        box-shadow: none;
+      }
+      .diagnosis-prompts {
+        display: none;
+      }
+      .diagnosis-page.diagnosis-start-mode .diagnosis-prompts {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+      .diagnosis-prompt-chip {
+        min-height: 32px;
+        border: 1px solid #e7e5e4;
+        border-radius: 7px;
+        background: white;
+        color: #57534e;
+        padding: 0 12px;
+        box-shadow: 0 1px 6px rgba(28, 25, 23, 0.08);
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+      }
+      .diagnosis-page.diagnosis-start-mode .composer {
+        position: relative;
+        display: block;
+        margin-top: 0;
+      }
+      .diagnosis-page.diagnosis-start-mode .composer textarea {
+        min-height: 124px;
+        margin: 0;
+        border-radius: 10px;
+        border-color: #e7e5e4;
+        padding: 18px 16px 44px;
+        box-shadow: 0 24px 60px rgba(28, 25, 23, 0.08);
+        resize: none;
+      }
+      .diagnosis-page.diagnosis-start-mode .composer textarea::placeholder {
+        color: #a8a29e;
+      }
+      .diagnosis-page.diagnosis-start-mode .composer::after {
+        content: "Enter para enviar · Shift+Enter para nueva línea";
+        position: absolute;
+        left: 14px;
+        bottom: 20px;
+        color: #b5b0aa;
+        font-size: 10px;
+        line-height: 14px;
+        pointer-events: none;
+      }
+      .diagnosis-page.diagnosis-start-mode .composer .btn {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        min-height: 30px;
+        border: 0;
+        border-radius: 7px;
+        padding: 0 14px;
+        background: #05060f;
+        color: white;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 650;
       }
       .diagnosis-phase-head {
         display: flex;
@@ -1010,7 +1140,13 @@ export function renderHomePage() {
           <span>Sistema de innovación</span>
           <h1>Chat estratégico</h1>
         </div>
-        <div id="phase-status" class="status">1</div>
+        <div class="phase-indicator">
+          <div class="phase-copy">
+            <strong id="phase-label">Diagnóstico estratégico</strong>
+            <span id="phase-progress">7% del flujo</span>
+          </div>
+          <div id="phase-status" class="status">1</div>
+        </div>
       </header>
 
       <div class="layout">
@@ -1107,6 +1243,15 @@ export function renderHomePage() {
             </div>
             <div class="chat-layout diagnosis-layout">
               <div class="diagnosis-chat-panel">
+                <div class="diagnosis-start-hero">
+                  <h2>Diagnóstico estratégico</h2>
+                  <p>Cuéntame el reto como lo dirías en una reunión. Necesito entender qué está pasando antes de buscar ideas.</p>
+                </div>
+                <div class="diagnosis-prompts">
+                  <button class="diagnosis-prompt-chip" type="button" data-prompt="Tengo un problema de crecimiento">Tengo un problema de crecimiento</button>
+                  <button class="diagnosis-prompt-chip" type="button" data-prompt="Tengo una decisión bloqueada">Tengo una decisión bloqueada</button>
+                  <button class="diagnosis-prompt-chip" type="button" data-prompt="Quiero replantear una oferta">Quiero replantear una oferta</button>
+                </div>
                 <div id="messages" class="messages"></div>
                 <div class="composer">
                   <textarea id="user-message" placeholder="Escribe tu respuesta o describe el reto..."></textarea>
@@ -1246,9 +1391,6 @@ export function renderHomePage() {
           }
           state.registration = data.registration.output.contextForDiagnosis;
           setStep("diagnosis");
-          if (state.messages.length === 0) {
-            addMessage("assistant", "Cuéntame el reto como lo dirías en una reunión. Necesito entender qué está pasando antes de buscar ideas.");
-          }
           persistDraft();
         } catch (error) {
           setError(error.message || "No se pudo guardar Registro.");
@@ -1266,6 +1408,12 @@ export function renderHomePage() {
       });
       $("step-ideation").addEventListener("click", () => {
         if (state.signals) openIdeation();
+      });
+      document.querySelectorAll(".diagnosis-prompt-chip").forEach((button) => {
+        button.addEventListener("click", () => {
+          $("user-message").value = button.dataset.prompt || "";
+          $("user-message").focus();
+        });
       });
       $("send-message").addEventListener("click", sendMessage);
       $("complete-diagnosis").addEventListener("click", completeDiagnosis);
@@ -1299,8 +1447,22 @@ export function renderHomePage() {
         $("step-signals").classList.toggle("done", Boolean(state.signals));
         $("step-ideation").classList.toggle("done", Boolean(state.ideation) || state.ideationSets.length > 0);
         const phaseNumber = { registration: "1", diagnosis: "2", signals: "3", ideation: "4" }[step] || "1";
+        const phaseLabels = {
+          registration: ["Registro", "Preparación"],
+          diagnosis: ["Diagnóstico estratégico", "7% del flujo"],
+          signals: ["Lectura de señales", "Gaps e insights"],
+          ideation: ["Ideación disruptiva", "Ideas propuestas"]
+        };
         $("phase-status").textContent = phaseNumber;
+        $("phase-label").textContent = (phaseLabels[step] || phaseLabels.registration)[0];
+        $("phase-progress").textContent = (phaseLabels[step] || phaseLabels.registration)[1];
+        updateDiagnosisViewMode();
         persistDraft();
+      }
+
+      function updateDiagnosisViewMode() {
+        const hasUserMessages = state.messages.some((item) => item.role === "user");
+        $("diagnosis-section").classList.toggle("diagnosis-start-mode", !state.diagnosis && !hasUserMessages);
       }
 
       function readRegistration() {
@@ -1604,6 +1766,7 @@ export function renderHomePage() {
         node.textContent = content;
         $("messages").appendChild(node);
         $("messages").scrollTop = $("messages").scrollHeight;
+        updateDiagnosisViewMode();
         persistDraft();
       }
 
@@ -1611,6 +1774,7 @@ export function renderHomePage() {
         const previousDiagnosis = state.diagnosis ? JSON.stringify(state.diagnosis) : "";
         const nextDiagnosis = JSON.stringify(diagnosis);
         state.diagnosis = diagnosis;
+        updateDiagnosisViewMode();
         if (previousDiagnosis && previousDiagnosis !== nextDiagnosis) {
           state.signals = null;
           state.ideationOptions = null;
