@@ -5,28 +5,13 @@ import type {
 
 export type IdeationContractViolation = {
   type:
-    | "ANTI_PATTERN"
     | "ROUTE_MISMATCH"
+    | "CASE_TRACE_MISMATCH"
     | "MISSING_VISIBLE_STRUCTURE";
   ideaId?: string;
   message: string;
   source?: string;
 };
-
-const UNIVERSAL_ANTI_PATTERN_REGEXES = [
-  /\b(app|aplicaci[oó]n|plataforma)\b.{0,120}\b(conecta|conectar|gestiona|centraliza)\b/i,
-  /\b(usar|utilizar|implementar)\s+ia\b(?![\s\S]{0,160}\b(regla|ritual|objeto|interfaz|decision|decisi[oó]n|piloto|mec[aá]nica)\b)/i,
-  /\b(agente|chatbot)\b.{0,120}\bia\b(?![\s\S]{0,160}\b(regla|ritual|objeto|interfaz|decision|decisi[oó]n|piloto|mec[aá]nica)\b)/i,
-  /\b(gamificaci[oó]n|puntos|badges|leaderboard|ranking)\b/i,
-  /\b(cre(ar)?|lanzar|montar|hacer)\s+(una\s+)?comunidad\b/i,
-  /\bmarketplace\b.{0,120}\b(conecta|conectar)\b/i,
-  /\b(webinar|workshop|taller|evento)\b/i,
-  /\b(newsletter|podcast|linkedin|contenido)\b/i,
-  /\b(alianza estrat[eé]gica)\b(?!.*\bprimer experimento\b)/i,
-  /\b(transformaci[oó]n digital)\b/i,
-  /\b(dashboard|tablero)\b(?!.*\bdecisi[oó]n obligatoria\b)/i,
-  /\b(capacitaci[oó]n|certificaci[oó]n|manual)\b(?!.*\bobjeto|interfaz|campo|decisi[oó]n\b)/i,
-];
 
 export function validateIdeationOutput(
   input: IdeationGenerationInput,
@@ -34,7 +19,7 @@ export function validateIdeationOutput(
 ): IdeationContractViolation[] {
   return [
     ...validateVisibleStructure(output),
-    ...validateAntiPatterns(input, output),
+    ...validateCaseTrace(output),
     ...validateRouteFit(input, output),
   ];
 }
@@ -56,40 +41,20 @@ function validateVisibleStructure(output: IdeationOutput) {
   return violations;
 }
 
-function validateAntiPatterns(
-  input: IdeationGenerationInput,
-  output: IdeationOutput,
-) {
+function validateCaseTrace(output: IdeationOutput) {
   const violations: IdeationContractViolation[] = [];
+  const references = output.internal.caseScreening.translatedCaseReferences;
+  const referenceNames = new Set(references.map((reference) => normalize(reference.caseName)));
 
   for (const idea of output.ideas) {
-    const text = antiPatternText(idea);
-
-    for (const regex of UNIVERSAL_ANTI_PATTERN_REGEXES) {
-      if (regex.test(text)) {
-        violations.push({
-          type: "ANTI_PATTERN",
-          ideaId: idea.id,
-          message:
-            "La idea coincide con un anti-patron universal de ideacion generica.",
-          source: regex.source,
-        });
-      }
-    }
-
-    for (const antiPattern of input.knowledgePack.antiPatterns) {
-      const matchedTerm = antiPattern.forbiddenIdeaPatterns.find((term) =>
-        includesNormalized(text, term),
-      );
-
-      if (matchedTerm) {
-        violations.push({
-          type: "ANTI_PATTERN",
-          ideaId: idea.id,
-          message: `La idea coincide con el anti-patron "${antiPattern.title}".`,
-          source: matchedTerm,
-        });
-      }
+    if (!referenceNames.has(normalize(idea.trace.disruptiveCaseName))) {
+      violations.push({
+        type: "CASE_TRACE_MISMATCH",
+        ideaId: idea.id,
+        message:
+          "La idea debe trazarse a uno de los casos seleccionados en el scouting previo.",
+        source: idea.trace.disruptiveCaseName,
+      });
     }
   }
 
@@ -101,88 +66,54 @@ function validateRouteFit(
   output: IdeationOutput,
 ) {
   const violations: IdeationContractViolation[] = [];
-  const ruptureType = input.selection.ruptureType;
+
+  if (output.route.ruptureType !== input.selection.ruptureType) {
+    violations.push({
+      type: "ROUTE_MISMATCH",
+      message:
+        "La ruta generada debe conservar el tipo de ruptura seleccionado por el usuario.",
+      source: output.route.ruptureType,
+    });
+  }
+
+  if (!output.route.usesGapTitles.includes(input.selection.gapTitle)) {
+    violations.push({
+      type: "ROUTE_MISMATCH",
+      message: "La ruta generada debe usar el gap seleccionado por el usuario.",
+      source: input.selection.gapTitle,
+    });
+  }
+
+  if (!output.route.usesInsightTitles.includes(input.selection.insightTitle)) {
+    violations.push({
+      type: "ROUTE_MISMATCH",
+      message:
+        "La ruta generada debe usar el insight seleccionado por el usuario.",
+      source: input.selection.insightTitle,
+    });
+  }
 
   for (const idea of output.ideas) {
-    const text = ideaText(idea);
-
-    if (
-      ruptureType === "RUPTURA_MODERADA" &&
-      /\b(quien paga|qui[eé]n paga|modelo de negocio|suscripci[oó]n|cobro|cobra|pago por|tercero paga|marketplace|distribuci[oó]n nueva)\b/i.test(
-        text,
-      )
-    ) {
+    if (!idea.trace.gapTitles.includes(input.selection.gapTitle)) {
       violations.push({
         type: "ROUTE_MISMATCH",
         ideaId: idea.id,
-        message:
-          "Ruptura moderada debe mejorar lo existente sin cambiar cobro, pagador, distribucion ni modelo de negocio.",
+        message: "Cada idea debe trazarse al gap seleccionado.",
+        source: input.selection.gapTitle,
       });
     }
 
-    if (
-      ruptureType === "RUPTURA_FUERTE" &&
-      !/\b(cobra|cobro|paga|pagador|entrega|accede|acceso|canal|modelo|precio|suscripci[oó]n|distribuci[oó]n|quien paga|qui[eé]n paga|regla|reglas|incentivo|incentivos|decide|decidir|decisi[oó]n|criterio|ritual|aprobaci[oó]n|responsable|flujo|operaci[oó]n)\b/i.test(
-        text,
-      )
-    ) {
+    if (!idea.trace.insightTitles.includes(input.selection.insightTitle)) {
       violations.push({
         type: "ROUTE_MISMATCH",
         ideaId: idea.id,
-        message:
-          "Ruptura fuerte debe transformar una pieza del modelo: cobro, pagador, entrega, acceso, canal, precio, distribucion, reglas, incentivos o forma de decidir.",
-      });
-    }
-
-    if (
-      ruptureType === "RUPTURA_RADICAL_CONTROLADA" &&
-      !/\b(supuesto|creencia|industria|categoria|categor[ií]a|todo el mundo|se asume|se da por obvio|no es cierto)\b/i.test(
-        idea.supuestoQueRompe,
-      )
-    ) {
-      violations.push({
-        type: "ROUTE_MISMATCH",
-        ideaId: idea.id,
-        message:
-          "Ruptura radical controlada debe romper una creencia industrial explicita, no solo mejorar o transformar.",
+        message: "Cada idea debe trazarse al insight seleccionado.",
+        source: input.selection.insightTitle,
       });
     }
   }
 
   return violations;
-}
-
-function ideaText(idea: IdeationOutput["ideas"][number]) {
-  return [
-    idea.idea,
-    idea.supuestoQueRompe,
-    idea.mecanicaConcreta,
-    idea.porQueFunciona,
-    idea.casoAnalogo,
-    idea.metricaQueMueve,
-    idea.primerPasoEjecutable,
-  ].join("\n");
-}
-
-function antiPatternText(idea: IdeationOutput["ideas"][number]) {
-  return [
-    idea.idea,
-    idea.supuestoQueRompe,
-    idea.mecanicaConcreta,
-    idea.porQueFunciona,
-    idea.metricaQueMueve,
-    idea.primerPasoEjecutable,
-  ].join("\n");
-}
-
-function includesNormalized(text: string, term: string) {
-  const normalizedTerm = normalize(term);
-
-  if (normalizedTerm.length < 4) {
-    return false;
-  }
-
-  return normalize(text).includes(normalizedTerm);
 }
 
 function normalize(value: string) {

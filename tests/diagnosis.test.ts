@@ -17,6 +17,7 @@ import {
 import { IdeationService } from "../src/ideation/service.js";
 import {
   buildCaseScreeningSystemPrompt,
+  buildConceptReviewSystemPrompt,
   buildIdeationSystemPrompt,
   createIdeationEngine,
 } from "../src/ideation/engine.js";
@@ -494,7 +495,7 @@ describe("Diagnostico", () => {
     );
   });
 
-  it("valida anti-patrones y ajuste de ruta en Ideacion", async () => {
+  it("valida ajuste estructural de ruta en Ideacion sin bloquear por palabras", async () => {
     const input = buildInput({ cycleId: "cycle-ideation-validation" });
     await registerInput(input);
     await service.complete(input);
@@ -512,14 +513,15 @@ describe("Diagnostico", () => {
       mecanicaConcreta:
         "Crear una app que conecta administradores con tecnicos y cambia el modelo de negocio con suscripcion mensual.",
     });
+    output.route.ruptureType = "RUPTURA_FUERTE";
     const violations = validateIdeationOutput(ideationInput, output);
 
-    expect(violations.some((violation) => violation.type === "ANTI_PATTERN")).toBe(
-      true,
-    );
     expect(
       violations.some((violation) => violation.type === "ROUTE_MISMATCH"),
     ).toBe(true);
+    expect(
+      violations.some((violation) => violation.type === "CASE_TRACE_MISMATCH"),
+    ).toBe(false);
   });
 
   it("no castiga una idea por mencionar anti-patrones en el campo de ejecucion", async () => {
@@ -542,9 +544,7 @@ describe("Diagnostico", () => {
     });
     const violations = validateIdeationOutput(ideationInput, output);
 
-    expect(
-      violations.some((violation) => violation.type === "ANTI_PATTERN"),
-    ).toBe(false);
+    expect(violations).toHaveLength(0);
   });
 
   it("acepta ruptura fuerte cuando transforma reglas o incentivos de decision", async () => {
@@ -591,9 +591,34 @@ describe("Diagnostico", () => {
     });
     const violations = validateIdeationOutput(ideationInput, output);
 
+    expect(violations).toHaveLength(0);
+  });
+
+  it("exige trazabilidad a los casos seleccionados en scouting", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation-case-trace" });
+    await registerInput(input);
+    await service.complete(input);
+    const signalsResult = await signalsService.generate(input.cycleId);
+    const selectedGap = signalsResult.signals.output.gaps[0]?.title;
+    const selectedInsight = signalsResult.signals.output.insights[0]?.title;
+    const ideationInput = await ideationService.buildInput(input.cycleId, {
+      ruptureType: "RUPTURA_MODERADA",
+      gapTitle: selectedGap,
+      insightTitle: selectedInsight,
+    });
+    const output = buildIdeationOutputForTest(ideationInput, {
+      trace: {
+        gapTitles: [ideationInput.selection.gapTitle],
+        insightTitles: [ideationInput.selection.insightTitle],
+        evidenceIds: ["sig_1"],
+        disruptiveCaseName: "Caso inventado",
+      },
+    });
+    const violations = validateIdeationOutput(ideationInput, output);
+
     expect(
-      violations.some((violation) => violation.type === "ANTI_PATTERN"),
-    ).toBe(false);
+      violations.some((violation) => violation.type === "CASE_TRACE_MISMATCH"),
+    ).toBe(true);
   });
 
   it("bloquea Ideacion sin Senales generadas", async () => {
@@ -613,10 +638,13 @@ describe("Diagnostico", () => {
   it("el prompt final de Ideacion fuerza uso criterio de casos y antipatrones", () => {
     const prompt = buildIdeationSystemPrompt();
     const screeningPrompt = buildCaseScreeningSystemPrompt();
+    const reviewPrompt = buildConceptReviewSystemPrompt();
 
     expect(screeningPrompt).toContain("seleccionar casos disruptivos antes de generar ideas");
     expect(screeningPrompt).toContain("Selecciona exactamente 3 casos");
     expect(screeningPrompt).toContain("mecanismo transferible");
+    expect(reviewPrompt).toContain("No bloquees por palabras sueltas");
+    expect(reviewPrompt).toContain("modelo de la idea");
     expect(prompt).toContain("mandatoryCaseScreening");
     expect(prompt).toContain("una referencia distinta por idea");
     expect(prompt).toContain("Cruzar cada idea contra antipatrones");

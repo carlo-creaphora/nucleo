@@ -32,6 +32,21 @@ const ideationCaseScreeningSchema = z.object({
 
 type IdeationCaseScreening = z.infer<typeof ideationCaseScreeningSchema>;
 
+const ideationConceptReviewSchema = z.object({
+  passed: z.boolean(),
+  conceptualFindings: z.array(
+    z.object({
+      ideaId: z.string().min(1),
+      status: z.enum(["ok", "generic_or_antipattern"]),
+      reason: z.string().min(12),
+      antiPatternTitle: z.string().min(3).optional(),
+      requiredReframe: z.string().min(12).optional(),
+    }),
+  ).length(3),
+});
+
+type IdeationConceptReview = z.infer<typeof ideationConceptReviewSchema>;
+
 export class OpenAiIdeationEngine implements IdeationEngine {
   private readonly client: OpenAI;
   private readonly model: string;
@@ -55,7 +70,34 @@ export class OpenAiIdeationEngine implements IdeationEngine {
     const violations = validateIdeationOutput(input, output);
 
     if (violations.length === 0) {
-      return output;
+      const conceptReview = await this.runConceptReview(input, caseScreening, output);
+
+      if (conceptReview.passed) {
+        return output;
+      }
+
+      const semanticallyRepaired = await this.repairConceptViolations(
+        input,
+        caseScreening,
+        output,
+        conceptReview,
+      );
+      const semanticallyRepairedReview = await this.runConceptReview(
+        input,
+        caseScreening,
+        semanticallyRepaired,
+      );
+
+      if (!semanticallyRepairedReview.passed) {
+        throw new Error(
+          `Ideacion incumplio contrato conceptual despues de reparacion: ${semanticallyRepairedReview.conceptualFindings
+            .filter((finding) => finding.status !== "ok")
+            .map((finding) => finding.reason)
+            .join(" | ")}`,
+        );
+      }
+
+      return semanticallyRepaired;
     }
 
     const repaired = await this.repairContractViolations(
@@ -74,6 +116,33 @@ export class OpenAiIdeationEngine implements IdeationEngine {
       );
     }
 
+    const conceptReview = await this.runConceptReview(input, caseScreening, repaired);
+
+    if (!conceptReview.passed) {
+      const semanticallyRepaired = await this.repairConceptViolations(
+        input,
+        caseScreening,
+        repaired,
+        conceptReview,
+      );
+      const semanticallyRepairedReview = await this.runConceptReview(
+        input,
+        caseScreening,
+        semanticallyRepaired,
+      );
+
+      if (!semanticallyRepairedReview.passed) {
+        throw new Error(
+          `Ideacion incumplio contrato conceptual despues de reparacion: ${semanticallyRepairedReview.conceptualFindings
+            .filter((finding) => finding.status !== "ok")
+            .map((finding) => finding.reason)
+            .join(" | ")}`,
+        );
+      }
+
+      return semanticallyRepaired;
+    }
+
     return repaired;
   }
 
@@ -87,6 +156,22 @@ export class OpenAiIdeationEngine implements IdeationEngine {
       instruction:
         "Repara la ideacion por incumplimiento contractual. No cambies gap, insight, tipo de ruptura ni los casos ya seleccionados en caseScreening. Reformula solo las ideas afectadas y conserva exactamente 3 ideas.",
       violations,
+      mandatoryCaseScreening: caseScreening,
+      originalOutput: output,
+      originalPayload: buildIdeationUserPayload(input, caseScreening),
+    });
+  }
+
+  private async repairConceptViolations(
+    input: IdeationGenerationInput,
+    caseScreening: IdeationCaseScreening,
+    output: IdeationOutput,
+    conceptReview: IdeationConceptReview,
+  ) {
+    return this.runStructured({
+      instruction:
+        "Repara la ideacion por incumplimiento conceptual de anti-patrones. No cambies gap, insight, tipo de ruptura ni los casos seleccionados. Reformula solo las ideas marcadas como generic_or_antipattern desde el mecanismo del caso seleccionado.",
+      conceptReview,
       mandatoryCaseScreening: caseScreening,
       originalOutput: output,
       originalPayload: buildIdeationUserPayload(input, caseScreening),
@@ -119,6 +204,42 @@ export class OpenAiIdeationEngine implements IdeationEngine {
     }
 
     return parsed as IdeationCaseScreening;
+  }
+
+  private async runConceptReview(
+    input: IdeationGenerationInput,
+    caseScreening: IdeationCaseScreening,
+    output: IdeationOutput,
+  ) {
+    const completion = await this.client.beta.chat.completions.parse({
+      model: this.model,
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: buildConceptReviewSystemPrompt(),
+        },
+        {
+          role: "user",
+          content: JSON.stringify(
+            buildConceptReviewPayload(input, caseScreening, output),
+            null,
+            2,
+          ),
+        },
+      ],
+      response_format: zodResponseFormat(
+        ideationConceptReviewSchema,
+        "ideation_concept_review",
+      ),
+    });
+    const parsed = completion.choices[0]?.message.parsed;
+
+    if (!parsed) {
+      throw new Error("OpenAI no devolvio revision conceptual valida");
+    }
+
+    return parsed as IdeationConceptReview;
   }
 
   private async runStructured(payload: unknown) {
@@ -260,6 +381,24 @@ export function buildCaseScreeningSystemPrompt() {
   ].join("\n");
 }
 
+export function buildConceptReviewSystemPrompt() {
+  return [
+    "Eres el revisor conceptual de anti-patrones de Ideacion de Nucleo.",
+    "No bloquees por palabras sueltas. Evalua el modelo de la idea, su logica y su mecanica.",
+    "",
+    "CRITERIO",
+    "- Una idea falla si su concepto es generico aunque use palabras sofisticadas.",
+    "- Una idea pasa si tiene mecanismo concreto, actor, regla de uso, interaccion/ritual/objeto, primer piloto y trazabilidad a un caso disruptivo.",
+    "- Palabras como app, plataforma, dashboard, IA, comunidad, alianza o capacitacion no son motivo suficiente para fallar. Solo fallan si el modelo de la idea es generico, decorativo o sustituye el problema por una solucion obvia.",
+    "- Usa los anti-patrones del payload como criterios conceptuales, no como lista de palabras prohibidas.",
+    "- D3 Solucion antes que problema falla cuando la idea parte de una solucion predefinida y no de la tension/gap/insight.",
+    "- D4 Beneficio sin mecanica falla cuando promete un resultado sin explicar la mecanica concreta que lo produce.",
+    "",
+    "SALIDA",
+    "Devuelve passed=true solo si las 3 ideas pasan conceptualmente.",
+  ].join("\n");
+}
+
 function buildCaseScreeningPayload(input: IdeationGenerationInput) {
   const selectedGap = input.signalsHandoff.gaps.find(
     (gap) => gap.title === input.selection.gapTitle,
@@ -345,6 +484,31 @@ function buildIdeationUserPayload(
       disruptiveCases: input.knowledgePack.disruptiveCases,
       weirdBusinessModels: input.knowledgePack.weirdBusinessModels,
     },
+  };
+}
+
+function buildConceptReviewPayload(
+  input: IdeationGenerationInput,
+  caseScreening: IdeationCaseScreening,
+  output: IdeationOutput,
+) {
+  return {
+    instruction:
+      "Evalua conceptualmente si las ideas caen en anti-patrones. No uses palabras sueltas como criterio.",
+    selection: input.selection,
+    selectedContext: {
+      challenge: input.diagnosisHandoff.selectedChallenge,
+      diagnosis: input.diagnosisHandoff.diagnosis,
+      gap: input.signalsHandoff.gaps.find(
+        (gap) => gap.title === input.selection.gapTitle,
+      ),
+      insight: input.signalsHandoff.insights.find(
+        (insight) => insight.title === input.selection.insightTitle,
+      ),
+    },
+    mandatoryCaseScreening: caseScreening,
+    antiPatterns: input.knowledgePack.antiPatterns,
+    outputToReview: output,
   };
 }
 
