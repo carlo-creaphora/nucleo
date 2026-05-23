@@ -66,26 +66,28 @@ export function renderHomePage() {
         gap: 16px;
         margin: 0;
         border-bottom: 1px solid var(--line);
-        background: rgba(250, 249, 245, 0.92);
-        padding: 14px 22px;
+        background: rgba(250, 249, 245, 0.9);
+        padding: 12px 20px;
         backdrop-filter: blur(10px);
       }
       .brand {
         display: flex;
-        align-items: baseline;
-        gap: 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
       }
       .brand h1 {
         margin: 0;
-        font-size: 22px;
-        line-height: 1.1;
+        font-size: 24px;
+        line-height: 1.25;
         letter-spacing: 0;
-        font-weight: 700;
+        font-weight: 600;
       }
       .brand span {
         color: var(--muted);
         font-size: 12px;
-        font-weight: 600;
+        line-height: 16px;
+        font-weight: 500;
         text-transform: uppercase;
       }
       .status {
@@ -284,6 +286,147 @@ export function renderHomePage() {
         display: grid;
         grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
         gap: 16px;
+      }
+      .diagnosis-page {
+        width: min(930px, calc(100% - 64px));
+        padding-top: 24px;
+      }
+      .diagnosis-phase-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        border-bottom: 0;
+        margin-bottom: 30px;
+        padding-bottom: 0;
+      }
+      .diagnosis-phase-head .eyebrow,
+      .diagnosis-card-kicker {
+        margin: 0;
+        color: #a8a29e;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 500;
+        text-transform: uppercase;
+      }
+      .diagnosis-phase-head h2 {
+        margin-top: 8px;
+        color: #1c1917;
+        font-size: 30px;
+        line-height: 36px;
+        font-weight: 600;
+      }
+      .diagnosis-phase-head p:not(.eyebrow) {
+        max-width: 680px;
+        margin-top: 8px;
+        color: #78716c;
+        font-size: 14px;
+        line-height: 24px;
+      }
+      .diagnosis-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      .diagnosis-chat-panel {
+        border-radius: 24px;
+        border: 1px solid #e7e5e4;
+        background: white;
+        padding: 20px;
+        box-shadow: 0 18px 60px rgba(28, 25, 23, 0.07);
+      }
+      .diagnosis-chat-panel .messages {
+        height: 250px;
+      }
+      .diagnosis-output {
+        display: grid;
+        gap: 20px;
+        max-height: none;
+        overflow: visible;
+      }
+      .diagnosis-challenge {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        padding: 0;
+      }
+      .diagnosis-challenge h3 {
+        margin: 0;
+        color: #1c1917;
+        font-size: 24px;
+        line-height: 30px;
+        letter-spacing: 0;
+        font-weight: 600;
+      }
+      .diagnosis-challenge p {
+        max-width: none;
+        margin-top: 16px;
+        color: #57534e;
+        font-size: 14px;
+        line-height: 28px;
+      }
+      .diagnosis-reading {
+        border: 1px solid #e7e5e4;
+        border-radius: 24px;
+        background: white;
+        padding: 20px;
+        box-shadow: 0 18px 60px rgba(28, 25, 23, 0.07);
+      }
+      .diagnosis-reading h3,
+      .diagnosis-brief h3 {
+        margin: 0;
+        color: #1c1917;
+        font-size: 18px;
+        line-height: 28px;
+        font-weight: 600;
+      }
+      .diagnosis-row-list {
+        display: flex;
+        flex-direction: column;
+        margin-top: 12px;
+      }
+      .diagnosis-row {
+        padding: 12px 0;
+        border-top: 1px solid #e7e5e4;
+      }
+      .diagnosis-row:first-child { border-top: 0; padding-top: 0; }
+      .diagnosis-row:last-child { padding-bottom: 0; }
+      .diagnosis-row-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .diagnosis-row-title {
+        margin: 0;
+        color: #1c1917;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 600;
+      }
+      .diagnosis-row-body {
+        margin-top: 4px;
+        color: #44403c;
+        font-size: 14px;
+        line-height: 20px;
+      }
+      .diagnosis-row-body ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .diagnosis-brief {
+        border: 1px solid #e7e5e4;
+        border-radius: 24px;
+        background: #f5f4ef;
+        padding: 20px;
+        box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04);
+      }
+      .diagnosis-brief p {
+        max-width: 768px;
+        margin-top: 12px;
+        color: #57534e;
+        font-size: 14px;
+        line-height: 28px;
       }
       .panel {
         border-radius: 16px;
@@ -950,16 +1093,20 @@ export function renderHomePage() {
             </div>
           </div>
 
-          <div id="diagnosis-section" class="section">
-            <div class="section-head">
+          <div id="diagnosis-section" class="section diagnosis-page">
+            <div class="section-head diagnosis-phase-head">
               <div>
+                <p class="eyebrow">Revisión de fase</p>
                 <h2>Diagnóstico estratégico</h2>
-                <p>Describe el problema como lo dirías en una reunión. La IA hará preguntas y luego entregará el reto recomendado.</p>
+                <p>Revisa esta lectura y confirma el diagnóstico antes de leer señales externas.</p>
               </div>
-              <span id="loading" class="loading">Pensando...</span>
+              <div class="actions" style="margin-top:0;">
+                <span id="loading" class="loading">Pensando...</span>
+                <button id="confirm-diagnosis-signals" class="btn primary" type="button" disabled>Confirmar y consultar señales</button>
+              </div>
             </div>
-            <div class="chat-layout">
-              <div class="panel">
+            <div class="chat-layout diagnosis-layout">
+              <div class="diagnosis-chat-panel">
                 <div id="messages" class="messages"></div>
                 <div class="composer">
                   <textarea id="user-message" placeholder="Escribe tu respuesta o describe el reto..."></textarea>
@@ -970,16 +1117,10 @@ export function renderHomePage() {
                 </div>
                 <div id="error" class="error"></div>
               </div>
-              <aside class="panel">
-                <h3 style="margin:0 0 12px;">Resultado</h3>
-                <div id="critical-missing" class="critical"></div>
-                <div id="result" class="result">
-                  <p style="color: var(--muted); line-height: 1.6;">Cuando cierres el diagnóstico, aquí aparecerán los 10 outputs contratados.</p>
-                </div>
-                <div class="actions">
-                  <button id="confirm-diagnosis-signals" class="btn primary" type="button" disabled>Confirmar y consultar señales</button>
-                </div>
-              </aside>
+              <div id="critical-missing" class="critical"></div>
+              <div id="result" class="result diagnosis-output">
+                <p style="color: var(--muted); line-height: 1.6;">Cuando cierres el diagnóstico, aquí aparecerá la lectura diagnóstica.</p>
+              </div>
             </div>
           </div>
 
@@ -1483,25 +1624,42 @@ export function renderHomePage() {
           setSignalsError("");
           setIdeationError("");
         }
-        const items = [
-          ["recommendedChallenge", "Reto recomendado", diagnosis.recommendedChallenge],
-          ["whyThisChallenge", "Por qué es más correcto", diagnosis.whyThisChallenge],
-          ["symptoms", "Síntomas", diagnosis.symptoms],
-          ["causes", "Causas", diagnosis.causes],
-          ["tensions", "Tensiones", diagnosis.tensions],
-          ["metrics", "Métricas", diagnosis.metrics],
-          ["restrictions", "Restricciones", diagnosis.restrictions],
-          ["notWorthAttackingYet", "Qué no conviene atacar todavía", diagnosis.notWorthAttackingYet],
-          ["assumptionToQuestion", "Supuesto a cuestionar", diagnosis.assumptionToQuestion],
-          ["ideationBrief", "Brief para ideación", diagnosis.ideationBrief]
-        ];
         $("result").innerHTML = "";
+
+        const challenge = document.createElement("section");
+        challenge.className = "diagnosis-challenge";
+        const challengeKicker = document.createElement("p");
+        challengeKicker.className = "diagnosis-card-kicker";
+        challengeKicker.textContent = "Reto recomendado";
+        const challengeTitle = document.createElement("h3");
+        challengeTitle.textContent = diagnosis.recommendedChallenge || "Sin reto recomendado.";
+        const challengeReason = document.createElement("p");
+        challengeReason.textContent = diagnosis.whyThisChallenge || "Sin justificación declarada.";
+        challenge.append(challengeKicker, challengeTitle, challengeReason);
+        $("result").appendChild(challenge);
+
+        const reading = document.createElement("section");
+        reading.className = "diagnosis-reading";
+        const readingTitle = document.createElement("h3");
+        readingTitle.textContent = "Lectura diagnóstica";
+        const rowList = document.createElement("div");
+        rowList.className = "diagnosis-row-list";
+        const items = [
+          ["symptoms", "Síntomas observados", diagnosis.symptoms],
+          ["causes", "Causas probables", diagnosis.causes],
+          ["tensions", "Tensión estratégica", diagnosis.tensions],
+          ["metrics", "Métrica prioritaria", diagnosis.metrics],
+          ["restrictions", "Restricciones no negociables", diagnosis.restrictions],
+          ["notWorthAttackingYet", "No conviene atacar todavía", diagnosis.notWorthAttackingYet],
+          ["assumptionToQuestion", "Supuesto a cuestionar", diagnosis.assumptionToQuestion]
+        ];
         for (const [key, label, value] of items) {
           const box = document.createElement("div");
-          box.className = "result-item";
+          box.className = "diagnosis-row";
           const header = document.createElement("div");
-          header.className = "result-title";
+          header.className = "diagnosis-row-head";
           const title = document.createElement("strong");
+          title.className = "diagnosis-row-title";
           title.textContent = label;
           header.appendChild(title);
           if (clarifiableSections[key]) {
@@ -1514,6 +1672,8 @@ export function renderHomePage() {
             header.appendChild(clarifyButton);
           }
           box.appendChild(header);
+          const body = document.createElement("div");
+          body.className = "diagnosis-row-body";
           if (Array.isArray(value)) {
             const ul = document.createElement("ul");
             for (const item of value.length ? value : ["Sin dato declarado"]) {
@@ -1521,14 +1681,25 @@ export function renderHomePage() {
               li.textContent = item;
               ul.appendChild(li);
             }
-            box.appendChild(ul);
+            body.appendChild(ul);
           } else {
-            const text = document.createElement("div");
-            text.textContent = value || "Sin dato declarado";
-            box.appendChild(text);
+            body.textContent = value || "Sin dato declarado";
           }
-          $("result").appendChild(box);
+          box.appendChild(body);
+          rowList.appendChild(box);
         }
+        reading.append(readingTitle, rowList);
+        $("result").appendChild(reading);
+
+        const brief = document.createElement("section");
+        brief.className = "diagnosis-brief";
+        const briefTitle = document.createElement("h3");
+        briefTitle.textContent = "Brief para ideación";
+        const briefText = document.createElement("p");
+        briefText.textContent = diagnosis.ideationBrief || "Sin brief para ideación.";
+        brief.append(briefTitle, briefText);
+        $("result").appendChild(brief);
+
         $("confirm-diagnosis-signals").disabled = !state.diagnosis || !canAdvanceToSignals() || Boolean(state.clarificationTarget);
         persistDraft();
       }
@@ -2330,7 +2501,7 @@ export function renderHomePage() {
         }
         form.reset();
         $("messages").innerHTML = "";
-        $("result").innerHTML = '<p style="color: var(--muted); line-height: 1.6;">Cuando cierres el diagnóstico, aquí aparecerán los outputs contratados.</p>';
+        $("result").innerHTML = '<p style="color: var(--muted); line-height: 1.6;">Cuando cierres el diagnóstico, aquí aparecerá la lectura diagnóstica.</p>';
         $("signals-result").innerHTML = '<p style="color: var(--muted); line-height: 1.6;">Confirma el diagnóstico para ejecutar Señales.</p>';
         $("ideation-canvas").innerHTML = '<p style="color: var(--muted); line-height: 1.6;">Consulta Señales para cargar rutas, gaps e insights.</p>';
         $("ideation-result").innerHTML = "";
