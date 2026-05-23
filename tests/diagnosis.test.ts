@@ -19,6 +19,7 @@ import {
   buildCaseScreeningSystemPrompt,
   buildConceptReviewSystemPrompt,
   buildIdeationSystemPrompt,
+  cleanIdeationOutputForDisplay,
   createIdeationEngine,
 } from "../src/ideation/engine.js";
 import { validateIdeationOutput } from "../src/ideation/validation.js";
@@ -656,6 +657,43 @@ describe("Diagnostico", () => {
     expect(prompt).toContain("mejorar optimiza el juego");
     expect(prompt).toContain("RUPTURA_FUERTE = transformar");
     expect(prompt).toContain("No mezclar rutas");
+  });
+
+  it("limpia repeticiones y codigos internos de la salida visible de ideas", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation-clean-copy" });
+    await registerInput(input);
+    await service.complete(input);
+    const signalsResult = await signalsService.generate(input.cycleId);
+    const selectedGap = signalsResult.signals.output.gaps[0]?.title;
+    const selectedInsight = signalsResult.signals.output.insights[0]?.title;
+    const ideationInput = await ideationService.buildInput(input.cycleId, {
+      ruptureType: "RUPTURA_MODERADA",
+      gapTitle: selectedGap,
+      insightTitle: selectedInsight,
+    });
+    const output = buildIdeationOutputForTest(ideationInput, {
+      supuestoQueRompe:
+        "Supuesto que rompe: Que el estandar se adopta solo porque esta escrito.",
+      mecanicaConcreta:
+        "La mecanica concreta consiste en usar tarjetas fisicas de decision en campo antes de cerrar tareas. El piloto consiste en probarlo durante 30 dias con seis tecnicos.",
+      antiPatronesAEvitar: [
+        "No convertirlo en otro checklist burocratico. (evitar D4).",
+        "No saltar directo a una solucion de software. (evitar D3).",
+      ],
+    });
+
+    const cleaned = cleanIdeationOutputForDisplay(output);
+
+    expect(cleaned.ideas[0]?.supuestoQueRompe).toBe(
+      "Que el estandar se adopta solo porque esta escrito.",
+    );
+    expect(cleaned.ideas[0]?.mecanicaConcreta).toBe(
+      "usar tarjetas fisicas de decision en campo antes de cerrar tareas.",
+    );
+    expect(cleaned.ideas[0]?.antiPatronesAEvitar).toEqual([
+      "No convertirlo en otro checklist burocratico.",
+      "No saltar directo a una solucion de software.",
+    ]);
   });
 });
 

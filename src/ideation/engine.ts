@@ -267,7 +267,9 @@ export class OpenAiIdeationEngine implements IdeationEngine {
       throw new Error("OpenAI no devolvio una ideacion valida");
     }
 
-    return parsed as z.infer<typeof ideationOutputSchema>;
+    return cleanIdeationOutputForDisplay(
+      parsed as z.infer<typeof ideationOutputSchema>,
+    );
   }
 }
 
@@ -323,7 +325,7 @@ export function buildIdeationSystemPrompt() {
     "3. Traducir el mecanismo transferible, no copiar el caso ni presentarlo como biblioteca.",
     "4. Cruzar cada reinterpretacion con supuestos por industria: cada idea debe romper un supuesto explicitamente.",
     "5. Cruzar cada idea contra antipatrones antes de responder. Si coincide con D3 Solucion antes que problema o D4 Beneficio sin mecanica, esta prohibida.",
-    "6. No basta decir el beneficio: la mecanica concreta debe incluir actor, objeto/ritual/interaccion, regla de uso, frecuencia o momento, y primer piloto.",
+    "6. No basta decir el beneficio: la mecanica concreta debe incluir actor, objeto/ritual/interaccion, regla de uso, frecuencia o momento. El piloto va solo en primerPasoEjecutable.",
     "7. Usar modelos de negocio raros solo como apoyo cuando mejoren la mecanica; no los presentes como idea abstracta.",
     "8. Formular exactamente 3 ideas, cada una prototipable en un piloto acotado.",
     "",
@@ -353,11 +355,70 @@ export function buildIdeationSystemPrompt() {
     "6. metricaQueMueve: contenido de 'Metrica que mueve:'",
     "7. primerPasoEjecutable: contenido de 'Primer paso ejecutable:'",
     "8. antiPatronesAEvitar: contenido de 'Anti-patrones a evitar al ejecutar:'",
-    "La mecanica concreta debe nombrar actores, objetos/rituales/interacciones, regla de uso y primer piloto.",
+    "No repitas el nombre del campo dentro del contenido: supuestoQueRompe no debe empezar con 'Supuesto que rompe:' y mecanicaConcreta no debe empezar con 'La mecanica concreta consiste en'.",
+    "La mecanica concreta debe nombrar actores, objetos/rituales/interacciones y regla de uso, pero no debe describir el piloto; el piloto va exclusivamente en primerPasoEjecutable.",
+    "antiPatronesAEvitar debe estar escrito para el usuario final, sin codigos internos como D3, D4 o textos entre parentesis tipo '(evitar D4)'.",
     "",
     "SALIDA INTERNA",
     "En internal.caseScreening.translatedCaseReferences copia las 3 referencias de mandatoryCaseScreening ya reinterpretadas, sin inventar otras nuevas.",
   ].join("\n");
+}
+
+export function cleanIdeationOutputForDisplay(
+  output: IdeationOutput,
+): IdeationOutput {
+  return {
+    ...output,
+    ideas: output.ideas.map((idea) => ({
+      ...idea,
+      supuestoQueRompe: stripLeadingFieldLabel(idea.supuestoQueRompe, [
+        "Supuesto que rompe",
+      ]),
+      mecanicaConcreta: stripPilotFromMechanic(
+        stripLeadingFieldLabel(idea.mecanicaConcreta, [
+          "Mecanica concreta",
+          "Mecánica concreta",
+          "La mecanica concreta consiste en",
+          "La mecánica concreta consiste en",
+        ]),
+      ),
+      antiPatronesAEvitar: idea.antiPatronesAEvitar
+        .map(stripInternalAntiPatternCode)
+        .filter((item) => item.length > 0),
+    })),
+  };
+}
+
+function stripLeadingFieldLabel(value: string, labels: string[]) {
+  let cleaned = value.trim();
+
+  for (const label of labels) {
+    const escaped = escapeRegExp(label);
+    cleaned = cleaned.replace(new RegExp(`^${escaped}\\s*:?\\s*`, "i"), "");
+  }
+
+  return cleaned.trim();
+}
+
+function stripPilotFromMechanic(value: string) {
+  return value
+    .replace(
+      /\s+(?:El piloto|El primer piloto|Como piloto|Para el piloto)\b[\s\S]*$/i,
+      "",
+    )
+    .trim();
+}
+
+function stripInternalAntiPatternCode(value: string) {
+  return value
+    .replace(/\s*\(evitar\s+D\d+\)\.?/gi, "")
+    .replace(/\s*\bD\d+\b\.?/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function buildCaseScreeningSystemPrompt() {
