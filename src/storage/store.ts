@@ -1,6 +1,9 @@
 import type { DiagnosisInput, DiagnosisOutput } from "../contracts/diagnosis.js";
 import type { IdeationRecord } from "../contracts/ideation.js";
+import type { PlaybookPhaseRecord } from "../contracts/playbook.js";
+import type { PrototypePhaseRecord } from "../contracts/prototype.js";
 import type { RegistrationRecord } from "../contracts/registration.js";
+import type { ResultsPhaseRecord } from "../contracts/results.js";
 import type { SignalsInput, SignalsOutput } from "../contracts/signals.js";
 
 export type AuditEvent = {
@@ -8,7 +11,16 @@ export type AuditEvent = {
   cycleId?: string;
   companyId?: string;
   licenseId?: string;
-  stage: "REGISTRATION" | "DIAGNOSIS" | "SIGNALS" | "IDEATION" | "SYSTEM";
+  stage:
+    | "REGISTRATION"
+    | "DIAGNOSIS"
+    | "SIGNALS"
+    | "IDEATION"
+    | "PROTOTYPE"
+    | "RESULTS"
+    | "PLAYBOOK"
+    | "MEMORY"
+    | "SYSTEM";
   action: string;
   summary: string;
   metadata?: Record<string, unknown>;
@@ -61,6 +73,14 @@ export type NucleoStore = {
   getSignalsRun(cycleId: string): Promise<StoredSignalsRun | null>;
   saveIdeationRun(run: IdeationRecord): Promise<void>;
   getIdeationRun(cycleId: string): Promise<IdeationRecord | null>;
+  savePrototypeRun(run: PrototypePhaseRecord): Promise<void>;
+  getPrototypeRun(cycleId: string): Promise<PrototypePhaseRecord | null>;
+  saveResultsRun(run: ResultsPhaseRecord): Promise<void>;
+  getResultsRun(cycleId: string): Promise<ResultsPhaseRecord | null>;
+  savePlaybookRun(run: PlaybookPhaseRecord): Promise<void>;
+  getPlaybookRun(cycleId: string): Promise<PlaybookPhaseRecord | null>;
+  saveCycleMemory(memory: PlaybookPhaseRecord): Promise<void>;
+  listCompanyCycleMemories(companyId: string): Promise<PlaybookPhaseRecord[]>;
   saveAuditEvent(event: AuditEvent): Promise<void>;
   listAuditEvents(cycleId: string): Promise<AuditEvent[]>;
 };

@@ -1,7 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { IdeationRecord } from "../contracts/ideation.js";
+import type { PlaybookPhaseRecord } from "../contracts/playbook.js";
+import type { PrototypePhaseRecord } from "../contracts/prototype.js";
 import type { RegistrationRecord } from "../contracts/registration.js";
+import type { ResultsPhaseRecord } from "../contracts/results.js";
 import { BlobStore } from "./blob-store.js";
 import { PostgresStore } from "./postgres-store.js";
 import type {
@@ -18,6 +21,10 @@ type StoreFile = {
   diagnosisVersions: StoredDiagnosisVersion[];
   signalsRuns: StoredSignalsRun[];
   ideationRuns: IdeationRecord[];
+  prototypeRuns: PrototypePhaseRecord[];
+  resultsRuns: ResultsPhaseRecord[];
+  playbookRuns: PlaybookPhaseRecord[];
+  cycleMemories: PlaybookPhaseRecord[];
   auditEvents: AuditEvent[];
 };
 
@@ -27,6 +34,10 @@ const emptyStore: StoreFile = {
   diagnosisVersions: [],
   signalsRuns: [],
   ideationRuns: [],
+  prototypeRuns: [],
+  resultsRuns: [],
+  playbookRuns: [],
+  cycleMemories: [],
   auditEvents: [],
 };
 
@@ -150,6 +161,86 @@ export class FileStore implements NucleoStore {
     return data.ideationRuns.find((run) => run.cycleId === cycleId) ?? null;
   }
 
+  async savePrototypeRun(run: PrototypePhaseRecord) {
+    const data = await this.read();
+    const index = data.prototypeRuns.findIndex(
+      (item) => item.cycleId === run.cycleId,
+    );
+
+    if (index >= 0) {
+      data.prototypeRuns[index] = run;
+    } else {
+      data.prototypeRuns.push(run);
+    }
+
+    await this.write(data);
+  }
+
+  async getPrototypeRun(cycleId: string) {
+    const data = await this.read();
+    return data.prototypeRuns.find((run) => run.cycleId === cycleId) ?? null;
+  }
+
+  async saveResultsRun(run: ResultsPhaseRecord) {
+    const data = await this.read();
+    const index = data.resultsRuns.findIndex(
+      (item) => item.cycleId === run.cycleId,
+    );
+
+    if (index >= 0) {
+      data.resultsRuns[index] = run;
+    } else {
+      data.resultsRuns.push(run);
+    }
+
+    await this.write(data);
+  }
+
+  async getResultsRun(cycleId: string) {
+    const data = await this.read();
+    return data.resultsRuns.find((run) => run.cycleId === cycleId) ?? null;
+  }
+
+  async savePlaybookRun(run: PlaybookPhaseRecord) {
+    const data = await this.read();
+    const index = data.playbookRuns.findIndex((item) => item.cycleId === run.cycleId);
+
+    if (index >= 0) {
+      data.playbookRuns[index] = run;
+    } else {
+      data.playbookRuns.push(run);
+    }
+
+    await this.write(data);
+  }
+
+  async getPlaybookRun(cycleId: string) {
+    const data = await this.read();
+    return data.playbookRuns.find((run) => run.cycleId === cycleId) ?? null;
+  }
+
+  async saveCycleMemory(memory: PlaybookPhaseRecord) {
+    const data = await this.read();
+    const index = data.cycleMemories.findIndex(
+      (item) => item.cycleId === memory.cycleId,
+    );
+
+    if (index >= 0) {
+      data.cycleMemories[index] = memory;
+    } else {
+      data.cycleMemories.push(memory);
+    }
+
+    await this.write(data);
+  }
+
+  async listCompanyCycleMemories(companyId: string) {
+    const data = await this.read();
+    return data.cycleMemories
+      .filter((memory) => memory.companyId === companyId)
+      .sort((left, right) => right.closedAt.localeCompare(left.closedAt));
+  }
+
   async saveAuditEvent(event: AuditEvent) {
     const data = await this.read();
     data.auditEvents.push(event);
@@ -174,6 +265,10 @@ export class FileStore implements NucleoStore {
         diagnosisVersions: data.diagnosisVersions ?? [],
         signalsRuns: data.signalsRuns ?? [],
         ideationRuns: data.ideationRuns ?? [],
+        prototypeRuns: data.prototypeRuns ?? [],
+        resultsRuns: data.resultsRuns ?? [],
+        playbookRuns: data.playbookRuns ?? [],
+        cycleMemories: data.cycleMemories ?? [],
         auditEvents: data.auditEvents ?? [],
       };
     } catch (error) {
@@ -189,6 +284,10 @@ export class FileStore implements NucleoStore {
             diagnosisVersions: [],
             signalsRuns: [],
             ideationRuns: [],
+            prototypeRuns: [],
+            resultsRuns: [],
+            playbookRuns: [],
+            cycleMemories: [],
             auditEvents: [],
           };
       }

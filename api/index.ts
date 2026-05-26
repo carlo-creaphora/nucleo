@@ -8,11 +8,28 @@ import { createRegistrationEngine } from "../src/registration/engine.js";
 import { RegistrationService } from "../src/registration/service.js";
 import { diagnosisOutputSchema } from "../src/contracts/diagnosis.js";
 import { createStore } from "../src/storage/file-store.js";
-import { renderHomePage } from "../src/http/home-page.js";
 import { createSignalsEngine } from "../src/signals/engine.js";
 import { SignalsService } from "../src/signals/service.js";
 import { createIdeationEngine } from "../src/ideation/engine.js";
 import { IdeationService } from "../src/ideation/service.js";
+import {
+  prototypeBuildInputSchema,
+  prototypeClassifyInputSchema,
+  prototypePhaseStateSchema,
+} from "../src/contracts/prototype.js";
+import {
+  evidenceReadInputSchema,
+  resultsPhaseStateSchema,
+} from "../src/contracts/results.js";
+import { playbookGenerateInputSchema } from "../src/contracts/playbook.js";
+import { createPrototypeEngine } from "../src/prototype/engine.js";
+import { PrototypeService } from "../src/prototype/service.js";
+import { createResultsEngine } from "../src/results/engine.js";
+import { ResultsService } from "../src/results/service.js";
+import { createPlaybookEngine } from "../src/playbook/engine.js";
+import { PlaybookService } from "../src/playbook/service.js";
+import { buildSystemCapabilities } from "../src/system/capabilities.js";
+import { readClientAsset, readClientIndex } from "../src/http/client-assets.js";
 
 const store = createStore();
 const service = new DiagnosisService(createDiagnosisEngine(), store);
@@ -31,6 +48,9 @@ const ideationService = new IdeationService(
   service,
   signalsService,
 );
+const prototypeService = new PrototypeService(createPrototypeEngine(), store);
+const resultsService = new ResultsService(store, createResultsEngine());
+const playbookService = new PlaybookService(createPlaybookEngine(), store);
 
 export const config = {
   runtime: "nodejs",
@@ -45,13 +65,46 @@ export default async function handler(
     const method = request.method ?? "GET";
 
     if ((method === "GET" || method === "HEAD") && url.pathname === "/") {
+      const index = await readClientIndex();
+
       if (method === "HEAD") {
         response.statusCode = 200;
         response.setHeader("content-type", "text/html; charset=utf-8");
         return response.end();
       }
 
-      return sendHtml(response, 200, renderHomePage());
+      if (index) {
+        return sendAsset(response, 200, index.body, index.contentType);
+      }
+
+      return sendHtml(response, 503, renderClientBuildMissingPage());
+    }
+
+    if (
+      (method === "GET" || method === "HEAD") &&
+      url.pathname.startsWith("/assets/")
+    ) {
+      const asset = await readClientAsset(url.pathname);
+
+      if (!asset) {
+        return sendJson(response, 404, { error: "not_found" });
+      }
+
+      if (method === "HEAD") {
+        response.statusCode = 200;
+        response.setHeader("content-type", asset.contentType);
+        response.setHeader(
+          "cache-control",
+          "public, max-age=31536000, immutable",
+        );
+        return response.end();
+      }
+
+      response.setHeader(
+        "cache-control",
+        "public, max-age=31536000, immutable",
+      );
+      return sendAsset(response, 200, asset.body, asset.contentType);
     }
 
     if ((method === "GET" || method === "HEAD") && url.pathname === "/api/health") {
@@ -67,8 +120,26 @@ export default async function handler(
         diagnosis: "ready",
         signals: "ready",
         ideation: "ready",
+        prototype: "ready",
+        results: "ready",
+        evidenceReading: "ready",
+        playbook: "ready",
+        cycleMemory: "ready",
         databaseId: process.env.NUCLEO_DB_ID ?? "local-file",
       });
+    }
+
+    if (
+      (method === "GET" || method === "HEAD") &&
+      url.pathname === "/api/system/capabilities"
+    ) {
+      if (method === "HEAD") {
+        response.statusCode = 200;
+        response.setHeader("content-type", "application/json");
+        return response.end();
+      }
+
+      return sendJson(response, 200, buildSystemCapabilities());
     }
 
     if (method === "POST" && url.pathname === "/api/registration") {
@@ -274,6 +345,108 @@ export default async function handler(
       return sendJson(response, 200, { ideation });
     }
 
+    if (method === "POST" && url.pathname === "/api/prototype/build") {
+      const body = await readJson(request);
+      const input = prototypeBuildInputSchema.parse(body);
+      const artifact = await prototypeService.build(input);
+
+      return sendJson(response, 200, { artifact });
+    }
+
+    if (method === "POST" && url.pathname === "/api/prototype/classify") {
+      const body = await readJson(request);
+      const input = prototypeClassifyInputSchema.parse(body);
+      const classification = await prototypeService.classify(input);
+
+      return sendJson(response, 200, { classification });
+    }
+
+    const prototypeMatch = /^\/api\/prototype\/cycles\/([^/]+)$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && prototypeMatch) {
+      const prototype = await prototypeService.get(
+        decodeURIComponent(prototypeMatch[1]!),
+      );
+
+      if (!prototype) {
+        return sendJson(response, 404, { error: "prototype_not_found" });
+      }
+
+      return sendJson(response, 200, { prototype });
+    }
+
+    if (method === "POST" && prototypeMatch) {
+      const body = await readJson(request);
+      const input = prototypePhaseStateSchema.parse({
+        ...body,
+        cycleId: decodeURIComponent(prototypeMatch[1]!),
+      });
+      const prototype = await prototypeService.save(input);
+
+      return sendJson(response, 200, { prototype });
+    }
+
+    const resultsMatch = /^\/api\/results\/cycles\/([^/]+)$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && resultsMatch) {
+      const results = await resultsService.get(
+        decodeURIComponent(resultsMatch[1]!),
+      );
+
+      if (!results) {
+        return sendJson(response, 404, { error: "results_not_found" });
+      }
+
+      return sendJson(response, 200, { results });
+    }
+
+    if (method === "POST" && resultsMatch) {
+      const body = await readJson(request);
+      const input = resultsPhaseStateSchema.parse({
+        ...body,
+        cycleId: decodeURIComponent(resultsMatch[1]!),
+      });
+      const results = await resultsService.save(input);
+
+      return sendJson(response, 200, { results });
+    }
+
+    if (method === "POST" && url.pathname === "/api/results/read") {
+      const body = await readJson(request);
+      const input = evidenceReadInputSchema.parse(body);
+      const results = await resultsService.read(input);
+
+      return sendJson(response, 200, { evidenceReading: results.evidenceReading });
+    }
+
+    if (method === "POST" && url.pathname === "/api/playbook/generate") {
+      const body = await readJson(request);
+      const input = playbookGenerateInputSchema.parse(body);
+      const playbook = await playbookService.generate(input);
+
+      return sendJson(response, 200, { playbook });
+    }
+
+    const playbookMatch = /^\/api\/playbook\/cycles\/([^/]+)$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && playbookMatch) {
+      const playbook = await playbookService.get(
+        decodeURIComponent(playbookMatch[1]!),
+      );
+
+      if (!playbook) {
+        return sendJson(response, 404, { error: "playbook_not_found" });
+      }
+
+      return sendJson(response, 200, { playbook });
+    }
+
     const companyCyclesMatch =
       /^\/api\/companies\/([^/]+)\/diagnosis-cycles$/.exec(url.pathname);
 
@@ -294,6 +467,17 @@ export default async function handler(
       );
 
       return sendJson(response, 200, { registrations });
+    }
+
+    const companyMemoriesMatch =
+      /^\/api\/companies\/([^/]+)\/cycle-memories$/.exec(url.pathname);
+
+    if (method === "GET" && companyMemoriesMatch) {
+      const memories = await playbookService.listCompanyMemory(
+        decodeURIComponent(companyMemoriesMatch[1]!),
+      );
+
+      return sendJson(response, 200, { memories });
     }
 
     return sendJson(response, 404, { error: "not_found" });
@@ -319,6 +503,23 @@ export default async function handler(
           : undefined,
     });
   }
+}
+
+function renderClientBuildMissingPage() {
+  return [
+    "<!doctype html>",
+    '<html lang="es">',
+    "<head>",
+    '<meta charset="UTF-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0" />',
+    "<title>Núcleo</title>",
+    "</head>",
+    '<body style="font-family: system-ui, sans-serif; margin: 48px; color: #171717;">',
+    "<h1>Núcleo requiere el build React.</h1>",
+    "<p>Ejecuta <code>pnpm build</code> para generar <code>dist/client</code>.</p>",
+    "</body>",
+    "</html>",
+  ].join("");
 }
 
 async function readJson(request: IncomingMessage) {
@@ -354,5 +555,16 @@ function sendJson(
 function sendHtml(response: ServerResponse, status: number, body: string) {
   response.statusCode = status;
   response.setHeader("content-type", "text/html; charset=utf-8");
+  response.end(body);
+}
+
+function sendAsset(
+  response: ServerResponse,
+  status: number,
+  body: Buffer,
+  contentType: string,
+) {
+  response.statusCode = status;
+  response.setHeader("content-type", contentType);
   response.end(body);
 }

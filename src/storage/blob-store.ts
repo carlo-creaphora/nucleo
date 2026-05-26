@@ -1,6 +1,9 @@
 import { get, put } from "@vercel/blob";
 import type { IdeationRecord } from "../contracts/ideation.js";
+import type { PlaybookPhaseRecord } from "../contracts/playbook.js";
+import type { PrototypePhaseRecord } from "../contracts/prototype.js";
 import type { RegistrationRecord } from "../contracts/registration.js";
+import type { ResultsPhaseRecord } from "../contracts/results.js";
 import type {
   AuditEvent,
   NucleoStore,
@@ -15,6 +18,10 @@ type StoreFile = {
   diagnosisVersions: StoredDiagnosisVersion[];
   signalsRuns: StoredSignalsRun[];
   ideationRuns: IdeationRecord[];
+  prototypeRuns: PrototypePhaseRecord[];
+  resultsRuns: ResultsPhaseRecord[];
+  playbookRuns: PlaybookPhaseRecord[];
+  cycleMemories: PlaybookPhaseRecord[];
   auditEvents: AuditEvent[];
 };
 
@@ -24,8 +31,14 @@ const emptyStore: StoreFile = {
   diagnosisVersions: [],
   signalsRuns: [],
   ideationRuns: [],
+  prototypeRuns: [],
+  resultsRuns: [],
+  playbookRuns: [],
+  cycleMemories: [],
   auditEvents: [],
 };
+
+let transientStore: StoreFile = structuredClone(emptyStore);
 
 export class BlobStore implements NucleoStore {
   constructor(private readonly pathname = "nucleo/demo-store.json") {}
@@ -132,6 +145,74 @@ export class BlobStore implements NucleoStore {
     return data.ideationRuns.find((item) => item.cycleId === cycleId) ?? null;
   }
 
+  async savePrototypeRun(run: PrototypePhaseRecord) {
+    const data = await this.read();
+    const index = data.prototypeRuns.findIndex(
+      (item) => item.cycleId === run.cycleId,
+    );
+
+    if (index >= 0) data.prototypeRuns[index] = run;
+    else data.prototypeRuns.push(run);
+
+    await this.write(data);
+  }
+
+  async getPrototypeRun(cycleId: string) {
+    const data = await this.read();
+    return data.prototypeRuns.find((item) => item.cycleId === cycleId) ?? null;
+  }
+
+  async saveResultsRun(run: ResultsPhaseRecord) {
+    const data = await this.read();
+    const index = data.resultsRuns.findIndex(
+      (item) => item.cycleId === run.cycleId,
+    );
+
+    if (index >= 0) data.resultsRuns[index] = run;
+    else data.resultsRuns.push(run);
+
+    await this.write(data);
+  }
+
+  async getResultsRun(cycleId: string) {
+    const data = await this.read();
+    return data.resultsRuns.find((item) => item.cycleId === cycleId) ?? null;
+  }
+
+  async savePlaybookRun(run: PlaybookPhaseRecord) {
+    const data = await this.read();
+    const index = data.playbookRuns.findIndex((item) => item.cycleId === run.cycleId);
+
+    if (index >= 0) data.playbookRuns[index] = run;
+    else data.playbookRuns.push(run);
+
+    await this.write(data);
+  }
+
+  async getPlaybookRun(cycleId: string) {
+    const data = await this.read();
+    return data.playbookRuns.find((item) => item.cycleId === cycleId) ?? null;
+  }
+
+  async saveCycleMemory(memory: PlaybookPhaseRecord) {
+    const data = await this.read();
+    const index = data.cycleMemories.findIndex(
+      (item) => item.cycleId === memory.cycleId,
+    );
+
+    if (index >= 0) data.cycleMemories[index] = memory;
+    else data.cycleMemories.push(memory);
+
+    await this.write(data);
+  }
+
+  async listCompanyCycleMemories(companyId: string) {
+    const data = await this.read();
+    return data.cycleMemories
+      .filter((item) => item.companyId === companyId)
+      .sort((left, right) => right.closedAt.localeCompare(left.closedAt));
+  }
+
   async saveAuditEvent(event: AuditEvent) {
     const data = await this.read();
     data.auditEvents.push(event);
@@ -159,27 +240,38 @@ export class BlobStore implements NucleoStore {
       const raw = await new Response(result.stream).text();
       const data = JSON.parse(raw) as Partial<StoreFile>;
 
-      return {
+      transientStore = {
         registrations: data.registrations ?? [],
         diagnosisCycles: data.diagnosisCycles ?? [],
         diagnosisVersions: data.diagnosisVersions ?? [],
         signalsRuns: data.signalsRuns ?? [],
         ideationRuns: data.ideationRuns ?? [],
+        prototypeRuns: data.prototypeRuns ?? [],
+        resultsRuns: data.resultsRuns ?? [],
+        playbookRuns: data.playbookRuns ?? [],
+        cycleMemories: data.cycleMemories ?? [],
         auditEvents: data.auditEvents ?? [],
       };
+
+      return transientStore;
     } catch (error) {
       if (
         error instanceof Error &&
         /not found|BlobNotFound|404/i.test(error.message)
       ) {
-        return { ...emptyStore };
+        return transientStore;
       }
 
-      throw error;
+      console.warn(
+        "Vercel Blob read failed; continuing with an empty transient store.",
+        error,
+      );
+      return transientStore;
     }
   }
 
   private async write(data: StoreFile) {
+    transientStore = data;
     await put(this.pathname, JSON.stringify(data, null, 2), {
       access: "private",
       allowOverwrite: true,

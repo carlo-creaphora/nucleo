@@ -1,6 +1,9 @@
 import pg from "pg";
 import type { IdeationRecord } from "../contracts/ideation.js";
+import type { PlaybookPhaseRecord } from "../contracts/playbook.js";
+import type { PrototypePhaseRecord } from "../contracts/prototype.js";
 import type { RegistrationRecord } from "../contracts/registration.js";
+import type { ResultsPhaseRecord } from "../contracts/results.js";
 import type {
   AuditEvent,
   NucleoStore,
@@ -229,6 +232,134 @@ export class PostgresStore implements NucleoStore {
     return result.rows[0] ? this.toIdeationRun(result.rows[0]) : null;
   }
 
+  async savePrototypeRun(run: PrototypePhaseRecord) {
+    await this.ensureSchema();
+    await this.pool.query(
+      `insert into nucleo_prototype_runs
+        (id, cycle_id, state, created_at, updated_at)
+       values ($1, $2, $3, $4, $5)
+       on conflict (cycle_id) do update set
+        state = excluded.state,
+        updated_at = excluded.updated_at`,
+      [
+        run.id,
+        run.cycleId,
+        run,
+        run.createdAt,
+        run.updatedAt,
+      ],
+    );
+  }
+
+  async getPrototypeRun(cycleId: string) {
+    await this.ensureSchema();
+    const result = await this.pool.query(
+      `select * from nucleo_prototype_runs where cycle_id = $1 limit 1`,
+      [cycleId],
+    );
+
+    return result.rows[0] ? this.toPrototypeRun(result.rows[0]) : null;
+  }
+
+  async saveResultsRun(run: ResultsPhaseRecord) {
+    await this.ensureSchema();
+    await this.pool.query(
+      `insert into nucleo_results_runs
+        (id, cycle_id, state, created_at, updated_at)
+       values ($1, $2, $3, $4, $5)
+       on conflict (cycle_id) do update set
+        state = excluded.state,
+        updated_at = excluded.updated_at`,
+      [
+        run.id,
+        run.cycleId,
+        run,
+        run.createdAt,
+        run.updatedAt,
+      ],
+    );
+  }
+
+  async getResultsRun(cycleId: string) {
+    await this.ensureSchema();
+    const result = await this.pool.query(
+      `select * from nucleo_results_runs where cycle_id = $1 limit 1`,
+      [cycleId],
+    );
+
+    return result.rows[0] ? this.toResultsRun(result.rows[0]) : null;
+  }
+
+  async savePlaybookRun(run: PlaybookPhaseRecord) {
+    await this.ensureSchema();
+    await this.pool.query(
+      `insert into nucleo_playbook_runs
+        (id, cycle_id, company_id, license_id, state, closed_at, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (cycle_id) do update set
+        company_id = excluded.company_id,
+        license_id = excluded.license_id,
+        state = excluded.state,
+        closed_at = excluded.closed_at,
+        updated_at = excluded.updated_at`,
+      [
+        run.id,
+        run.cycleId,
+        run.companyId,
+        run.licenseId,
+        run,
+        run.closedAt,
+        run.createdAt,
+        run.updatedAt,
+      ],
+    );
+  }
+
+  async getPlaybookRun(cycleId: string) {
+    await this.ensureSchema();
+    const result = await this.pool.query(
+      `select * from nucleo_playbook_runs where cycle_id = $1 limit 1`,
+      [cycleId],
+    );
+
+    return result.rows[0] ? this.toPlaybookRun(result.rows[0]) : null;
+  }
+
+  async saveCycleMemory(memory: PlaybookPhaseRecord) {
+    await this.ensureSchema();
+    await this.pool.query(
+      `insert into nucleo_cycle_memories
+        (id, cycle_id, company_id, license_id, state, closed_at, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (cycle_id) do update set
+        company_id = excluded.company_id,
+        license_id = excluded.license_id,
+        state = excluded.state,
+        closed_at = excluded.closed_at,
+        updated_at = excluded.updated_at`,
+      [
+        memory.id,
+        memory.cycleId,
+        memory.companyId,
+        memory.licenseId,
+        memory,
+        memory.closedAt,
+        memory.createdAt,
+        memory.updatedAt,
+      ],
+    );
+  }
+
+  async listCompanyCycleMemories(companyId: string) {
+    await this.ensureSchema();
+    const result = await this.pool.query(
+      `select * from nucleo_cycle_memories where company_id = $1 order by closed_at desc`,
+      [companyId],
+    );
+
+    return result.rows.map((row) => this.toPlaybookRun(row));
+  }
+
   async saveAuditEvent(event: AuditEvent) {
     await this.ensureSchema();
     await this.pool.query(
@@ -334,11 +465,54 @@ export class PostgresStore implements NucleoStore {
         updated_at timestamptz not null
       );
 
+      create table if not exists nucleo_prototype_runs (
+        id text primary key,
+        cycle_id text not null unique,
+        state jsonb not null,
+        created_at timestamptz not null,
+        updated_at timestamptz not null
+      );
+
+      create table if not exists nucleo_results_runs (
+        id text primary key,
+        cycle_id text not null unique,
+        state jsonb not null,
+        created_at timestamptz not null,
+        updated_at timestamptz not null
+      );
+
+      create table if not exists nucleo_playbook_runs (
+        id text primary key,
+        cycle_id text not null unique,
+        company_id text,
+        license_id text,
+        state jsonb not null,
+        closed_at timestamptz not null,
+        created_at timestamptz not null,
+        updated_at timestamptz not null
+      );
+
+      create table if not exists nucleo_cycle_memories (
+        id text primary key,
+        cycle_id text not null unique,
+        company_id text,
+        license_id text,
+        state jsonb not null,
+        closed_at timestamptz not null,
+        created_at timestamptz not null,
+        updated_at timestamptz not null
+      );
+
       create index if not exists nucleo_registrations_company_idx on nucleo_registrations(company_id);
       create index if not exists nucleo_diagnosis_cycles_company_idx on nucleo_diagnosis_cycles(company_id);
       create index if not exists nucleo_diagnosis_versions_cycle_idx on nucleo_diagnosis_versions(cycle_id);
       create index if not exists nucleo_signals_runs_company_idx on nucleo_signals_runs(company_id);
       create index if not exists nucleo_ideation_runs_company_idx on nucleo_ideation_runs(company_id);
+      create index if not exists nucleo_prototype_runs_cycle_idx on nucleo_prototype_runs(cycle_id);
+      create index if not exists nucleo_results_runs_cycle_idx on nucleo_results_runs(cycle_id);
+      create index if not exists nucleo_playbook_runs_cycle_idx on nucleo_playbook_runs(cycle_id);
+      create index if not exists nucleo_playbook_runs_company_idx on nucleo_playbook_runs(company_id);
+      create index if not exists nucleo_cycle_memories_company_idx on nucleo_cycle_memories(company_id);
       create index if not exists nucleo_audit_events_cycle_idx on nucleo_audit_events(cycle_id);
     `);
   }
@@ -419,6 +593,42 @@ export class PostgresStore implements NucleoStore {
       licenseId: String(row.license_id),
       input: row.input as IdeationRecord["input"],
       output: row.output as IdeationRecord["output"],
+      createdAt: new Date(String(row.created_at)).toISOString(),
+      updatedAt: new Date(String(row.updated_at)).toISOString(),
+    };
+  }
+
+  private toPrototypeRun(row: Record<string, unknown>): PrototypePhaseRecord {
+    const state = row.state as PrototypePhaseRecord;
+    return {
+      ...state,
+      id: String(row.id),
+      cycleId: String(row.cycle_id),
+      createdAt: new Date(String(row.created_at)).toISOString(),
+      updatedAt: new Date(String(row.updated_at)).toISOString(),
+    };
+  }
+
+  private toResultsRun(row: Record<string, unknown>): ResultsPhaseRecord {
+    const state = row.state as ResultsPhaseRecord;
+    return {
+      ...state,
+      id: String(row.id),
+      cycleId: String(row.cycle_id),
+      createdAt: new Date(String(row.created_at)).toISOString(),
+      updatedAt: new Date(String(row.updated_at)).toISOString(),
+    };
+  }
+
+  private toPlaybookRun(row: Record<string, unknown>): PlaybookPhaseRecord {
+    const state = row.state as PlaybookPhaseRecord;
+    return {
+      ...state,
+      id: String(row.id),
+      cycleId: String(row.cycle_id),
+      companyId: row.company_id ? String(row.company_id) : state.companyId,
+      licenseId: row.license_id ? String(row.license_id) : state.licenseId,
+      closedAt: new Date(String(row.closed_at)).toISOString(),
       createdAt: new Date(String(row.created_at)).toISOString(),
       updatedAt: new Date(String(row.updated_at)).toISOString(),
     };

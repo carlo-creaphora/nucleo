@@ -302,7 +302,7 @@ export class DiagnosisService {
     const registration = await this.store.getRegistrationByCycle(input.cycleId);
 
     if (!registration) {
-      throw new Error("Completa Registro antes de Diagnostico.");
+      return;
     }
 
     if (!registration.output.readiness.isReadyForDiagnosis) {

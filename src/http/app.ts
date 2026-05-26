@@ -13,7 +13,24 @@ import { createSignalsEngine } from "../signals/engine.js";
 import { SignalsService } from "../signals/service.js";
 import { createIdeationEngine } from "../ideation/engine.js";
 import { IdeationService } from "../ideation/service.js";
-import { renderHomePage } from "./home-page.js";
+import {
+  prototypeBuildInputSchema,
+  prototypeClassifyInputSchema,
+  prototypePhaseStateSchema,
+} from "../contracts/prototype.js";
+import {
+  evidenceReadInputSchema,
+  resultsPhaseStateSchema,
+} from "../contracts/results.js";
+import { playbookGenerateInputSchema } from "../contracts/playbook.js";
+import { createPrototypeEngine } from "../prototype/engine.js";
+import { PrototypeService } from "../prototype/service.js";
+import { createResultsEngine } from "../results/engine.js";
+import { ResultsService } from "../results/service.js";
+import { createPlaybookEngine } from "../playbook/engine.js";
+import { PlaybookService } from "../playbook/service.js";
+import { buildSystemCapabilities } from "../system/capabilities.js";
+import { readClientAsset, readClientIndex } from "./client-assets.js";
 
 export function createApp() {
   const app = new Hono();
@@ -34,8 +51,36 @@ export function createApp() {
     service,
     signalsService,
   );
+  const prototypeService = new PrototypeService(createPrototypeEngine(), store);
+  const resultsService = new ResultsService(store, createResultsEngine());
+  const playbookService = new PlaybookService(createPlaybookEngine(), store);
 
-  app.get("/", (context) => context.html(renderHomePage()));
+  app.get("/", async (context) => {
+    const index = await readClientIndex();
+
+    if (index) {
+      return new Response(new Uint8Array(index.body), {
+        headers: { "content-type": index.contentType },
+      });
+    }
+
+    return context.html(renderClientBuildMissingPage(), 503);
+  });
+
+  app.get("/assets/*", async (context) => {
+    const asset = await readClientAsset(context.req.path);
+
+    if (!asset) {
+      return context.notFound();
+    }
+
+    return new Response(new Uint8Array(asset.body), {
+      headers: {
+        "cache-control": "public, max-age=31536000, immutable",
+        "content-type": asset.contentType,
+      },
+    });
+  });
 
   app.get("/api/health", (context) =>
     context.json({
@@ -44,8 +89,17 @@ export function createApp() {
       diagnosis: "ready",
       signals: "ready",
       ideation: "ready",
+      prototype: "ready",
+      results: "ready",
+      evidenceReading: "ready",
+      playbook: "ready",
+      cycleMemory: "ready",
       databaseId: process.env.NUCLEO_DB_ID ?? "local-file",
     }),
+  );
+
+  app.get("/api/system/capabilities", (context) =>
+    context.json(buildSystemCapabilities()),
   );
 
   app.post("/api/diagnosis/question", async (context) => {
@@ -195,6 +249,98 @@ export function createApp() {
     return context.json({ ideation });
   });
 
+  app.post("/api/prototype/build", async (context) => {
+    const body = await context.req.json();
+    const input = prototypeBuildInputSchema.parse(body);
+    const artifact = await prototypeService.build(input);
+
+    return context.json({ artifact });
+  });
+
+  app.post("/api/prototype/classify", async (context) => {
+    const body = await context.req.json();
+    const input = prototypeClassifyInputSchema.parse(body);
+    const classification = await prototypeService.classify(input);
+
+    return context.json({ classification });
+  });
+
+  app.get("/api/prototype/cycles/:cycleId", async (context) => {
+    const prototype = await prototypeService.get(context.req.param("cycleId"));
+
+    if (!prototype) {
+      return context.json({ error: "prototype_not_found" }, 404);
+    }
+
+    return context.json({ prototype });
+  });
+
+  app.post("/api/prototype/cycles/:cycleId", async (context) => {
+    const body = await context.req.json();
+    const input = prototypePhaseStateSchema.parse({
+      ...body,
+      cycleId: context.req.param("cycleId"),
+    });
+    const prototype = await prototypeService.save(input);
+
+    return context.json({ prototype });
+  });
+
+  app.get("/api/results/cycles/:cycleId", async (context) => {
+    const results = await resultsService.get(context.req.param("cycleId"));
+
+    if (!results) {
+      return context.json({ error: "results_not_found" }, 404);
+    }
+
+    return context.json({ results });
+  });
+
+  app.post("/api/results/cycles/:cycleId", async (context) => {
+    const body = await context.req.json();
+    const input = resultsPhaseStateSchema.parse({
+      ...body,
+      cycleId: context.req.param("cycleId"),
+    });
+    const results = await resultsService.save(input);
+
+    return context.json({ results });
+  });
+
+  app.post("/api/results/read", async (context) => {
+    const body = await context.req.json();
+    const input = evidenceReadInputSchema.parse(body);
+    const results = await resultsService.read(input);
+
+    return context.json({ evidenceReading: results.evidenceReading });
+  });
+
+  app.post("/api/playbook/generate", async (context) => {
+    const body = await context.req.json();
+    const input = playbookGenerateInputSchema.parse(body);
+    const playbook = await playbookService.generate(input);
+
+    return context.json({ playbook });
+  });
+
+  app.get("/api/playbook/cycles/:cycleId", async (context) => {
+    const playbook = await playbookService.get(context.req.param("cycleId"));
+
+    if (!playbook) {
+      return context.json({ error: "playbook_not_found" }, 404);
+    }
+
+    return context.json({ playbook });
+  });
+
+  app.get("/api/companies/:companyId/cycle-memories", async (context) => {
+    const memories = await playbookService.listCompanyMemory(
+      context.req.param("companyId"),
+    );
+
+    return context.json({ memories });
+  });
+
   app.get("/api/companies/:companyId/diagnosis-cycles", async (context) => {
     const cycles = await service.listCompanyCycles(
       context.req.param("companyId"),
@@ -238,4 +384,21 @@ export function createApp() {
   });
 
   return app;
+}
+
+function renderClientBuildMissingPage() {
+  return [
+    "<!doctype html>",
+    '<html lang="es">',
+    "<head>",
+    '<meta charset="UTF-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0" />',
+    "<title>Núcleo</title>",
+    "</head>",
+    '<body style="font-family: system-ui, sans-serif; margin: 48px; color: #171717;">',
+    "<h1>Núcleo requiere el build React.</h1>",
+    "<p>Ejecuta <code>pnpm build</code> para generar <code>dist/client</code>.</p>",
+    "</body>",
+    "</html>",
+  ].join("");
 }
