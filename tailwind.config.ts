@@ -28,8 +28,8 @@ const config = {
         "2xl": "1.5rem",
       },
       boxShadow: {
-        workspace: "0 16px 40px rgba(20, 18, 16, 0.08)",
-        soft: "0 8px 24px rgba(20, 18, 16, 0.07)",
+        workspace: "0 10px 28px rgba(20, 18, 16, 0.055)",
+        soft: "0 4px 14px rgba(20, 18, 16, 0.05)",
       },
       fontFamily: {
         sans: ["Geist", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],

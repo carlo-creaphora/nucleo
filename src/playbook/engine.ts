@@ -55,7 +55,7 @@ export class OpenAiPlaybookEngine implements PlaybookEngine {
 class MissingOpenAiPlaybookEngine implements PlaybookEngine {
   async generate(): Promise<PlaybookOutput> {
     throw new Error(
-      "OPENAI_API_KEY es requerido para Playbook; no se genera con motor heuristico.",
+      "OPENAI_API_KEY es requerido para Playbook; no se genera sin IA.",
     );
   }
 }

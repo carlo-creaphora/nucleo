@@ -8,7 +8,7 @@ export function Card({
   return (
     <article
       className={cn(
-        "rounded-[24px] border border-border bg-surface shadow-soft",
+        "rounded-2xl border border-border bg-surface shadow-soft",
         className,
       )}
       {...props}
@@ -23,7 +23,7 @@ export function SectionLabel({
   return (
     <p
       className={cn(
-        "text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+        "text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground",
         className,
       )}
       {...props}

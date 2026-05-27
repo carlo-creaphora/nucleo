@@ -40,6 +40,11 @@ export const DIAGNOSIS_RULES = [
   "Tratar lo que dice el usuario como hipotesis de entrada, no como conclusion.",
   "Separar sintoma visible, lectura declarada, mecanismo causal probable y reto estrategico.",
   "Si falta evidencia, bajar confianza o preguntar; no inventar.",
+  "Interpretar semanticamente respuestas negativas, ausencias declaradas, respuestas parciales y contexto lateral como informacion valida del caso.",
+  "La ausencia declarada de evidencia, medicion, intentos, decision o alineacion es un dato diagnostico; debe incorporarse como condicion del sistema, no tratarse como falta de respuesta.",
+  "Si el usuario responde parcialmente, reconocer lo que si respondio y preguntar solo por el borde que falta.",
+  "Si el usuario responde algo distinto a la pregunta, interpretar ese contexto, actualizar los hechos cubiertos y no volver a preguntar por lo que ya quedo respondido.",
+  "Prohibido resolver interpretacion con listas de palabras clave, casos puntuales o dialogos parcheados; la evaluacion debe ser semantica y contextual.",
   "Hacer preguntas adaptativas, no cuestionario fijo.",
   "No repetir preguntas ya respondidas.",
   "Si el usuario corrige algo, responder esa correccion antes de avanzar.",
@@ -67,57 +72,14 @@ export const DIAGNOSIS_QUESTION_COMPLEMENTS = [
 ] as const;
 
 export const DIAGNOSIS_CLOSE_RULES = [
-  "Maximo 15 preguntas.",
+  "Objetivo de cierre alrededor de 15 preguntas; no bloquear si falta contexto critico.",
   "Cerrar despues de suficiente contexto.",
-  "Detectar si faltan piezas criticas antes de cerrar.",
+  "Si faltan piezas criticas, convertirlas en una pregunta adaptativa concreta y seguir la conversacion.",
 ] as const;
 
 export function countUserDiagnosisTurns(input: DiagnosisInput) {
   return input.dialogMessages.filter((message) => message.role === "user")
     .length;
-}
-
-export function detectCriticalMissingPieces(input: DiagnosisInput) {
-  const userText = input.dialogMessages
-    .filter((message) => message.role === "user")
-    .map((message) => message.content)
-    .join(" ");
-  const checks = [
-    {
-      key: "metrica" as const,
-      missing: !/m[eé]trica|indicador|venta|ingreso|margen|tiempo|costo|riesgo|calidad|retenci[oó]n|conversion|conversi[oó]n/i.test(userText),
-      reason: "Sin metrica o senal, el reto puede quedarse en percepcion.",
-    },
-    {
-      key: "restriccion" as const,
-      missing: !/restric|no podemos|presupuesto|legal|regulaci[oó]n|operaci[oó]n|marca|talento|tecnolog/i.test(userText),
-      reason: "Sin restriccion, Ideacion puede proponer algo no ejecutable.",
-    },
-    {
-      key: "intentos previos" as const,
-      missing: !/intent|probamos|hicimos|ya se hizo|funcion[oó]|fall[oó]|no cambio|no funcion/i.test(userText),
-      reason: "Sin intentos previos, se pueden repetir soluciones obvias.",
-    },
-    {
-      key: "tension interna" as const,
-      missing: !/pero|aunque|sin embargo|tensi[oó]n|conflicto|fricci[oó]n|desacuerdo|prioridad/i.test(userText),
-      reason: "Sin tension, el diagnostico puede confundir sintoma con mecanismo.",
-    },
-    {
-      key: "decision trabada" as const,
-      missing: !/decisi[oó]n|decidir|priorizar|destrabar|aprobar|invertir|definir/i.test(userText),
-      reason: "Sin decision, el cierre no habilita accion concreta.",
-    },
-    {
-      key: "cambio esperado" as const,
-      missing: !/esperamos|deber[ií]a cambiar|queremos que|resultado esperado|cambio esperado|lograr|cambiar/i.test(userText),
-      reason: "Sin cambio esperado, no hay forma clara de reconocer avance.",
-    },
-  ];
-
-  return checks
-    .filter((check) => check.missing)
-    .map(({ key, reason }) => ({ key, reason }));
 }
 
 export function buildDiagnosisSystemPrompt() {
@@ -141,6 +103,9 @@ export function buildDiagnosisSystemPrompt() {
 
 export function buildQuestionInstruction(input: DiagnosisInput) {
   const userTurns = countUserDiagnosisTurns(input);
+  const latestUserMessage = input.dialogMessages
+    .filter((message) => message.role === "user")
+    .at(-1)?.content;
 
   return {
     task: "Genera la siguiente pregunta de Diagnostico.",
@@ -151,8 +116,18 @@ export function buildQuestionInstruction(input: DiagnosisInput) {
     },
     instruction:
       userTurns >= MAX_DIAGNOSIS_QUESTIONS
-        ? "Ya se alcanzo el maximo de preguntas. No hagas otra pregunta; marca shouldCloseDiagnosis=true y senala que piezas criticas faltan si aplica."
+        ? "Ya se alcanzo el umbral objetivo de preguntas. Si el contexto es suficiente, marca shouldCloseDiagnosis=true. Si falta contexto critico, haz una sola pregunta adaptativa adicional; no bloquees ni devuelvas una lista de faltantes como salida al usuario."
         : "Haz una sola pregunta adaptativa que nazca de lo ya respondido y ataque el punto mas incierto del diagnostico. Usa los complementos solo si ayudan a completar contexto critico.",
+    interpretationRules: [
+      "Antes de formular la pregunta, interpreta la ultima respuesta del usuario aunque sea breve, negativa o lateral.",
+      "Toda ausencia declarada por el usuario debe registrarse como hecho del caso y no como falta de respuesta.",
+      "Si el usuario describe una accion, decision, practica, barrera o condicion existente, incorporala como hecho cubierto aunque no use el vocabulario esperado por la pregunta.",
+      "Si el usuario aporta contexto de otro tema, incorporalo en coveredFacts y evita preguntarlo de nuevo.",
+      "La propiedad question debe poder incluir una frase breve de lectura de la ultima respuesta antes de la nueva pregunta.",
+      "No contradigas lo que el usuario acaba de decir ni lo conviertas en vacio por no coincidir con una palabra esperada.",
+      "No uses listas de palabras clave ni casos puntuales para decidir si una respuesta es valida; razona por significado, relacion con el registro y continuidad del dialogo.",
+    ],
+    latestUserMessage,
     criticalPieces: CRITICAL_DIAGNOSIS_PIECES,
     closeRules: DIAGNOSIS_CLOSE_RULES,
     input,
@@ -163,7 +138,7 @@ export function buildClosureAssessmentInstruction(input: DiagnosisInput) {
   return {
     task: "Evalua si Diagnostico puede cerrar.",
     instruction:
-      "Determina si las piezas criticas estan cubiertas por evidencia explicita o por inferencia razonable desde Registro, documentos, dialogo y aclaraciones. No uses coincidencia de palabras. No marques faltante una pieza si el contenido existe con otra redaccion. Si falta algo, devuelve solo las piezas que bloquean pasar a Senales.",
+      "Determina si las piezas criticas estan cubiertas por evidencia explicita, inferencia razonable o declaracion explicita de ausencia desde Registro, documentos, dialogo y aclaraciones. No uses coincidencia de palabras ni listas de palabras clave. No marques faltante una pieza si el contenido existe con otra redaccion. Una ausencia declarada cubre el hecho de ausencia y debe bajar confianza, no borrar el dato. Si falta algo, devuelve solo las piezas que bloquean pasar a Senales.",
     criticalPieces: CRITICAL_DIAGNOSIS_PIECES,
     input,
   };
@@ -173,7 +148,7 @@ export function buildCompletionInstruction(input: DiagnosisInput) {
   return {
     task: "Cierra el Diagnostico.",
     instruction:
-      "Reinterpreta lo que declara el perfil. Entrega el reto real, no lo que el usuario cree que es el problema. No confirmes su lectura por complacencia. Si hay incertidumbre, dejala reflejada en causas, tensiones, restricciones o supuesto a cuestionar. Mantente breve, criterioso y directo.",
+      "Reinterpreta lo que declara el perfil. Entrega el reto real, no lo que el usuario cree que es el problema. No confirmes su lectura por complacencia. Si hay incertidumbre o ausencia de evidencia, dejala reflejada como rasgo del caso en causas, tensiones, metricas, restricciones o supuesto a cuestionar. Mantente breve, criterioso y directo.",
     outputContract: [
       "recommendedChallenge",
       "whyThisChallenge",

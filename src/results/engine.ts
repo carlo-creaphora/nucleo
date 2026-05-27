@@ -58,7 +58,7 @@ export class OpenAiResultsEngine implements ResultsEngine {
 class MissingOpenAiResultsEngine implements ResultsEngine {
   async read(): Promise<EvidenceReading> {
     throw new Error(
-      "OPENAI_API_KEY es requerido para Lectura de evidencias; no se decide con motor heuristico.",
+      "OPENAI_API_KEY es requerido para Lectura de evidencias; no se decide sin IA.",
     );
   }
 }

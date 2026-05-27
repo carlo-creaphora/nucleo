@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { IdeationRecord } from "../contracts/ideation.js";
+import type { DiagnosisDraft } from "../contracts/diagnosis.js";
 import type { PlaybookPhaseRecord } from "../contracts/playbook.js";
 import type { PrototypePhaseRecord } from "../contracts/prototype.js";
 import type { RegistrationRecord } from "../contracts/registration.js";
@@ -19,6 +20,7 @@ type StoreFile = {
   registrations: RegistrationRecord[];
   diagnosisCycles: StoredDiagnosisCycle[];
   diagnosisVersions: StoredDiagnosisVersion[];
+  diagnosisDrafts: DiagnosisDraft[];
   signalsRuns: StoredSignalsRun[];
   ideationRuns: IdeationRecord[];
   prototypeRuns: PrototypePhaseRecord[];
@@ -32,6 +34,7 @@ const emptyStore: StoreFile = {
   registrations: [],
   diagnosisCycles: [],
   diagnosisVersions: [],
+  diagnosisDrafts: [],
   signalsRuns: [],
   ideationRuns: [],
   prototypeRuns: [],
@@ -119,6 +122,26 @@ export class FileStore implements NucleoStore {
     return data.diagnosisVersions
       .filter((item) => item.cycleId === cycleId)
       .sort((left, right) => left.version - right.version);
+  }
+
+  async saveDiagnosisDraft(draft: DiagnosisDraft) {
+    const data = await this.read();
+    const index = data.diagnosisDrafts.findIndex(
+      (item) => item.cycleId === draft.cycleId,
+    );
+
+    if (index >= 0) {
+      data.diagnosisDrafts[index] = draft;
+    } else {
+      data.diagnosisDrafts.push(draft);
+    }
+
+    await this.write(data);
+  }
+
+  async getDiagnosisDraft(cycleId: string) {
+    const data = await this.read();
+    return data.diagnosisDrafts.find((draft) => draft.cycleId === cycleId) ?? null;
   }
 
   async saveSignalsRun(run: StoredSignalsRun) {
@@ -263,6 +286,7 @@ export class FileStore implements NucleoStore {
         registrations: data.registrations ?? [],
         diagnosisCycles: data.diagnosisCycles ?? [],
         diagnosisVersions: data.diagnosisVersions ?? [],
+        diagnosisDrafts: data.diagnosisDrafts ?? [],
         signalsRuns: data.signalsRuns ?? [],
         ideationRuns: data.ideationRuns ?? [],
         prototypeRuns: data.prototypeRuns ?? [],
@@ -282,6 +306,7 @@ export class FileStore implements NucleoStore {
             registrations: [],
             diagnosisCycles: [],
             diagnosisVersions: [],
+            diagnosisDrafts: [],
             signalsRuns: [],
             ideationRuns: [],
             prototypeRuns: [],
@@ -310,7 +335,7 @@ export function createStore() {
   }
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    return new BlobStore(process.env.NUCLEO_BLOB_PATH || "nucleo/demo-store.json");
+    return new BlobStore(process.env.NUCLEO_BLOB_PATH || "nucleo/store.json");
   }
 
   const defaultPath = process.env.VERCEL ? "/tmp/nucleo.json" : ".data/nucleo.json";

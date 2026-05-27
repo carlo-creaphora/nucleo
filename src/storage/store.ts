@@ -1,4 +1,8 @@
-import type { DiagnosisInput, DiagnosisOutput } from "../contracts/diagnosis.js";
+import type {
+  DiagnosisDraft,
+  DiagnosisInput,
+  DiagnosisOutput,
+} from "../contracts/diagnosis.js";
 import type { IdeationRecord } from "../contracts/ideation.js";
 import type { PlaybookPhaseRecord } from "../contracts/playbook.js";
 import type { PrototypePhaseRecord } from "../contracts/prototype.js";
@@ -69,6 +73,8 @@ export type NucleoStore = {
   listCompanyDiagnosisCycles(companyId: string): Promise<StoredDiagnosisCycle[]>;
   saveDiagnosisVersion(version: StoredDiagnosisVersion): Promise<void>;
   listDiagnosisVersions(cycleId: string): Promise<StoredDiagnosisVersion[]>;
+  saveDiagnosisDraft(draft: DiagnosisDraft): Promise<void>;
+  getDiagnosisDraft(cycleId: string): Promise<DiagnosisDraft | null>;
   saveSignalsRun(run: StoredSignalsRun): Promise<void>;
   getSignalsRun(cycleId: string): Promise<StoredSignalsRun | null>;
   saveIdeationRun(run: IdeationRecord): Promise<void>;

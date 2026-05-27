@@ -71,6 +71,11 @@ export const prototypeClassifyInputSchema = z.object({
 export const prototypeClassificationSchema = z.object({
   ideaType: prototypeIdeaTypeSchema,
   rationale: z.string().min(20),
+  evaluationDecision: z.object({
+    criticalAssumptions: z.string().min(20),
+    firstThingToTest: z.string().min(20),
+    risksToWatch: z.string().min(20),
+  }),
 });
 
 export const prototypeBuildInputSchema = z.object({

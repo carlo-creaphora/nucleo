@@ -49,7 +49,7 @@ export async function extractDocumentText(
     return {
       text: "",
       status: "UNSUPPORTED",
-      summary: `Archivo cargado, pero supera el limite de demo de ${Math.round(MAX_DOCUMENT_BYTES / 1024 / 1024)} MB.`,
+      summary: `Archivo cargado, pero supera el limite de ${Math.round(MAX_DOCUMENT_BYTES / 1024 / 1024)} MB.`,
     };
   }
 
@@ -61,7 +61,7 @@ export async function extractDocumentText(
       status: "UNSUPPORTED",
       summary:
         summary ||
-        "Archivo cargado. Extraccion automatica no disponible para este tipo en el demo.",
+        "Archivo cargado. Extraccion automatica no disponible para este tipo de archivo.",
     };
   }
 

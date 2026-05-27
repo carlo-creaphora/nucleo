@@ -3,6 +3,7 @@ import {
   type DiagnosisInput,
   type DiagnosisOutput,
   type CriticalMissingPiece,
+  diagnosisDraftSchema,
   diagnosisInputSchema,
 } from "../contracts/diagnosis.js";
 import { type IdeationInput, ideationInputSchema } from "../contracts/ideation.js";
@@ -39,13 +40,14 @@ export class DiagnosisService {
     if (userTurns >= MAX_DIAGNOSIS_QUESTIONS) {
       const closure = await this.engine.assessClosure(input);
       if (!closure.canClose) {
+        const question = await this.engine.generateQuestion(input);
         await this.persist(input);
 
         return {
           maxQuestionsReached: true,
-          question: null,
+          question,
           diagnosis: null,
-          criticalMissing: closure.missing,
+          criticalMissing: [],
         };
       }
 
@@ -61,6 +63,32 @@ export class DiagnosisService {
     }
 
     const question = await this.engine.generateQuestion(input);
+
+    if (question.shouldCloseDiagnosis) {
+      const closure = await this.engine.assessClosure(input);
+
+      if (closure.canClose) {
+        const diagnosis = await this.engine.completeDiagnosis(input);
+        await this.persist(input, diagnosis, "complete");
+
+        return {
+          maxQuestionsReached: false,
+          question: null,
+          diagnosis,
+          criticalMissing: [],
+        };
+      }
+
+      await this.persist(input);
+
+      return {
+        maxQuestionsReached: false,
+        question,
+        diagnosis: null,
+        criticalMissing: [],
+      };
+    }
+
     await this.persist(input);
 
     return {
@@ -120,6 +148,16 @@ export class DiagnosisService {
 
   listAudit(cycleId: string) {
     return this.store.listAuditEvents(cycleId);
+  }
+
+  getDraft(cycleId: string) {
+    return this.store.getDiagnosisDraft(cycleId);
+  }
+
+  async saveDraft(rawDraft: unknown) {
+    const draft = diagnosisDraftSchema.parse(rawDraft);
+    await this.store.saveDiagnosisDraft(draft);
+    return draft;
   }
 
   async buildIdeationInput(cycleId: string): Promise<IdeationInput | null> {

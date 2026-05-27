@@ -187,7 +187,7 @@ describe("Diagnostico", () => {
     expect(result.documents[0]?.extractionStatus).toBe("UNSUPPORTED");
   });
 
-  it("respeta el maximo de 15 preguntas pero no cierra si faltan piezas criticas", async () => {
+  it("sigue preguntando despues de 15 respuestas si falta contexto critico", async () => {
     const dialogMessages = Array.from({ length: 15 }, (_, index) => ({
       role: "user" as const,
       content: `Respuesta de contexto ${index + 1}`,
@@ -197,9 +197,19 @@ describe("Diagnostico", () => {
     const result = await service.nextQuestion(input);
 
     expect(result.maxQuestionsReached).toBe(true);
-    expect(result.question).toBeNull();
+    expect(result.question?.question).toBeTruthy();
     expect(result.diagnosis).toBeNull();
-    expect(result.criticalMissing.length).toBeGreaterThan(0);
+    expect(result.criticalMissing).toEqual([]);
+  });
+
+  it("cierra diagnostico desde la decision de la IA cuando el contexto es suficiente", async () => {
+    const input = buildInput({ cycleId: "cycle-ai-close" });
+    await registerInput(input);
+    const result = await service.nextQuestion(input);
+
+    expect(result.question).toBeNull();
+    expect(result.diagnosis?.recommendedChallenge).toBeTruthy();
+    expect(result.criticalMissing).toEqual([]);
   });
 
   it("usa intentos previos, tensiones, decision trabada y cambio esperado como complementos de pregunta", async () => {
@@ -470,6 +480,14 @@ describe("Diagnostico", () => {
     expect(prompt).toContain("Responder breve");
   });
 
+  it("prohibe parches por palabras clave y exige interpretacion semantica", () => {
+    const prompt = buildDiagnosisSystemPrompt();
+
+    expect(prompt).toContain("Interpretar semanticamente");
+    expect(prompt).toContain("ausencia declarada");
+    expect(prompt).toContain("Prohibido resolver interpretacion con listas de palabras clave");
+  });
+
   it("construye input y opciones de Ideacion sin motor heuristico", async () => {
     const input = buildInput({ cycleId: "cycle-ideation-clean" });
     await registerInput(input);
@@ -658,7 +676,8 @@ describe("Diagnostico", () => {
     expect(prompt).not.toContain("prototypeBrief");
     expect(prompt).toContain("translatedCaseReferences");
     expect(prompt).toContain("1. idea:");
-    expect(prompt).toContain("8. antiPatronesAEvitar:");
+    expect(prompt).toContain("2. tipoDeIdea:");
+    expect(prompt).toContain("9. antiPatronesAEvitar:");
     expect(prompt).toContain("mejorar optimiza el juego");
     expect(prompt).toContain("RUPTURA_FUERTE = transformar");
     expect(prompt).toContain("No mezclar rutas");
@@ -740,8 +759,8 @@ function buildIdeationOutputForTest(
   const baseIdea: IdeationOutput["ideas"][number] = {
     id: "idea_1",
     routeId: route.id,
-    idea: "Idea 1. Regla visible: reducir friccion en una decision existente",
-    supuestoQueRompe:
+	    idea: "Idea 1. Regla visible: reducir friccion en una decision existente",
+	    supuestoQueRompe:
       "Que la operacion mejora solamente cuando se agrega mas supervision.",
     mecanicaConcreta:
       "Tomar una decision existente y hacerla mas rapida con una regla visible, un responsable y una evidencia minima antes del cierre.",
@@ -763,8 +782,9 @@ function buildIdeationOutputForTest(
       evidenceIds: ["sig_1"],
       disruptiveCaseName: "IKEA Cook this Page",
     },
-    ...override,
-    source: override.source ?? "ai",
+	    ...override,
+	    tipoDeIdea: override.tipoDeIdea ?? "Proceso / operación",
+	    source: override.source ?? "ai",
     selectedForEvaluation: override.selectedForEvaluation ?? false,
   };
 

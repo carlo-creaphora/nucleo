@@ -3,10 +3,9 @@ import { type ReactNode } from "react";
 import {
   AlertCircle,
   ArrowRight,
-  ExternalLink,
+  ChevronDown,
   Loader2,
   Radar,
-  RefreshCw,
 } from "lucide-react";
 import {
   useAppState,
@@ -56,34 +55,19 @@ export function SignalsPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>Lectura de señales</SectionLabel>
-        <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div className="mt-4">
           <div className="max-w-4xl">
-            <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+            <h1 className="phase-title">
               Señales públicas, gaps e insights para ideación.
             </h1>
-            <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+            <p className="phase-summary">
               Consulta social listening, tendencias y competidores. La síntesis
-              trabaja sobre evidencia encontrada y declara vacíos.
+              trabaja sobre evidencia encontrada y produce siempre 2 gaps y 2
+              insights.
             </p>
-          </div>
-          <div className="flex gap-3">
-            <Button disabled={!signals} onClick={() => setActivePhaseId("ideation")} variant="secondary">
-              Diseñar ruta de ideación
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button disabled={!diagnosis || status === "loading"} onClick={runSignals}>
-              {status === "loading" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : signals ? (
-                <RefreshCw className="h-4 w-4" />
-              ) : (
-                <Radar className="h-4 w-4" />
-              )}
-              {signals ? "Regenerar señales" : "Consultar señales"}
-            </Button>
           </div>
         </div>
       </section>
@@ -97,18 +81,35 @@ export function SignalsPage() {
       {!signals ? (
         <Card className="flex min-h-[420px] flex-col items-center justify-center p-10 text-center">
           <Radar className="h-10 w-10 text-muted-foreground" />
-          <h2 className="mt-4 text-3xl font-extrabold">
+          <h2 className="mt-4 text-xl font-semibold">
             Señales pendientes
           </h2>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">
             Cuando ejecutes la consulta, Núcleo mostrará análisis por lente, 2
-            gaps, 2 insights, fuentes consultadas, vacíos de evidencia y memoria
-            usada por la IA.
+            gaps, 2 insights, fuentes consultadas y memoria usada por la IA.
           </p>
         </Card>
       ) : (
         <SignalsResult signals={signals} />
       )}
+
+      <div className="flex justify-end">
+        {signals ? (
+          <Button onClick={() => setActivePhaseId("ideation")} variant="secondary">
+            Diseñar ruta de ideación
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button disabled={!diagnosis || status === "loading"} onClick={runSignals}>
+            {status === "loading" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Radar className="h-4 w-4" />
+            )}
+            Consultar señales
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -135,7 +136,7 @@ function SignalsResult({ signals }: { signals: SignalsOutput }) {
         />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid gap-5">
         <SourcesCard signals={signals} />
         <MemoryCard signals={signals} />
       </section>
@@ -151,7 +152,7 @@ function AnalysisCard({
   value: SignalsAnalysisSection;
 }) {
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <SectionLabel>{label}</SectionLabel>
       <p className="mt-3 text-xl font-extrabold leading-tight">
         {value.summary}
@@ -177,7 +178,7 @@ function SignalCollection<T>({
   renderItem: (item: T) => ReactNode;
 }) {
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <SectionLabel>{label}</SectionLabel>
       <div className="mt-5 space-y-4">{items.map(renderItem)}</div>
     </Card>
@@ -230,47 +231,38 @@ function SignalField({ label, value }: { label: string; value: string }) {
 
 function SourcesCard({ signals }: { signals: SignalsOutput }) {
   const sources = signals.internal.fuentesConsultadas;
-  const gaps = signals.internal.vaciosDeEvidencia;
 
   return (
-    <Card className="p-7">
-      <SectionLabel>Fuentes y vacíos</SectionLabel>
-      <div className="mt-5 flex flex-wrap gap-2">
-        {(sources.length ? sources : ["Sin fuentes registradas"]).map((source) =>
-          source.startsWith("http") ? (
-            <a
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-3 py-2 text-sm font-semibold text-stone-700"
-              href={source}
-              key={source}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Fuente
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          ) : (
-            <span
-              className="rounded-full border border-border bg-white px-3 py-2 text-sm font-semibold text-stone-700"
-              key={source}
-            >
-              {source}
-            </span>
-          ),
-        )}
-        <span className="rounded-full bg-black px-3 py-2 text-sm font-semibold text-white">
-          {signals.generatedAt}
-        </span>
-      </div>
-      <div className="mt-7">
-        <h3 className="text-xl font-extrabold">Vacíos de evidencia</h3>
-        <ul className="mt-3 space-y-2">
-          {(gaps.length ? gaps : ["Sin vacíos declarados."]).map((gap) => (
-            <li className="text-sm leading-6 text-muted-foreground" key={gap}>
-              {gap}
+    <Card className="p-5">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+          <div>
+            <SectionLabel>Fuentes consultadas</SectionLabel>
+            <p className="mt-2 text-sm font-semibold text-muted-foreground">
+              {sources.length || 1} fuente(s) · {signals.generatedAt}
+            </p>
+          </div>
+          <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition group-open:rotate-180" />
+        </summary>
+        <ul className="mt-5 list-disc space-y-2 pl-5 text-sm leading-6 text-stone-700">
+          {(sources.length ? sources : ["Sin fuentes registradas"]).map((source) => (
+            <li key={source}>
+              {source.startsWith("http") ? (
+                <a
+                  className="font-semibold underline underline-offset-4"
+                  href={source}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {source}
+                </a>
+              ) : (
+                source
+              )}
             </li>
           ))}
         </ul>
-      </div>
+      </details>
     </Card>
   );
 }
@@ -279,22 +271,24 @@ function MemoryCard({ signals }: { signals: SignalsOutput }) {
   const memory = signals.memoriaEmpresa;
 
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <SectionLabel>Memoria usada por IA</SectionLabel>
-      <p className="mt-3 text-base leading-7 text-muted-foreground">
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
         Antes de idear, el motor consulta ciclos cerrados de la empresa para
         evitar repetir errores y detectar patrones útiles.
       </p>
-      <MiniList label="Patrones a evitar" items={memory.avoidRepeating} />
-      <MiniList label="Aprendizajes previos" items={memory.previousLearnings} />
-      <MiniList label="Patrones de empresa" items={memory.companyPatterns} />
+      <div className="mt-5 grid gap-4 xl:grid-cols-3">
+        <MiniList label="Patrones a evitar" items={memory.avoidRepeating} />
+        <MiniList label="Aprendizajes previos" items={memory.previousLearnings} />
+        <MiniList label="Patrones de empresa" items={memory.companyPatterns} />
+      </div>
     </Card>
   );
 }
 
 function MiniList({ label, items }: { label: string; items: string[] }) {
   return (
-    <div className="mt-5 rounded-[18px] border border-border bg-surface-raised p-4">
+    <div className="rounded-[18px] border border-border bg-surface-raised p-4">
       <h3 className="text-sm font-bold">{label}</h3>
       <ul className="mt-3 space-y-2">
         {(items.length ? items : ["Sin dato declarado."]).map((item) => (

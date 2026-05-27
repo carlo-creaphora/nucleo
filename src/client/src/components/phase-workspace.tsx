@@ -18,20 +18,20 @@ export function PhaseWorkspace({ phase }: PhaseWorkspaceProps) {
   const details = phaseDetails[phase.id];
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>{phase.eyebrow}</SectionLabel>
         <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-4xl">
             <div className="flex items-start gap-4">
-              <div className="mt-1 grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-border bg-surface-raised">
-                <Icon className="h-6 w-6 text-stone-700" />
+              <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border bg-surface-raised">
+                <Icon className="h-5 w-5 text-stone-700" />
               </div>
               <div>
-                <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+                <h1 className="phase-title">
                   {phase.title}
                 </h1>
-                <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+                <p className="phase-summary">
                   {phase.summary}
                 </p>
               </div>
@@ -49,7 +49,7 @@ export function PhaseWorkspace({ phase }: PhaseWorkspaceProps) {
 
       <section className="grid gap-5 xl:grid-cols-3">
         {details.map((detail, index) => (
-          <Card className="p-7" key={detail}>
+          <Card className="p-5" key={detail}>
             <SectionLabel>
               {index === 0
                 ? "Entrada clave"
@@ -57,8 +57,8 @@ export function PhaseWorkspace({ phase }: PhaseWorkspaceProps) {
                   ? "Decisión"
                   : "Control"}
             </SectionLabel>
-            <h2 className="mt-3 text-2xl font-bold leading-tight">{detail}</h2>
-            <p className="mt-4 text-base leading-7 text-muted-foreground">
+            <h2 className="mt-3 text-lg font-semibold leading-tight">{detail}</h2>
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">
               {supportCopy[index]}
             </p>
           </Card>
@@ -66,17 +66,17 @@ export function PhaseWorkspace({ phase }: PhaseWorkspaceProps) {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="p-7">
+        <Card className="p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
               <SectionLabel>Lectura de evidencia</SectionLabel>
-              <h2 className="mt-3 text-3xl font-extrabold">
+              <h2 className="mt-3 text-xl font-semibold">
                 Matriz de señales tomada de la bitácora del test.
               </h2>
             </div>
             <FlaskConical className="h-7 w-7 text-muted-foreground" />
           </div>
-          <div className="mt-7 overflow-hidden rounded-[18px] border border-border">
+          <div className="mt-5 overflow-hidden rounded-[18px] border border-border">
             {evidenceRows.map((row, index) => (
               <div
                 key={row.join("-")}
@@ -89,7 +89,7 @@ export function PhaseWorkspace({ phase }: PhaseWorkspaceProps) {
                   <div
                     key={cell}
                     className={cn(
-                      "px-6 py-5 text-base",
+                      "px-4 py-3 text-sm",
                       index === 0
                         ? "font-bold text-foreground"
                         : "text-muted-foreground",
@@ -103,15 +103,15 @@ export function PhaseWorkspace({ phase }: PhaseWorkspaceProps) {
           </div>
         </Card>
 
-        <Card className="p-7">
+        <Card className="p-5">
           <SectionLabel>Sistema visual</SectionLabel>
-          <h2 className="mt-3 text-3xl font-extrabold">
+          <h2 className="mt-3 text-xl font-semibold">
             Workspace React preparado para crecer por fases.
           </h2>
           <div className="mt-6 space-y-3">
             {[
               ["Contexto", companyContext.category],
-              ["Estado", "Demo comercial navegable"],
+              ["Estado", "Flujo activo"],
               ["UI", "Tokens, componentes y layout modular"],
               ["API", "Hono y contratos existentes intactos"],
             ].map(([name, detail]) => (

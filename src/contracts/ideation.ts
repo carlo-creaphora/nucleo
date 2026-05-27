@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { diagnosisInputSchema, diagnosisOutputSchema } from "./diagnosis.js";
+import { prototypeIdeaTypeSchema } from "./prototype.js";
 import { registrationOutputSchema } from "./registration.js";
 
 export const ideationInputSchema = z.object({
@@ -175,6 +176,7 @@ export const ideationIdeaSchema = z.object({
   source: z.enum(["ai", "user"]).default("ai"),
   selectedForEvaluation: z.boolean().default(false),
   idea: z.string().min(8),
+  tipoDeIdea: prototypeIdeaTypeSchema,
   supuestoQueRompe: z.string().min(20),
   mecanicaConcreta: z.string().min(40),
   porQueFunciona: z.string().min(30),

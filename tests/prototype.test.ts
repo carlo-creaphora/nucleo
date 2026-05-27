@@ -105,6 +105,7 @@ describe("Prototipado", () => {
       prototypeRouteId: input.route.id,
       prototypeIdeaType: input.route.ideaType,
       prototypeClassification: {
+        evaluationDecision: buildEvaluationDecision(),
         ideaId: "idea-1",
         ideaType: input.route.ideaType,
         rationale: "La idea modifica el paquete comercial y la forma de acceso.",
@@ -164,10 +165,22 @@ class FakePrototypeEngine implements PrototypeEngine {
 
   async classify(input: PrototypeClassifyInput): Promise<PrototypeClassification> {
     return {
+      evaluationDecision: buildEvaluationDecision(),
       ideaType: input.availableIdeaTypes[0]!,
       rationale: "Clasificación válida dentro de los tipos permitidos por la matriz.",
     };
   }
+}
+
+function buildEvaluationDecision() {
+  return {
+    criticalAssumptions:
+      "El comprador necesita evidencia temprana antes de aprobar una implementacion completa.",
+    firstThingToTest:
+      "Probar una oferta acotada con compradores reales y registrar si aceptan un siguiente paso observable.",
+    risksToWatch:
+      "No leer interes verbal como decision de compra ni extrapolar resultados con muestra insuficiente.",
+  };
 }
 
 function buildInput(): PrototypeBuildInput {

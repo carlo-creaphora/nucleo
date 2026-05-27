@@ -75,15 +75,15 @@ export function MemoryPage() {
   const summary = useMemo(() => summarizeRecords(records), [records]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>Memoria de ciclos</SectionLabel>
         <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-4xl">
-            <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+            <h1 className="phase-title">
               Aprendizaje acumulado, no archivo muerto.
             </h1>
-            <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+            <p className="phase-summary">
               Cada ciclo cerrado queda en solo lectura con su ruta metodológica,
               evidencia, aprendizajes, riesgos y siguiente movimiento.
             </p>
@@ -97,9 +97,9 @@ export function MemoryPage() {
 
       {error && <Notice>{error}</Notice>}
 
-      <Card className="p-7">
+      <Card className="p-5">
         <SectionLabel>Regla de cierre</SectionLabel>
-        <p className="mt-3 max-w-5xl text-base leading-7 text-stone-700">
+        <p className="mt-3 max-w-5xl text-sm leading-6 text-stone-700">
           Un ciclo pasa a memoria cuando existe una ruta metodológica final
           confirmada desde Lectura de evidencias o Playbook. No se cierra por
           registrar resultados ni por leer evidencia sin decisión.
@@ -109,7 +109,7 @@ export function MemoryPage() {
       {status === "loading" ? (
         <Card className="p-10 text-center">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-          <h2 className="mt-4 text-3xl font-extrabold">Cargando memoria</h2>
+          <h2 className="mt-4 text-xl font-semibold">Cargando memoria</h2>
         </Card>
       ) : records.length ? (
         <>
@@ -141,7 +141,7 @@ export function MemoryPage() {
             />
           </section>
 
-          <Card className="p-7">
+          <Card className="p-5">
             <SectionLabel>Ciclos cerrados</SectionLabel>
             <div className="mt-5 grid gap-4">
               {records.map((record) => (
@@ -157,8 +157,8 @@ export function MemoryPage() {
       ) : (
         <Card className="p-10 text-center">
           <Archive className="mx-auto h-8 w-8 text-muted-foreground" />
-          <h2 className="mt-4 text-3xl font-extrabold">Memoria vacía</h2>
-          <p className="mt-3 text-base leading-7 text-muted-foreground">
+          <h2 className="mt-4 text-xl font-semibold">Memoria vacía</h2>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
             Cierra un ciclo desde Lectura de evidencias para guardar aprendizaje
             personal y colectivo en modo solo lectura.
           </p>
@@ -253,9 +253,14 @@ function SummaryCard({
   return (
     <Card className="p-6">
       <SectionLabel>{label}</SectionLabel>
-      <strong className="mt-3 block text-2xl font-extrabold leading-tight">
-        {value || "Sin repetición todavía"}
-      </strong>
+      <ul className="mt-4 grid gap-2 text-sm font-medium leading-6 text-stone-800">
+        {splitSummaryValue(value).map((item) => (
+          <li key={item} className="flex gap-2">
+            <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-stone-400" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
     </Card>
   );
@@ -360,6 +365,15 @@ function countBy(items: string[]) {
 
 function unique(items: string[]) {
   return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+}
+
+function splitSummaryValue(value: string) {
+  const items = String(value || "")
+    .split(/\s+·\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return items.length ? items : ["Sin repetición todavía"];
 }
 
 function routeClass(route: EvidenceReading["methodologicalRoute"]) {

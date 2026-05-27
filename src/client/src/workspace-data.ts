@@ -33,10 +33,10 @@ export type Phase = {
 };
 
 export const companyContext = {
-  user: "Carlos Rodriguez",
-  company: "Movilidad vertical regional",
-  cycle: "Ciclo demo activo",
-  category: "Mantenimiento de movilidad vertical",
+  user: "Usuario",
+  company: "Núcleo",
+  cycle: "Ciclo activo",
+  category: "Categoría por definir",
 };
 
 export const registrationPhase: Phase = {

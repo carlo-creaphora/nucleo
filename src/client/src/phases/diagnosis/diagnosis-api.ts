@@ -34,6 +34,15 @@ export type DiagnosisVersion = {
   createdAt: string;
 };
 
+export type DiagnosisDraft = {
+  cycleId: string;
+  dialogMessages: DialogMessage[];
+  correctedSections: DiagnosisCorrection[];
+  lastQuestion: DiagnosisQuestion | null;
+  composer: string;
+  updatedAt: string;
+};
+
 export type AuditEvent = {
   id: string;
   stage: string;
@@ -98,6 +107,40 @@ export async function getDiagnosisAudit(cycleId: string) {
   return (await response.json()) as { events: AuditEvent[] };
 }
 
+export async function getDiagnosisDraft(cycleId: string) {
+  const response = await fetch(
+    `/api/diagnosis/cycles/${encodeURIComponent(cycleId)}/draft`,
+  );
+
+  if (!response.ok) return null;
+
+  const data = (await response.json().catch(() => null)) as {
+    draft?: DiagnosisDraft | null;
+  } | null;
+
+  return data?.draft ?? null;
+}
+
+export async function saveDiagnosisDraft(
+  cycleId: string,
+  draft: Omit<DiagnosisDraft, "cycleId" | "updatedAt">,
+) {
+  const response = await fetch(
+    `/api/diagnosis/cycles/${encodeURIComponent(cycleId)}/draft`,
+    {
+      body: JSON.stringify(draft),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("No se pudo guardar el chat en progreso.");
+  }
+
+  return (await response.json()) as { draft: DiagnosisDraft };
+}
+
 export async function getDiagnosisCycle(cycleId: string) {
   const response = await fetch(
     `/api/diagnosis/cycles/${encodeURIComponent(cycleId)}`,
@@ -151,6 +194,20 @@ export async function getRegistration(registrationId: string) {
   const response = await fetch(
     `/api/registration/${encodeURIComponent(registrationId)}`,
   );
+
+  if (!response.ok) {
+    throw new Error("No se pudo recuperar el Registro guardado.");
+  }
+
+  return (await response.json()) as { registration: RegistrationRecord };
+}
+
+export async function getRegistrationByCycle(cycleId: string) {
+  const response = await fetch(
+    `/api/registration/cycles/${encodeURIComponent(cycleId)}`,
+  );
+
+  if (response.status === 404) return null;
 
   if (!response.ok) {
     throw new Error("No se pudo recuperar el Registro guardado.");

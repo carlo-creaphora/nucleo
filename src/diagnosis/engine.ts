@@ -16,7 +16,6 @@ import {
   buildDiagnosisSystemPrompt,
   buildQuestionInstruction,
   buildReinterpretInstruction,
-  detectCriticalMissingPieces,
 } from "./prompt.js";
 
 export type DiagnosisEngine = {
@@ -245,7 +244,7 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
   async assessClosure(
     input: DiagnosisInput,
   ): Promise<DiagnosisClosureAssessmentOutput> {
-    const missing = detectCriticalMissingPieces(input);
+    const missing = detectLocalTestMissingPieces(input);
     return {
       canClose: missing.length === 0,
       missing,
@@ -317,7 +316,8 @@ function buildHeuristicDiagnosis(input: DiagnosisInput): DiagnosisOutput {
 }
 
 export function createDiagnosisEngine() {
-  const useFake = process.env.NUCLEO_FAKE_AI === "true";
+  const useFake =
+    process.env.NODE_ENV === "test" && process.env.NUCLEO_FAKE_AI === "true";
   const apiKey = process.env.OPENAI_API_KEY?.trim();
 
   if (useFake) {
@@ -336,6 +336,27 @@ export function createDiagnosisEngine() {
 
 function missingOpenAiError(stage: string) {
   return new Error(
-    `OPENAI_API_KEY es requerido para ${stage}; el demo y produccion no usan respuestas heuristicas.`,
+    `OPENAI_API_KEY es requerido para ${stage}; no se usan respuestas alternativas sin IA.`,
   );
+}
+
+function detectLocalTestMissingPieces(input: DiagnosisInput) {
+  const userTurns = input.dialogMessages.filter((message) => message.role === "user");
+
+  if (userTurns.length > 1 && userTurns.length < 15) {
+    return [];
+  }
+
+  const latest = userTurns.at(-1)?.content.trim() ?? "";
+
+  if (latest.length > 160) {
+    return [];
+  }
+
+  return [
+    {
+      key: "metrica" as const,
+      reason: "Sin metrica o senal, el reto puede quedarse en percepcion.",
+    },
+  ];
 }

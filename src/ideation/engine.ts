@@ -307,7 +307,7 @@ export class OpenAiIdeationEngine implements IdeationEngine {
 class MissingOpenAiIdeationEngine implements IdeationEngine {
   async generate(): Promise<IdeationOutput> {
     throw new Error(
-      "OPENAI_API_KEY es requerido para Ideacion; el demo y produccion no usan respuestas heuristicas.",
+      "OPENAI_API_KEY es requerido para Ideacion; no se usan respuestas alternativas sin IA.",
     );
   }
 }
@@ -378,14 +378,15 @@ export function buildIdeationSystemPrompt() {
     "Generar exactamente 1 idea para la ruta seleccionada.",
     "La idea debe derivarse del gap seleccionado, insight seleccionado, reto recomendado, restricciones, tensiones y evidencias usadas.",
     "La idea debe tener exactamente esta estructura visible y en este orden:",
-    "1. idea: debe empezar con 'Idea 1. [nombre distintivo]: [descripcion corta]'",
-    "2. supuestoQueRompe: solo el supuesto que rompe, en una frase corta. No empieces con 'Rompe el supuesto de que', no expliques beneficio, no agregues frases como 'Cambia...' o 'Esto permite...'.",
-    "3. mecanicaConcreta: mecanismo concreto en maximo 2 frases, sin piloto y sin explicar beneficios.",
-    "4. porQueFunciona: explicacion breve en maximo 2 frases.",
-    "5. casoAnalogo: contenido de 'Caso analogo:' incluyendo nombre, ano, industria/pais, similitud y diferencia",
-    "6. metricaQueMueve: contenido de 'Metrica que mueve:'",
-    "7. primerPasoEjecutable: contenido de 'Primer paso ejecutable:'",
-    "8. antiPatronesAEvitar: contenido de 'Anti-patrones a evitar al ejecutar:'",
+    "1. idea: nombre distintivo y descripcion corta de la idea.",
+    "2. tipoDeIdea: exactamente uno de los tipos de la matriz de prototipado disponible: Servicio / experiencia, Producto digital / interfaz, Proceso / operación, Modelo comercial / acceso o Producto físico / tangible.",
+    "3. supuestoQueRompe: solo el supuesto que rompe, en una frase corta. No empieces con 'Rompe el supuesto de que', no expliques beneficio, no agregues frases como 'Cambia...' o 'Esto permite...'.",
+    "4. mecanicaConcreta: mecanismo concreto en maximo 2 frases, sin piloto y sin explicar beneficios.",
+    "5. porQueFunciona: explicacion breve en maximo 2 frases.",
+    "6. casoAnalogo: contenido de 'Caso analogo:' incluyendo nombre, ano, industria/pais, similitud y diferencia",
+    "7. metricaQueMueve: contenido de 'Metrica que mueve:'",
+    "8. primerPasoEjecutable: contenido de 'Primer paso ejecutable:'",
+    "9. antiPatronesAEvitar: contenido de 'Anti-patrones a evitar al ejecutar:'",
     "No repitas el nombre del campo dentro del contenido: supuestoQueRompe no debe empezar con 'Supuesto que rompe:' y mecanicaConcreta no debe empezar con 'La mecanica concreta consiste en'.",
     "supuestoQueRompe debe ser solo el supuesto, no una mini-explicacion de la idea.",
     "mecanicaConcreta y porQueFunciona deben ser concretos: evita parrafos largos.",

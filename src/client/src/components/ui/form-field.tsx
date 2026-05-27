@@ -25,7 +25,7 @@ export function TextInput({
   return (
     <input
       className={cn(
-        "h-14 w-full rounded-[18px] border border-input bg-surface-raised px-5 text-base text-foreground outline-none transition placeholder:text-muted-foreground focus:border-stone-400 focus:bg-white focus:ring-4 focus:ring-stone-200/70",
+        "h-10 w-full rounded-lg border border-input bg-surface-raised px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-stone-400 focus:bg-white focus:ring-4 focus:ring-stone-200/70",
         className,
       )}
       {...props}
@@ -33,17 +33,18 @@ export function TextInput({
   );
 }
 
-export function TextArea({
-  className,
-  ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export const TextArea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function TextArea({ className, ...props }, ref) {
   return (
     <textarea
       className={cn(
-        "min-h-32 w-full resize-y rounded-[20px] border border-input bg-surface-raised px-5 py-4 text-base leading-7 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-stone-400 focus:bg-white focus:ring-4 focus:ring-stone-200/70",
+        "min-h-28 w-full resize-y rounded-lg border border-input bg-surface-raised px-3 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-stone-400 focus:bg-white focus:ring-4 focus:ring-stone-200/70",
         className,
       )}
+      ref={ref}
       {...props}
     />
   );
-}
+});

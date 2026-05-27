@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent, type ReactNode } from "react";
 import { AlertCircle, CheckCircle2, FileText, Loader2, Upload } from "lucide-react";
 import { useAppState } from "../../app-state.js";
 import { Button } from "../../components/ui/button.js";
@@ -11,8 +11,8 @@ import {
 } from "./registration-api.js";
 import {
   acquisitionChannelOptions,
-  demoRegistrationForm,
-} from "./registration-demo.js";
+  emptyRegistrationForm,
+} from "./registration-defaults.js";
 import {
   type RegistrationFormState,
   type UploadedRegistrationDocument,
@@ -29,7 +29,7 @@ export function RegistrationPage() {
   } =
     useAppState();
   const [form, setForm] =
-    useState<RegistrationFormState>(demoRegistrationForm);
+    useState<RegistrationFormState>(emptyRegistrationForm);
   const [uploadedDocuments, setUploadedDocuments] = useState<
     UploadedRegistrationDocument[]
   >([]);
@@ -111,28 +111,20 @@ export function RegistrationPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>Contexto base</SectionLabel>
         <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-4xl">
-            <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+            <h1 className="phase-title">
               Registro real de perfil, empresa y categoría.
             </h1>
-            <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+            <p className="phase-summary">
               Esta información queda como contexto invisible para diagnóstico,
               señales e ideación. No es una encuesta decorativa: define desde
               dónde razona Núcleo.
             </p>
           </div>
-          <Button disabled={status === "saving" || status === "uploading"} onClick={submit}>
-            {status === "saving" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4" />
-            )}
-            Guardar y diagnosticar
-          </Button>
         </div>
       </section>
 
@@ -153,9 +145,9 @@ export function RegistrationPage() {
         </div>
       )}
 
-      <Card className="p-7">
+      <Card className="p-5">
         <SectionLabel>Perfil del usuario</SectionLabel>
-        <h2 className="mt-3 text-3xl font-extrabold">
+        <h2 className="mt-3 text-xl font-semibold">
           Quién usará esta licencia
         </h2>
         <div className="mt-8 grid gap-5 xl:grid-cols-3">
@@ -192,9 +184,9 @@ export function RegistrationPage() {
         </div>
       </Card>
 
-      <Card className="p-7">
+      <Card className="p-5">
         <SectionLabel>Perfil de empresa</SectionLabel>
-        <h2 className="mt-3 text-3xl font-extrabold">
+        <h2 className="mt-3 text-xl font-semibold">
           Contexto base del negocio
         </h2>
         <div className="mt-8 grid gap-5 xl:grid-cols-3">
@@ -262,12 +254,12 @@ export function RegistrationPage() {
         </div>
       </Card>
 
-      <Card className="p-7">
+      <Card className="p-5">
         <SectionLabel>Contexto de categoría</SectionLabel>
-        <h2 className="mt-3 text-3xl font-extrabold">
+        <h2 className="mt-3 text-xl font-semibold">
           Datos para comparar e idear
         </h2>
-        <div className="mt-8 grid gap-5 xl:grid-cols-4">
+        <div className="mt-8 grid gap-5 xl:grid-cols-2">
           <Field label="Ticket promedio">
             <TextInput
               value={form.averageTicket}
@@ -282,101 +274,141 @@ export function RegistrationPage() {
               onChange={updateField("averageSalesCycleDays")}
             />
           </Field>
-          <Field label="Competidor 1">
-            <TextInput value={form.competitor1} onChange={updateField("competitor1")} />
-          </Field>
-          <Field label="Web competidor 1">
-            <TextInput
-              type="url"
-              value={form.competitor1Web}
-              onChange={updateField("competitor1Web")}
-            />
-          </Field>
-          <Field label="Competidor 2">
-            <TextInput value={form.competitor2} onChange={updateField("competitor2")} />
-          </Field>
-          <Field label="Web competidor 2">
-            <TextInput
-              type="url"
-              value={form.competitor2Web}
-              onChange={updateField("competitor2Web")}
-            />
-          </Field>
-          <Field label="Competidor 3">
-            <TextInput value={form.competitor3} onChange={updateField("competitor3")} />
-          </Field>
-          <Field label="Web competidor 3">
-            <TextInput
-              type="url"
-              value={form.competitor3Web}
-              onChange={updateField("competitor3Web")}
-            />
-          </Field>
-          <Field className="xl:col-span-2" label="Notas de categoría">
+        </div>
+        <div className="mt-5 grid gap-5 xl:grid-cols-3">
+          <CompetitorBox title="Competidor 1">
+            <Field label="Nombre">
+              <TextInput value={form.competitor1} onChange={updateField("competitor1")} />
+            </Field>
+            <Field label="URL web">
+              <TextInput
+                type="url"
+                value={form.competitor1Web}
+                onChange={updateField("competitor1Web")}
+              />
+            </Field>
+          </CompetitorBox>
+          <CompetitorBox title="Competidor 2">
+            <Field label="Nombre">
+              <TextInput value={form.competitor2} onChange={updateField("competitor2")} />
+            </Field>
+            <Field label="URL web">
+              <TextInput
+                type="url"
+                value={form.competitor2Web}
+                onChange={updateField("competitor2Web")}
+              />
+            </Field>
+          </CompetitorBox>
+          <CompetitorBox title="Competidor 3">
+            <Field label="Nombre">
+              <TextInput value={form.competitor3} onChange={updateField("competitor3")} />
+            </Field>
+            <Field label="URL web">
+              <TextInput
+                type="url"
+                value={form.competitor3Web}
+                onChange={updateField("competitor3Web")}
+              />
+            </Field>
+          </CompetitorBox>
+        </div>
+        <div className="mt-8">
+          <Field label="Notas de categoría">
             <TextArea
               value={form.categoryNotes}
               onChange={updateField("categoryNotes")}
             />
           </Field>
-          <div className="xl:col-span-2">
-            <Field label="Documentos reales">
-              <div className="rounded-[24px] border border-dashed border-stone-300 bg-surface-raised p-5">
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-[18px] border border-border bg-white px-5 py-8 text-center transition hover:bg-muted">
-                  {status === "uploading" ? (
-                    <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
-                  ) : (
-                    <Upload className="h-7 w-7 text-muted-foreground" />
-                  )}
-                  <span className="mt-3 text-base font-extrabold">
-                    Cargar PDF, DOCX, XLSX, CSV, TXT o MD
-                  </span>
-                  <span className="mt-1 text-sm leading-6 text-muted-foreground">
-                    Núcleo extrae texto y lo usa como contexto invisible.
-                  </span>
-                  <input
-                    accept=".pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.json,.html,text/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    className="sr-only"
-                    multiple
-                    onChange={uploadFiles}
-                    type="file"
-                  />
-                </label>
-                {uploadedDocuments.length ? (
-                  <div className="mt-5 grid gap-3">
-                    {uploadedDocuments.map((document) => (
-                      <div
-                        className="flex items-start gap-3 rounded-[18px] border border-border bg-white p-4"
-                        key={document.id}
-                      >
-                        <FileText className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-extrabold">
-                            {document.name}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <SectionLabel>Documentos opcionales</SectionLabel>
+        <h2 className="mt-3 text-xl font-semibold">
+          Material para enriquecer el motor de IA
+        </h2>
+        <div className="mt-6 grid gap-5">
+          <Field label="Documentos reales">
+            <div className="rounded-[24px] border border-dashed border-stone-300 bg-surface-raised p-5">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-[18px] border border-border bg-white px-5 py-8 text-center transition hover:bg-muted">
+                {status === "uploading" ? (
+                  <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+                ) : (
+                  <Upload className="h-7 w-7 text-muted-foreground" />
+                )}
+                <span className="mt-3 text-base font-extrabold">
+                  Cargar PDF, DOCX, XLSX, CSV, TXT o MD
+                </span>
+                <span className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Núcleo extrae texto y lo usa como contexto invisible.
+                </span>
+                <input
+                  accept=".pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.json,.html,text/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  className="sr-only"
+                  multiple
+                  onChange={uploadFiles}
+                  type="file"
+                />
+              </label>
+              {uploadedDocuments.length ? (
+                <div className="mt-5 grid gap-3">
+                  {uploadedDocuments.map((document) => (
+                    <div
+                      className="flex items-start gap-3 rounded-[18px] border border-border bg-white p-4"
+                      key={document.id}
+                    >
+                      <FileText className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-extrabold">
+                          {document.name}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                          {document.extractionStatus ?? "CARGADO"}
+                          {document.sizeBytes
+                            ? ` · ${Math.round(document.sizeBytes / 1024)} KB`
+                            : ""}
+                        </p>
+                        {document.summary && (
+                          <p className="mt-2 max-h-12 overflow-hidden text-sm leading-6 text-stone-600">
+                            {document.summary}
                           </p>
-                          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                            {document.extractionStatus ?? "CARGADO"}
-                            {document.sizeBytes
-                              ? ` · ${Math.round(document.sizeBytes / 1024)} KB`
-                              : ""}
-                          </p>
-                          {document.summary && (
-                            <p className="mt-2 max-h-12 overflow-hidden text-sm leading-6 text-stone-600">
-                              {document.summary}
-                            </p>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </Field>
-          </div>
-          <Field className="xl:col-span-2" label="Notas pegadas manualmente">
-            <TextArea value={form.documents} onChange={updateField("documents")} />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </Field>
         </div>
       </Card>
+
+      <div className="flex justify-end">
+        <Button disabled={status === "saving" || status === "uploading"} onClick={submit}>
+          {status === "saving" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4" />
+          )}
+          Guardar y diagnosticar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CompetitorBox({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
+  return (
+    <div className="grid gap-5 rounded-[20px] border border-border bg-surface-raised p-5">
+      <SectionLabel>{title}</SectionLabel>
+      {children}
     </div>
   );
 }

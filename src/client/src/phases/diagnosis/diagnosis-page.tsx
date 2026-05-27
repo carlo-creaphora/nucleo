@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -17,18 +17,19 @@ import { Button } from "../../components/ui/button.js";
 import { Card, SectionLabel } from "../../components/ui/card.js";
 import { TextArea } from "../../components/ui/form-field.js";
 import {
-  completeDiagnosis,
   getDiagnosisAudit,
+  getDiagnosisDraft,
   getDiagnosisVersions,
   getRegistration,
+  getRegistrationByCycle,
   reinterpretDiagnosis,
   requestDiagnosisQuestion,
+  saveDiagnosisDraft,
   type AuditEvent,
   type CriticalMissingPiece,
   type DiagnosisQuestion,
   type DiagnosisVersion,
 } from "./diagnosis-api.js";
-import { demoDiagnosisResponse } from "./diagnosis-demo.js";
 
 const promptChips = [
   "Tengo un problema de crecimiento",
@@ -39,20 +40,43 @@ const promptChips = [
 const clarifiableSections: Array<{
   key: DiagnosisCorrection["section"];
   label: string;
+  title: string;
   getItems: (diagnosis: DiagnosisOutput) => string[];
 }> = [
-  { key: "symptoms", label: "Síntomas", getItems: (diagnosis) => diagnosis.symptoms },
-  { key: "causes", label: "Causas", getItems: (diagnosis) => diagnosis.causes },
-  { key: "tensions", label: "Tensiones", getItems: (diagnosis) => diagnosis.tensions },
-  { key: "metrics", label: "Métricas", getItems: (diagnosis) => diagnosis.metrics },
+  {
+    key: "symptoms",
+    label: "Síntomas",
+    title: "Síntomas observados",
+    getItems: (diagnosis) => diagnosis.symptoms,
+  },
+  {
+    key: "causes",
+    label: "Causas",
+    title: "Causas probables",
+    getItems: (diagnosis) => diagnosis.causes,
+  },
+  {
+    key: "tensions",
+    label: "Tensiones",
+    title: "Tensión estratégica",
+    getItems: (diagnosis) => diagnosis.tensions,
+  },
+  {
+    key: "metrics",
+    label: "Métricas",
+    title: "Métrica prioritaria",
+    getItems: (diagnosis) => diagnosis.metrics,
+  },
   {
     key: "restrictions",
     label: "Restricciones",
+    title: "Restricciones no negociables",
     getItems: (diagnosis) => diagnosis.restrictions,
   },
   {
     key: "notWorthAttackingYet",
     label: "No atacar todavía",
+    title: "No conviene atacar todavía",
     getItems: (diagnosis) => diagnosis.notWorthAttackingYet,
   },
 ];
@@ -71,9 +95,9 @@ export function DiagnosisPage() {
     setDiagnosisMessages,
     setRegistration,
   } = useAppState();
-  const [composer, setComposer] = useState(demoDiagnosisResponse);
+  const [composer, setComposer] = useState("");
   const [status, setStatus] = useState<
-    "idle" | "question" | "complete" | "reinterpret" | "recover"
+    "idle" | "question" | "reinterpret" | "recover"
   >("idle");
   const [error, setError] = useState<string | null>(null);
   const [criticalMissing, setCriticalMissing] = useState<
@@ -88,22 +112,24 @@ export function DiagnosisPage() {
   } | null>(null);
   const [versions, setVersions] = useState<DiagnosisVersion[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
 
   const canRun = Boolean(registration?.output?.contextForDiagnosis);
   const isBusy = status !== "idle";
-  const userTurnCount = diagnosisMessages.filter(
-    (message) => message.role === "user",
-  ).length;
 
   useEffect(() => {
     const recoverRegistration = async () => {
-      const id = registration?.id ?? registrationId;
-
-      if (!id || registration?.output?.contextForDiagnosis) return;
+      if (registration?.output?.contextForDiagnosis) return;
 
       setStatus("recover");
       try {
-        const result = await getRegistration(id);
+        const result = registrationId
+          ? await getRegistration(registrationId)
+          : await getRegistrationByCycle(cycleId);
+
+        if (!result) return;
+
         setRegistration(result.registration);
       } catch {
         setError("No se pudo recuperar el Registro guardado.");
@@ -113,7 +139,51 @@ export function DiagnosisPage() {
     };
 
     void recoverRegistration();
-  }, [registration, registrationId, setRegistration]);
+  }, [cycleId, registration, registrationId, setRegistration]);
+
+  useEffect(() => {
+    const recoverDraft = async () => {
+      try {
+        const draft = await getDiagnosisDraft(cycleId);
+        if (draft) {
+          setDiagnosisMessages(draft.dialogMessages);
+          setDiagnosisCorrections(draft.correctedSections);
+          setLastQuestion(draft.lastQuestion);
+          setComposer(draft.composer);
+        }
+      } catch {
+        setError("No se pudo recuperar el chat en progreso.");
+      } finally {
+        setDraftLoaded(true);
+      }
+    };
+
+    void recoverDraft();
+  }, [cycleId, setDiagnosisCorrections, setDiagnosisMessages]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+
+    const timeout = window.setTimeout(() => {
+      void saveDiagnosisDraft(cycleId, {
+        composer,
+        correctedSections: diagnosisCorrections,
+        dialogMessages: diagnosisMessages,
+        lastQuestion,
+      }).catch(() => {
+        setError("No se pudo guardar el chat en progreso.");
+      });
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    composer,
+    cycleId,
+    diagnosisCorrections,
+    diagnosisMessages,
+    draftLoaded,
+    lastQuestion,
+  ]);
 
   const payload = useMemo(() => {
     if (!registration?.output?.contextForDiagnosis) return null;
@@ -236,37 +306,6 @@ export function DiagnosisPage() {
     }
   };
 
-  const closeDiagnosis = async () => {
-    if (!payload) {
-      setError("Completa Registro antes de cerrar Diagnóstico.");
-      return;
-    }
-
-    if (userTurnCount === 0) {
-      setError("Escribe al menos una respuesta antes de cerrar Diagnóstico.");
-      return;
-    }
-
-    setStatus("complete");
-    setError(null);
-
-    try {
-      await applyDiagnosisResult(await completeDiagnosis(payload));
-    } catch (submitError) {
-      handleDiagnosisError(submitError);
-      setDiagnosisMessages([
-        ...diagnosisMessages,
-        {
-          role: "assistant",
-          content:
-            "No cierro el diagnóstico todavía. Responde las piezas críticas faltantes y vuelve a cerrar.",
-        },
-      ]);
-    } finally {
-      setStatus("idle");
-    }
-  };
-
   const startClarification = (
     key: DiagnosisCorrection["section"],
     label: string,
@@ -280,6 +319,13 @@ export function DiagnosisPage() {
         content: `Aclara ${label} con evidencia concreta. Escribe lo que obliga a corregir el diagnóstico, no una defensa de la lectura anterior.`,
       },
     ]);
+    window.setTimeout(() => {
+      composerRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      composerRef.current?.focus();
+    }, 50);
   };
 
   const handleDiagnosisError = (submitError: unknown) => {
@@ -297,35 +343,18 @@ export function DiagnosisPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>Diagnóstico estratégico</SectionLabel>
-        <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div className="mt-4">
           <div className="max-w-4xl">
-            <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+            <h1 className="phase-title">
               Conversación para cerrar el reto real.
             </h1>
-            <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+            <p className="phase-summary">
               La IA pregunta, detecta piezas críticas, cierra diagnóstico y
               permite reinterpretar secciones con trazabilidad.
             </p>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              disabled={!diagnosis || criticalMissing.length > 0 || isBusy}
-              onClick={() => setActivePhaseId("signals")}
-              variant="secondary"
-            >
-              Confirmar y consultar señales
-            </Button>
-            <Button disabled={!canRun || isBusy} onClick={closeDiagnosis}>
-              {isBusy ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4" />
-              )}
-              Cerrar diagnóstico
-            </Button>
           </div>
         </div>
       </section>
@@ -342,23 +371,10 @@ export function DiagnosisPage() {
         </Notice>
       )}
 
-      {criticalMissing.length > 0 && (
-        <Card className="border-red-200 bg-red-50 p-7 shadow-sm">
-          <SectionLabel className="text-red-700">Piezas faltantes</SectionLabel>
-          <div className="mt-4 space-y-3">
-            {criticalMissing.map((item) => (
-              <p className="text-base leading-7 text-red-900" key={item.key}>
-                <strong>{item.key}:</strong> {item.reason}
-              </p>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+      <section className="grid gap-5">
         <Card className="flex min-h-[620px] flex-col p-7">
           <SectionLabel>Conversación</SectionLabel>
-          <h2 className="mt-3 text-3xl font-extrabold">
+          <h2 className="mt-3 text-xl font-semibold">
             Preguntas y respuestas
           </h2>
 
@@ -379,7 +395,7 @@ export function DiagnosisPage() {
             {diagnosisMessages.length === 0 ? (
               <div className="flex min-h-56 flex-col items-center justify-center text-center">
                 <MessageSquare className="h-8 w-8 text-muted-foreground" />
-                <p className="mt-3 max-w-sm text-base leading-7 text-muted-foreground">
+                <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
                   Escribe el reto como lo dirías en una reunión. La primera
                   respuesta puede ser larga; después la IA pedirá lo que falte.
                 </p>
@@ -397,39 +413,36 @@ export function DiagnosisPage() {
                   <p className="text-sm font-semibold">
                     {message.role === "user" ? "Usuario" : "Núcleo"}
                   </p>
-                  <p className="mt-1 text-base leading-7">{message.content}</p>
+                  <p className="mt-1 text-sm leading-6">{message.content}</p>
                 </div>
               ))
             )}
           </div>
 
-          {lastQuestion && (
-            <div className="mt-4 rounded-[20px] border border-border bg-white p-4">
-              <SectionLabel>Por qué importa</SectionLabel>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {lastQuestion.whyItMatters}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {lastQuestion.suggestedAngles.map((angle) => (
-                  <span
-                    className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-stone-600"
-                    key={angle}
-                  >
-                    {angle}
-                  </span>
-                ))}
-              </div>
+          {lastQuestion?.suggestedAngles.length ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {lastQuestion.suggestedAngles.map((angle) => (
+                <button
+                  className="rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-stone-600 transition hover:bg-muted"
+                  key={angle}
+                  onClick={() => setComposer(angle)}
+                  type="button"
+                >
+                  {angle}
+                </button>
+              ))}
             </div>
-          )}
+          ) : null}
 
           <div className="mt-4">
             <TextArea
               className="min-h-36"
               placeholder="Escribe tu respuesta o aclaración..."
+              ref={composerRef}
               value={composer}
               onChange={(event) => setComposer(event.target.value)}
             />
-            <div className="mt-3 flex justify-end gap-3">
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:justify-end">
               {clarificationTarget && (
                 <Button
                   onClick={() => setClarificationTarget(null)}
@@ -451,13 +464,21 @@ export function DiagnosisPage() {
           </div>
         </Card>
 
-        <div className="flex flex-col gap-5">
-          <DiagnosisResult
-            diagnosis={diagnosis}
-            onClarify={startClarification}
-            clarificationActive={Boolean(clarificationTarget)}
-          />
-          <TracePanel auditEvents={auditEvents} versions={versions} />
+        <DiagnosisResult
+          diagnosis={diagnosis}
+          onClarify={startClarification}
+          clarificationActive={Boolean(clarificationTarget)}
+        />
+
+        <div className="flex justify-end">
+          <Button
+            disabled={!diagnosis || criticalMissing.length > 0 || isBusy}
+            onClick={() => setActivePhaseId("signals")}
+            variant="secondary"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Confirmar y consultar señales
+          </Button>
         </div>
       </section>
     </div>
@@ -506,10 +527,10 @@ function DiagnosisResult({
     return (
       <Card className="flex min-h-[420px] flex-col justify-center p-7">
         <SectionLabel>Salida contractual</SectionLabel>
-        <h2 className="mt-3 text-3xl font-extrabold">
+        <h2 className="mt-3 text-xl font-semibold">
           Diagnóstico pendiente
         </h2>
-        <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+        <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
           Al cerrar, aquí aparecerán el reto recomendado, tensiones, métricas,
           restricciones y brief para Ideación.
         </p>
@@ -518,82 +539,92 @@ function DiagnosisResult({
   }
 
   return (
-    <Card className="p-7">
-      <div className="flex items-start gap-3">
-        <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-stone-900" />
-        <div>
-          <SectionLabel>Diagnóstico cerrado</SectionLabel>
-          <h2 className="mt-3 text-3xl font-extrabold">
-            {diagnosis.recommendedChallenge}
-          </h2>
-          <p className="mt-4 text-base leading-7 text-muted-foreground">
-            {diagnosis.whyThisChallenge}
-          </p>
+    <div className="grid gap-5">
+      <Card className="p-7">
+        <SectionLabel>Reto recomendado</SectionLabel>
+        <div className="mt-4 flex items-start gap-3">
+          <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-stone-900" />
+          <div>
+            <h2 className="text-2xl font-semibold leading-tight">
+              {diagnosis.recommendedChallenge}
+            </h2>
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">
+              {diagnosis.whyThisChallenge}
+            </p>
+            <div className="mt-6 border-t border-border pt-5">
+              <SectionLabel>Supuesto a cuestionar</SectionLabel>
+              <p className="mt-3 text-lg font-semibold leading-7 text-stone-900">
+                {diagnosis.assumptionToQuestion}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      <div className="mt-7 grid gap-4">
-        {clarifiableSections.map((section) => (
-          <DiagnosisList
-            disabled={clarificationActive}
-            items={section.getItems(diagnosis)}
-            key={section.key}
-            onClarify={() => onClarify(section.key, section.label)}
-            title={section.label}
-          />
-        ))}
-      </div>
+      <Card className="p-7">
+        <SectionLabel>Lectura diagnóstica</SectionLabel>
+        <div className="mt-5">
+          {clarifiableSections.map((section) => (
+            <DiagnosisRow
+              disabled={clarificationActive}
+              items={section.getItems(diagnosis)}
+              key={section.key}
+              onClarify={() => onClarify(section.key, section.label)}
+              title={section.title}
+            />
+          ))}
+        </div>
+      </Card>
 
-      <div className="mt-6 rounded-[20px] border border-border bg-surface-raised p-5">
-        <SectionLabel>Supuesto a cuestionar</SectionLabel>
-        <p className="mt-3 text-lg font-bold leading-7">
-          {diagnosis.assumptionToQuestion}
-        </p>
-      </div>
-
-      <div className="mt-4 rounded-[20px] border border-border bg-white p-5">
+      <Card className="p-7">
         <SectionLabel>Brief para ideación</SectionLabel>
-        <p className="mt-3 text-base leading-7 text-muted-foreground">
+        <p className="mt-4 text-sm leading-6 text-stone-700">
           {diagnosis.ideationBrief}
         </p>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 
-function DiagnosisList({
-  disabled,
+function DiagnosisRow({
+  disabled = false,
   items,
   onClarify,
   title,
 }: {
-  disabled: boolean;
+  disabled?: boolean;
   items: string[];
-  onClarify: () => void;
+  onClarify?: () => void;
   title: string;
 }) {
   return (
-    <div className="rounded-[18px] border border-border bg-surface-raised p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-bold text-stone-900">{title}</p>
-        <button
-          className="rounded-full border border-border bg-white px-3 py-1 text-xs font-bold text-stone-600 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-45"
-          disabled={disabled}
-          onClick={onClarify}
-          type="button"
-        >
-          Aclarar
-        </button>
+    <div className="border-b border-border py-5 first:pt-0 last:border-b-0 last:pb-0">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-stone-950">{title}</h3>
+          <p className="mt-4 text-sm leading-6 text-stone-600">
+            {formatDiagnosisItems(items)}
+          </p>
+        </div>
+        {onClarify ? (
+          <button
+            className="shrink-0 rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-stone-500 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={disabled}
+            onClick={onClarify}
+            type="button"
+          >
+            Aclarar
+          </button>
+        ) : null}
       </div>
-      <ul className="mt-3 space-y-2">
-        {(items.length ? items : ["Sin dato declarado"]).map((item) => (
-          <li className="text-sm leading-6 text-muted-foreground" key={item}>
-            {item}
-          </li>
-        ))}
-      </ul>
     </div>
   );
+}
+
+function formatDiagnosisItems(items: string[]) {
+  const cleanItems = items.map((item) => item.trim()).filter(Boolean);
+  if (!cleanItems.length) return "Sin dato declarado.";
+  return cleanItems.join(" ");
 }
 
 function TracePanel({
@@ -604,7 +635,7 @@ function TracePanel({
   versions: DiagnosisVersion[];
 }) {
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <SectionLabel>Trazabilidad</SectionLabel>
       <div className="mt-5 grid gap-4 xl:grid-cols-2">
         <div>

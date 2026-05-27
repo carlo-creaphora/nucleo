@@ -74,7 +74,6 @@ export function EvaluationPage() {
     evaluationWinnerId,
     ideationSets,
     prototypeClassification,
-    prototypeIdeaType,
     setActivePhaseId,
     setEvaluationConfirmed,
     setEvaluationScores,
@@ -144,6 +143,11 @@ export function EvaluationPage() {
         ({ key }) => Number(evaluationScores[entry.id]?.[key] ?? 0) > 0,
       ),
     );
+  const topScoreTie =
+    isComplete &&
+    rankedIdeas.length > 1 &&
+    rankedIdeas.filter((entry) => entry.total === rankedIdeas[0]?.total).length >
+      1;
 
   const updateScore = (
     ideaId: string,
@@ -164,7 +168,7 @@ export function EvaluationPage() {
   };
 
   const confirmScores = async () => {
-    if (!isComplete || !winner) return;
+    if (!isComplete || !winner || topScoreTie) return;
     setStatus("classifying");
     setError(null);
     try {
@@ -194,27 +198,19 @@ export function EvaluationPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>Evaluación de ideas</SectionLabel>
-        <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div className="mt-4">
           <div className="max-w-4xl">
-            <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+            <h1 className="phase-title">
               Puntajes humanos antes de decidir.
             </h1>
-            <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+            <p className="phase-summary">
               Todas las ideas arrancan en cero. La plataforma solo decide la
               ganadora cuando confirmas todos los criterios.
             </p>
           </div>
-          <Button
-            disabled={!evaluationConfirmed || !winner}
-            onClick={() => setActivePhaseId("prototype")}
-            variant="secondary"
-          >
-            Pasar a prototipado
-            <ArrowRight className="h-4 w-4" />
-          </Button>
         </div>
       </section>
 
@@ -222,10 +218,10 @@ export function EvaluationPage() {
 
       {!selectedIdeas.length ? (
         <Card className="p-10 text-center">
-          <h2 className="text-3xl font-extrabold">
+          <h2 className="text-xl font-semibold">
             Selecciona ideas en Ideación
           </h2>
-          <p className="mt-3 text-base leading-7 text-muted-foreground">
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
             La evaluación aparece cuando hay al menos una idea marcada para
             evaluar.
           </p>
@@ -237,8 +233,8 @@ export function EvaluationPage() {
         </Card>
       ) : (
         <>
-          <section className="grid gap-5 xl:grid-cols-[0.8fr_1.6fr]">
-            <Card className="p-7">
+          <section className="grid gap-5">
+            <Card className="p-5">
               <SectionLabel>Criterios</SectionLabel>
               <div className="mt-5 grid gap-4">
                 {evaluationCriteria.map((criterion) => (
@@ -257,11 +253,11 @@ export function EvaluationPage() {
               </div>
             </Card>
 
-            <Card className="p-7">
+            <Card className="p-5">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
                   <SectionLabel>Matriz de puntajes</SectionLabel>
-                  <h2 className="mt-3 text-3xl font-extrabold">
+                  <h2 className="mt-3 text-xl font-semibold">
                     {evaluationConfirmed
                       ? "Puntajes confirmados"
                       : "Califica de 1 a 5"}
@@ -270,10 +266,20 @@ export function EvaluationPage() {
                 <span className="rounded-full bg-muted px-4 py-2 text-sm font-bold text-stone-700">
                   {evaluationConfirmed && winner
                     ? `Ganadora: ${displayIdeaName(winner.idea)}`
+                    : topScoreTie
+                      ? "Empate pendiente"
                     : "Pendiente de confirmación"}
                 </span>
               </div>
-              <div className="mt-6 grid gap-5 xl:grid-cols-2">
+              {topScoreTie && (
+                <div className="mt-5 rounded-[18px] border border-amber-200 bg-amber-50 px-5 py-4">
+                  <p className="text-sm font-semibold text-amber-900">
+                    Hay empate en el puntaje mayor. Ajusta al menos un criterio
+                    para desempatar antes de confirmar la idea ganadora.
+                  </p>
+                </div>
+              )}
+              <div className="mt-6 grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
                 {rankedIdeas.map((entry) => (
                   <EvaluationIdeaCard
                     entry={entry}
@@ -286,10 +292,17 @@ export function EvaluationPage() {
                 <p className="text-sm font-semibold text-muted-foreground">
                   {evaluationConfirmed
                     ? "La decisión está lista para pasar a prototipado."
+                    : topScoreTie
+                      ? "Hay empate: desempata para que exista una única idea ganadora."
                     : "Completa todos los puntajes para confirmar."}
                 </p>
                 <Button
-                  disabled={evaluationConfirmed || !isComplete || status === "classifying"}
+                  disabled={
+                    evaluationConfirmed ||
+                    !isComplete ||
+                    topScoreTie ||
+                    status === "classifying"
+                  }
                   onClick={confirmScores}
                 >
                   {status === "classifying" ? (
@@ -305,12 +318,21 @@ export function EvaluationPage() {
 
           {evaluationConfirmed && winner && (
             <DecisionCard
-              classificationRationale={prototypeClassification?.rationale}
-              ideaType={prototypeIdeaType}
+              evaluationDecision={prototypeClassification?.evaluationDecision}
               runnerUp={runnerUp}
               winner={winner}
             />
           )}
+          <div className="flex justify-end">
+            <Button
+              disabled={!evaluationConfirmed || !winner}
+              onClick={() => setActivePhaseId("prototype")}
+              variant="secondary"
+            >
+              Pasar a prototipado
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </>
       )}
     </div>
@@ -372,22 +394,27 @@ function EvaluationIdeaCard({
 }
 
 function DecisionCard({
-  classificationRationale,
-  ideaType,
+  evaluationDecision,
   runnerUp,
   winner,
 }: {
-  classificationRationale?: string;
-  ideaType: string | null;
+  evaluationDecision?: {
+    criticalAssumptions: string;
+    firstThingToTest: string;
+    risksToWatch: string;
+  };
   runnerUp: EvaluationEntry | null;
   winner: EvaluationEntry;
 }) {
+  const decision =
+    evaluationDecision ?? buildFallbackEvaluationDecision(winner, runnerUp);
+
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <SectionLabel>Decisión de evaluación</SectionLabel>
-          <h2 className="mt-3 text-3xl font-extrabold">
+          <h2 className="mt-3 text-xl font-semibold">
             {displayIdeaName(winner.idea)}
           </h2>
         </div>
@@ -395,33 +422,18 @@ function DecisionCard({
           {winner.total} puntos
         </span>
       </div>
-      <div className="mt-6 grid gap-5 xl:grid-cols-2">
+      <div className="mt-6 grid gap-5 xl:grid-cols-3">
         <DecisionBox
           label="Supuestos críticos de la idea"
-          value={
-            winner.idea.supuestoQueRompe ||
-            "La idea depende de que el cliente valore una señal visible antes de una implementación completa."
-          }
+          value={decision.criticalAssumptions}
         />
         <DecisionBox
-          label="Qué probar primero principal"
-          value={
-            winner.idea.primerPasoEjecutable ||
-            winner.idea.mecanicaConcreta ||
-            "Diseñar una prueba acotada con un segmento y una métrica observable."
-          }
+          label="Qué probar primero"
+          value={decision.firstThingToTest}
         />
         <DecisionBox
           label="Riesgos a vigilar"
-          value={buildRiskWatchText(winner, runnerUp)}
-        />
-        <DecisionBox
-          label="Tipo de idea para prototipado"
-          value={
-            ideaType
-              ? `${ideaType}. ${classificationRationale ?? ""}`.trim()
-              : "Pendiente de clasificación."
-          }
+          value={decision.risksToWatch}
         />
       </div>
     </Card>
@@ -434,7 +446,7 @@ function DecisionBox({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-3 text-base leading-7 text-stone-800">{value}</p>
+      <p className="mt-3 text-sm leading-6 text-stone-800">{value}</p>
     </div>
   );
 }
@@ -491,6 +503,22 @@ function rankIdeas(left: EvaluationEntry, right: EvaluationEntry) {
 
 function displayIdeaName(idea: IdeationIdea) {
   return idea.idea.length > 88 ? `${idea.idea.slice(0, 85)}...` : idea.idea;
+}
+
+function buildFallbackEvaluationDecision(
+  winner: EvaluationEntry,
+  runnerUp: EvaluationEntry | null,
+) {
+  return {
+    criticalAssumptions:
+      winner.idea.supuestoQueRompe ||
+      "La idea depende de que el cliente valore una señal visible antes de una implementación completa.",
+    firstThingToTest:
+      winner.idea.primerPasoEjecutable ||
+      winner.idea.mecanicaConcreta ||
+      "Diseñar una prueba acotada con un segmento y una métrica observable.",
+    risksToWatch: buildRiskWatchText(winner, runnerUp),
+  };
 }
 
 function buildRiskWatchText(winner: EvaluationEntry, runnerUp: EvaluationEntry | null) {

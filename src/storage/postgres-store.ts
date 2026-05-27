@@ -1,4 +1,5 @@
 import pg from "pg";
+import type { DiagnosisDraft } from "../contracts/diagnosis.js";
 import type { IdeationRecord } from "../contracts/ideation.js";
 import type { PlaybookPhaseRecord } from "../contracts/playbook.js";
 import type { PrototypePhaseRecord } from "../contracts/prototype.js";
@@ -160,6 +161,29 @@ export class PostgresStore implements NucleoStore {
     );
 
     return result.rows.map((row) => this.toDiagnosisVersion(row));
+  }
+
+  async saveDiagnosisDraft(draft: DiagnosisDraft) {
+    await this.ensureSchema();
+    await this.pool.query(
+      `insert into nucleo_diagnosis_drafts
+        (cycle_id, draft, updated_at)
+       values ($1, $2, $3)
+       on conflict (cycle_id) do update set
+        draft = excluded.draft,
+        updated_at = excluded.updated_at`,
+      [draft.cycleId, draft, draft.updatedAt],
+    );
+  }
+
+  async getDiagnosisDraft(cycleId: string) {
+    await this.ensureSchema();
+    const result = await this.pool.query(
+      `select * from nucleo_diagnosis_drafts where cycle_id = $1 limit 1`,
+      [cycleId],
+    );
+
+    return result.rows[0] ? this.toDiagnosisDraft(result.rows[0]) : null;
   }
 
   async saveSignalsRun(run: StoredSignalsRun) {
@@ -431,6 +455,12 @@ export class PostgresStore implements NucleoStore {
         unique (cycle_id, version)
       );
 
+      create table if not exists nucleo_diagnosis_drafts (
+        cycle_id text primary key,
+        draft jsonb not null,
+        updated_at timestamptz not null
+      );
+
       create table if not exists nucleo_audit_events (
         id text primary key,
         cycle_id text,
@@ -506,6 +536,7 @@ export class PostgresStore implements NucleoStore {
       create index if not exists nucleo_registrations_company_idx on nucleo_registrations(company_id);
       create index if not exists nucleo_diagnosis_cycles_company_idx on nucleo_diagnosis_cycles(company_id);
       create index if not exists nucleo_diagnosis_versions_cycle_idx on nucleo_diagnosis_versions(cycle_id);
+      create index if not exists nucleo_diagnosis_drafts_updated_idx on nucleo_diagnosis_drafts(updated_at);
       create index if not exists nucleo_signals_runs_company_idx on nucleo_signals_runs(company_id);
       create index if not exists nucleo_ideation_runs_company_idx on nucleo_ideation_runs(company_id);
       create index if not exists nucleo_prototype_runs_cycle_idx on nucleo_prototype_runs(cycle_id);
@@ -555,6 +586,15 @@ export class PostgresStore implements NucleoStore {
       input: row.input as StoredDiagnosisVersion["input"],
       diagnosis: row.diagnosis as StoredDiagnosisVersion["diagnosis"],
       createdAt: new Date(String(row.created_at)).toISOString(),
+    };
+  }
+
+  private toDiagnosisDraft(row: Record<string, unknown>): DiagnosisDraft {
+    const draft = row.draft as DiagnosisDraft;
+    return {
+      ...draft,
+      cycleId: String(row.cycle_id),
+      updatedAt: new Date(String(row.updated_at)).toISOString(),
     };
   }
 

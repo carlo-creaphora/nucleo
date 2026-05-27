@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
-  BookOpenCheck,
   CheckCircle2,
   Loader2,
   LockKeyhole,
@@ -27,7 +26,6 @@ import { getSignals } from "../signals/signals-api.js";
 import {
   generatePlaybook,
   getPlaybook,
-  memoryDecision,
   toPlaybookOverride,
 } from "./playbook-api.js";
 
@@ -92,7 +90,7 @@ export function PlaybookPage({ mode = "playbook" }: PlaybookPageProps) {
       try {
         const [savedPlaybook, savedDiagnosis, savedSignals, savedIdeation, savedPrototype, savedResults] =
           await Promise.all([
-            getPlaybook(cycleId),
+            playbookRecord ? Promise.resolve(null) : getPlaybook(cycleId),
             diagnosis ? Promise.resolve(null) : getDiagnosisCycle(cycleId),
             signals ? Promise.resolve(null) : getSignals(cycleId).catch(() => null),
             ideationSets.length ? Promise.resolve(null) : getIdeationRun(cycleId),
@@ -104,7 +102,7 @@ export function PlaybookPage({ mode = "playbook" }: PlaybookPageProps) {
               : getResultsState(cycleId),
           ]);
 
-        if (savedPlaybook) setPlaybookRecord(savedPlaybook);
+        if (savedPlaybook && !playbookRecord) setPlaybookRecord(savedPlaybook);
         if (savedDiagnosis?.diagnosis) setDiagnosis(savedDiagnosis.diagnosis);
         if (savedDiagnosis?.companyId) setCompanyId(savedDiagnosis.companyId);
         if (savedDiagnosis?.licenseId) setLicenseId(savedDiagnosis.licenseId);
@@ -144,6 +142,7 @@ export function PlaybookPage({ mode = "playbook" }: PlaybookPageProps) {
     diagnosis,
     evidenceReading,
     ideationSets.length,
+    playbookRecord,
     prototypeArtifact,
     prototypeRouteId,
     resultsRecords.length,
@@ -252,34 +251,21 @@ export function PlaybookPage({ mode = "playbook" }: PlaybookPageProps) {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>{mode === "memory" ? "Memoria de ciclos" : "Playbook"}</SectionLabel>
         <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-4xl">
-            <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+            <h1 className="phase-title">
               {mode === "memory"
                 ? "Cerrar el ciclo como aprendizaje reutilizable."
                 : "Convertir avance validado en ejecución gerencial."}
             </h1>
-            <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+            <p className="phase-summary">
               Playbook solo existe cuando la ruta final es Avanzar. Las demás
               rutas cierran memoria sin disfrazar evidencia débil como escala.
             </p>
           </div>
-          <Button
-            disabled={!canClose || status === "closing" || Boolean(currentRecord)}
-            onClick={closeCycle}
-          >
-            {status === "closing" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : isPlaybookRoute ? (
-              <BookOpenCheck className="h-4 w-4" />
-            ) : (
-              <LockKeyhole className="h-4 w-4" />
-            )}
-            {isPlaybookRoute ? "Generar Playbook" : "Cerrar memoria"}
-          </Button>
         </div>
       </section>
 
@@ -288,12 +274,12 @@ export function PlaybookPage({ mode = "playbook" }: PlaybookPageProps) {
       {status === "loading" ? (
         <Card className="p-10 text-center">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-          <h2 className="mt-4 text-3xl font-extrabold">Cargando cierre</h2>
+          <h2 className="mt-4 text-xl font-semibold">Cargando cierre</h2>
         </Card>
       ) : !route || !evidenceReading || !finalRoute ? (
         <Card className="p-10 text-center">
-          <h2 className="text-3xl font-extrabold">Falta decisión final</h2>
-          <p className="mt-3 text-base leading-7 text-muted-foreground">
+          <h2 className="text-xl font-semibold">Falta decisión final</h2>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
             Completa lectura de evidencias y selecciona una ruta metodológica
             antes de cerrar el ciclo.
           </p>
@@ -317,6 +303,22 @@ export function PlaybookPage({ mode = "playbook" }: PlaybookPageProps) {
           recordsCount={resultsRecords.length}
         />
       )}
+
+      {status !== "loading" && route && evidenceReading && finalRoute ? (
+        <div className="flex justify-end">
+          <Button
+            disabled={!canClose || status === "closing" || Boolean(currentRecord)}
+            onClick={closeCycle}
+          >
+            {status === "closing" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <LockKeyhole className="h-4 w-4" />
+            )}
+            Cerrar ciclo y guardar en memoria
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -342,80 +344,113 @@ function PendingClose({
 }) {
   return (
     <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-      <Card className="p-7">
-        <SectionLabel>Ruta final</SectionLabel>
-        <h2 className="mt-3 text-3xl font-extrabold">{routeLabels[finalRoute]}</h2>
-        <p className="mt-3 text-base leading-7 text-stone-700">
-          Recomendación IA: {routeLabels[evidenceReading.methodologicalRoute]}.
-          Decisión de lectura: {evidenceReading.decision} con confianza{" "}
-          {evidenceReading.confidence.toLowerCase()}.
-        </p>
-        <div className="mt-5 grid gap-3">
-          <Kpi label="Artefacto" value={route.artifact} />
-          <Kpi
-            label="Muestra"
-            value={`${recordsCount}/${route.evidenceScope.sampleTargetMin}`}
-          />
-          <Kpi
-            label="Cierre"
-            value={isPlaybookRoute ? "Playbook + memoria" : "Solo memoria"}
-          />
-        </div>
-      </Card>
-
-      <Card className="p-7">
-        <SectionLabel>Control anti-optimismo</SectionLabel>
-        <h2 className="mt-3 text-3xl font-extrabold">
-          {isPlaybookRoute
-            ? "El avance debe respetar lo que el artefacto no valida."
-            : "El ciclo se guarda sin plan de escala."}
-        </h2>
-        <p className="mt-3 text-base leading-7 text-stone-700">
-          {evidenceReading.rationale}
-        </p>
-        <TextBox label="Qué valida" value={route.evidenceScope.validates} />
-        <TextBox label="Qué no valida" value={route.evidenceScope.doesNotValidate} />
-        {needsAdvanceOverride && (
-          <label className="mt-6 grid gap-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Razón ejecutiva para avanzar contra recomendación IA
-            </span>
-            <TextArea
-              className="min-h-28"
-              onChange={(event) => onOverrideChange(event.target.value)}
-              placeholder="Explica la razón trazable para generar Playbook aunque la IA no recomendó avanzar."
-              value={overrideReason}
+        <Card className="p-5">
+          <SectionLabel>Ruta final</SectionLabel>
+          <h2 className="mt-3 text-xl font-semibold">{routeLabels[finalRoute]}</h2>
+          <p className="mt-3 text-sm leading-6 text-stone-700">
+            Recomendación IA: {routeLabels[evidenceReading.methodologicalRoute]}.
+            Decisión de lectura: {evidenceReading.decision} con confianza{" "}
+            {evidenceReading.confidence.toLowerCase()}.
+          </p>
+          <div className="mt-5 grid gap-3">
+            <Kpi label="Artefacto" value={route.artifact} />
+            <Kpi
+              label="Muestra"
+              value={`${recordsCount}/${route.evidenceScope.sampleTargetMin}`}
             />
-          </label>
-        )}
-      </Card>
+            <Kpi
+              label="Cierre"
+              value={isPlaybookRoute ? "Playbook + memoria" : "Solo memoria"}
+            />
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <SectionLabel>Control anti-optimismo</SectionLabel>
+          <h2 className="mt-3 text-xl font-semibold">
+            {isPlaybookRoute
+              ? "El avance debe respetar lo que el artefacto no valida."
+              : "El ciclo se guarda sin plan de escala."}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-stone-700">
+            {evidenceReading.rationale}
+          </p>
+          <TextBox label="Qué valida" value={route.evidenceScope.validates} />
+          <TextBox label="Qué no valida" value={route.evidenceScope.doesNotValidate} />
+          {needsAdvanceOverride && (
+            <label className="mt-6 grid gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Razón ejecutiva para avanzar contra recomendación IA
+              </span>
+              <TextArea
+                className="min-h-28"
+                onChange={(event) => onOverrideChange(event.target.value)}
+                placeholder="Explica la razón trazable para generar Playbook aunque la IA no recomendó avanzar."
+                value={overrideReason}
+              />
+            </label>
+          )}
+        </Card>
     </section>
   );
 }
 
 function ClosedCycle({ record }: { record: PlaybookPhaseRecord }) {
+  const playbook = record.playbook;
+  const primaryTitle =
+    playbook?.validatedMove ?? record.memory.nextRecommendedMove;
+  const primaryText = playbook?.executiveDecision ?? record.memory.evidenceReading;
+  const keyLearning =
+    record.memory.keyLearnings[0] ??
+    playbook?.whyNow ??
+    record.memory.nextRecommendedMove;
+
   return (
     <>
-      <Card className="p-7">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <SectionLabel>{record.playbook ? "Playbook generado" : "Memoria cerrada"}</SectionLabel>
-            <h2 className="mt-3 text-3xl font-extrabold">
-              {record.playbook?.validatedMove ?? record.memory.nextRecommendedMove}
-            </h2>
-            <p className="mt-3 max-w-4xl text-base leading-7 text-stone-700">
-              {record.playbook?.executiveDecision ?? record.memory.evidenceReading}
-            </p>
+      <section className="grid overflow-hidden rounded-[28px] border border-border bg-surface shadow-workspace xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="bg-stone-950 p-8 text-white xl:p-10">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold text-white/75">
+              Decisión: {routeLabels[record.methodologicalRoute]}
+            </span>
+            <span className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold text-white/75">
+              Ruta IA: {routeLabels[record.recommendedRoute]}
+            </span>
           </div>
-          <div className="grid min-w-72 gap-3">
-            <Kpi label="Ruta final" value={routeLabels[record.methodologicalRoute]} />
-            <Kpi label="Recomendación IA" value={routeLabels[record.recommendedRoute]} />
-            <Kpi label="Memoria" value={memoryDecision(record.memory)} />
-          </div>
+          <SectionLabel className="mt-10 text-white/55">
+            {playbook ? "Playbook generado" : "Memoria cerrada"}
+          </SectionLabel>
+          <h2 className="mt-4 max-w-4xl text-3xl font-extrabold leading-[1.06] tracking-normal md:text-4xl xl:text-5xl">
+            {primaryTitle}
+          </h2>
+          <p className="mt-7 max-w-3xl text-base leading-8 text-white/70">
+            {primaryText}
+          </p>
         </div>
-      </Card>
 
-      {record.playbook ? <PlaybookDetail playbook={record.playbook} /> : null}
+        <div className="grid content-start gap-5 p-6 xl:p-8">
+          <Card className="p-6">
+            <SectionLabel>Aprendizaje clave</SectionLabel>
+            <p className="mt-4 text-lg font-semibold leading-8 text-stone-800">
+              {keyLearning}
+            </p>
+          </Card>
+        </div>
+      </section>
+
+      {playbook ? (
+        <Card className="p-6">
+          <SectionLabel>Cadena de evidencia</SectionLabel>
+          <div className="mt-5 grid gap-5 xl:grid-cols-4">
+            <EvidenceItem label="Acción" value={playbook.evidenceChain.action} />
+            <EvidenceItem label="Prototipo" value={playbook.evidenceChain.prototype} />
+            <EvidenceItem label="Lectura" value={playbook.evidenceChain.reading} />
+            <EvidenceItem label="Resultado" value={playbook.evidenceChain.result} />
+          </div>
+        </Card>
+      ) : null}
+
+      {playbook ? <PlaybookDetail playbook={playbook} /> : null}
       <MemoryDetail memory={record.memory} />
     </>
   );
@@ -424,18 +459,7 @@ function ClosedCycle({ record }: { record: PlaybookPhaseRecord }) {
 function PlaybookDetail({ playbook }: { playbook: PlaybookOutput }) {
   return (
     <>
-      <section className="grid gap-5 xl:grid-cols-4">
-        {Object.entries(playbook.evidenceChain).map(([label, value]) => (
-          <Card className="p-6" key={label}>
-            <SectionLabel>{label}</SectionLabel>
-            <p className="mt-3 text-base font-semibold leading-7 text-stone-800">
-              {value}
-            </p>
-          </Card>
-        ))}
-      </section>
-
-      <Card className="p-7">
+      <Card className="p-5">
         <SectionLabel>Plan 0-90</SectionLabel>
         <div className="mt-5 grid gap-4 xl:grid-cols-3">
           {playbook.implementationPlan.map((item) => (
@@ -469,7 +493,7 @@ function PlaybookDetail({ playbook }: { playbook: PlaybookOutput }) {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
-        <Card className="p-7">
+        <Card className="p-5">
           <SectionLabel>Métricas</SectionLabel>
           <div className="mt-5 grid gap-3">
             {playbook.metricsToMonitor.map((metric) => (
@@ -485,7 +509,7 @@ function PlaybookDetail({ playbook }: { playbook: PlaybookOutput }) {
             ))}
           </div>
         </Card>
-        <Card className="p-7">
+        <Card className="p-5">
           <SectionLabel>Riesgos y controles</SectionLabel>
           <div className="mt-5 grid gap-3">
             {playbook.risksAndControls.map((item) => (
@@ -503,10 +527,10 @@ function PlaybookDetail({ playbook }: { playbook: PlaybookOutput }) {
         </Card>
       </section>
 
-      <Card className="p-7">
+      <Card className="p-5">
         <SectionLabel>Resumen exportable</SectionLabel>
         <h2 className="mt-3 text-2xl font-extrabold">{playbook.whyNow}</h2>
-        <p className="mt-4 text-base leading-7 text-stone-700">
+        <p className="mt-4 text-sm leading-6 text-stone-700">
           {playbook.exportSummary}
         </p>
         <div className="mt-5 grid gap-5 xl:grid-cols-3">
@@ -524,20 +548,20 @@ function PlaybookDetail({ playbook }: { playbook: PlaybookOutput }) {
 
 function MemoryDetail({ memory }: { memory: CycleMemory }) {
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <div className="flex items-start gap-4">
         <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-border bg-surface-raised">
           <CheckCircle2 className="h-6 w-6 text-stone-800" />
         </div>
         <div>
           <SectionLabel>Memoria solo lectura</SectionLabel>
-          <h2 className="mt-3 text-3xl font-extrabold">{memory.title}</h2>
-          <p className="mt-3 text-base leading-7 text-stone-700">
+          <h2 className="mt-3 text-xl font-semibold">{memory.title}</h2>
+          <p className="mt-3 text-sm leading-6 text-stone-700">
             {memory.nextRecommendedMove}
           </p>
         </div>
       </div>
-      <section className="mt-7 grid gap-5 xl:grid-cols-2">
+      <section className="mt-5 grid gap-5 xl:grid-cols-2">
         <ListCard title="Aprendizajes" eyebrow="Memoria" items={memory.keyLearnings} />
         <ListCard
           title="Supuestos no resueltos"
@@ -562,6 +586,17 @@ function Kpi({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <strong className="mt-2 block text-xl font-extrabold">{value}</strong>
+    </div>
+  );
+}
+
+function EvidenceItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-l border-border px-5 py-1">
+      <SectionLabel>{label}</SectionLabel>
+      <p className="mt-3 text-base font-semibold leading-7 text-stone-800">
+        {value}
+      </p>
     </div>
   );
 }

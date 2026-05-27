@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Boxes, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Boxes, FileText, Loader2, Sparkles } from "lucide-react";
 import {
   useAppState,
   type EvaluationScores,
@@ -181,27 +181,19 @@ export function PrototypePage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>Prototipado rápido</SectionLabel>
-        <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div className="mt-4">
           <div className="max-w-4xl">
-            <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+            <h1 className="phase-title">
               Convierte la ganadora en artefacto testeable.
             </h1>
-            <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+            <p className="phase-summary">
               Núcleo usa el tipo clasificado por IA y solo muestra las dos rutas
               correspondientes. La evidencia se registra después.
             </p>
           </div>
-          <Button
-            disabled={!prototypeArtifact}
-            onClick={() => setActivePhaseId("results")}
-            variant="secondary"
-          >
-            Registrar resultados
-            <ArrowRight className="h-4 w-4" />
-          </Button>
         </div>
       </section>
 
@@ -210,10 +202,10 @@ export function PrototypePage() {
       {!winner || !prototypeIdeaType ? (
         <Card className="p-10 text-center">
           <Boxes className="mx-auto h-8 w-8 text-muted-foreground" />
-          <h2 className="mt-4 text-3xl font-extrabold">
+          <h2 className="mt-4 text-xl font-semibold">
             Confirma Evaluación antes de prototipar
           </h2>
-          <p className="mt-3 text-base leading-7 text-muted-foreground">
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
             Prototipado requiere una idea ganadora única y una clasificación de
             tipo de idea.
           </p>
@@ -225,53 +217,15 @@ export function PrototypePage() {
         </Card>
       ) : (
         <>
-          <Card className="p-7">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <SectionLabel>{prototypeIdeaType}</SectionLabel>
-                <h2 className="mt-3 text-3xl font-extrabold">
-                  {displayIdeaName(winner.idea)}
-                </h2>
-                <p className="mt-3 max-w-4xl text-base leading-7 text-muted-foreground">
-                  Supuesto que rompe:{" "}
-                  {winner.idea.supuestoQueRompe || "Supuesto no declarado."}
-                </p>
-              </div>
-              {prototypeClassification?.rationale && (
-                <p className="max-w-xl rounded-[18px] border border-border bg-surface-raised p-4 text-sm leading-6 text-stone-700">
-                  {prototypeClassification.rationale}
-                </p>
-              )}
-            </div>
-
-            <div className="mt-6 grid gap-4 xl:grid-cols-2">
-              {availableRoutes.map((route, index) => (
-                <button
-                  className={
-                    route.id === activeRoute?.id
-                      ? "rounded-[22px] border border-black bg-black p-5 text-left text-white"
-                      : "rounded-[22px] border border-border bg-surface-raised p-5 text-left transition hover:border-black hover:bg-white"
-                  }
-                  key={route.id}
-                  onClick={() => {
-                    setPrototypeRouteId(route.id);
-                    setPrototypeArtifact(null);
-                  }}
-                  type="button"
-                >
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] opacity-70">
-                    Ruta {index + 1}
-                  </span>
-                  <strong className="mt-2 block text-xl">
-                    {route.method} · {route.artifact}
-                  </strong>
-                  <span className="mt-3 block text-sm leading-6 opacity-80">
-                    {route.summary}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </Card>
+          <PrototypeHero
+            activeRoute={activeRoute}
+            availableRoutes={availableRoutes}
+            ideaType={prototypeIdeaType}
+            rationale={prototypeClassification?.rationale}
+            setPrototypeArtifact={setPrototypeArtifact}
+            setPrototypeRouteId={setPrototypeRouteId}
+            winner={winner}
+          />
 
           {activeRoute && (
             <section className="grid gap-5">
@@ -312,6 +266,84 @@ export function PrototypePage() {
   );
 }
 
+function PrototypeHero({
+  activeRoute,
+  availableRoutes,
+  ideaType,
+  rationale,
+  setPrototypeArtifact,
+  setPrototypeRouteId,
+  winner,
+}: {
+  activeRoute: PrototypeRoute | null;
+  availableRoutes: PrototypeRoute[];
+  ideaType: string;
+  rationale?: string;
+  setPrototypeArtifact: (artifact: ReturnType<typeof useAppState>["prototypeArtifact"]) => void;
+  setPrototypeRouteId: (routeId: string | null) => void;
+  winner: WinnerEntry;
+}) {
+  return (
+    <Card className="overflow-hidden p-0">
+      <div className="flex flex-col items-center px-8 py-12 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-[24px] bg-black text-white shadow-soft">
+          <FileText className="h-9 w-9" />
+        </div>
+        <SectionLabel className="mt-7">{ideaType}</SectionLabel>
+        <h2 className="mt-3 max-w-4xl text-3xl font-extrabold leading-tight">
+          {displayIdeaName(winner.idea)}
+        </h2>
+        <p className="mt-4 max-w-4xl text-base font-semibold leading-7 text-stone-600">
+          Supuesto que rompe:{" "}
+          {winner.idea.supuestoQueRompe || "Supuesto no declarado."}
+        </p>
+        {rationale && (
+          <p className="mt-4 max-w-5xl text-sm leading-7 text-muted-foreground">
+            {rationale}
+          </p>
+        )}
+      </div>
+
+      <div className="grid border-t border-border xl:grid-cols-2">
+        {availableRoutes.map((route, index) => {
+          const active = route.id === activeRoute?.id;
+          return (
+            <button
+              className="group flex min-h-40 gap-5 border-b border-border bg-white px-8 py-7 text-left transition hover:bg-surface-raised xl:border-b-0 xl:border-r xl:last:border-r-0"
+              key={route.id}
+              onClick={() => {
+                setPrototypeRouteId(route.id);
+                setPrototypeArtifact(null);
+              }}
+              type="button"
+            >
+              <span
+                className={
+                  active
+                    ? "mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white"
+                    : "mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-white text-stone-700 group-hover:border-black"
+                }
+              >
+                <ArrowRight className="h-5 w-5" />
+              </span>
+              <span>
+                <strong className="block text-xl font-extrabold leading-tight">
+                  Ruta {index + 1} · {route.method}
+                  <br />
+                  {route.artifact}
+                </strong>
+                <span className="mt-3 block text-sm leading-6 text-muted-foreground">
+                  {route.summary}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 function RouteSummary({ route }: { route: PrototypeRoute }) {
   return (
     <section className="grid gap-5 xl:grid-cols-3">
@@ -334,9 +366,9 @@ function BuilderCard({
   winner: WinnerEntry;
 }) {
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <SectionLabel>Constructor en plataforma</SectionLabel>
-      <h2 className="mt-3 text-3xl font-extrabold">Completa lo esencial</h2>
+      <h2 className="mt-3 text-xl font-semibold">Completa lo esencial</h2>
       <div className="mt-6 grid gap-4 xl:grid-cols-2">
         {route.buildFields.map(([label, description]) => {
           const key = fieldKey(label);
@@ -366,17 +398,12 @@ function BuilderCard({
 
 function EvidenceCard({ route }: { route: PrototypeRoute }) {
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <SectionLabel>Alcance de evidencia</SectionLabel>
-      <h2 className="mt-3 text-3xl font-extrabold">{route.evidenceScope.sample}</h2>
+      <h2 className="mt-3 text-xl font-semibold">{route.evidenceScope.sample}</h2>
       <div className="mt-6 grid gap-5 xl:grid-cols-2">
         <TextBox label="Qué valida" value={route.evidenceScope.validates} />
         <TextBox label="Qué no valida" value={route.evidenceScope.doesNotValidate} />
-      </div>
-      <div className="mt-6 grid gap-4 xl:grid-cols-3">
-        <TextBox label="Avanzar" value={route.evidenceScope.thresholds.advance} />
-        <TextBox label="Iterar" value={route.evidenceScope.thresholds.iterate} />
-        <TextBox label="Replantear" value={route.evidenceScope.thresholds.rethink} />
       </div>
     </Card>
   );
@@ -403,12 +430,12 @@ function ArtifactCard({
 }) {
   const thresholds = artifact.evidenceScope?.thresholds ?? route.evidenceScope.thresholds;
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <SectionLabel>Artefacto listo</SectionLabel>
-          <h2 className="mt-3 text-3xl font-extrabold">{artifact.title}</h2>
-          <p className="mt-3 max-w-4xl text-base leading-7 text-muted-foreground">
+          <h2 className="mt-3 text-xl font-semibold">{artifact.title}</h2>
+          <p className="mt-3 max-w-4xl text-sm leading-6 text-muted-foreground">
             {artifact.objective}
           </p>
         </div>
@@ -418,16 +445,16 @@ function ArtifactCard({
       </div>
 
       <div className="mt-6 grid gap-4">
-        <TextBox label="Cómo usarlo" value={artifact.howToUse} />
+        <ListTextBox label="Cómo usarlo" value={artifact.howToUse} />
         {artifact.artifact.map((item) => (
           <TextBox key={item.label} label={item.label} value={item.content} />
         ))}
       </div>
 
       <div className="mt-6 grid gap-5 xl:grid-cols-3">
-        <TextBox label="Avanzar" value={thresholds.advance} />
-        <TextBox label="Iterar" value={thresholds.iterate} />
-        <TextBox label="Replantear" value={thresholds.rethink} />
+        <TrafficLightBox tone="green" label="Avanzar" value={thresholds.advance} />
+        <TrafficLightBox tone="yellow" label="Iterar" value={thresholds.iterate} />
+        <TrafficLightBox tone="red" label="Replantear" value={thresholds.rethink} />
       </div>
 
       <div className="mt-6 grid gap-5 xl:grid-cols-2">
@@ -475,7 +502,51 @@ function TextBox({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-3 text-base leading-7 text-stone-800">{value}</p>
+      <p className="mt-3 text-sm leading-6 text-stone-800">{value}</p>
+    </div>
+  );
+}
+
+function ListTextBox({ label, value }: { label: string; value: string }) {
+  const items = splitInstructionList(value);
+  return (
+    <div className="rounded-[20px] border border-border bg-surface-raised p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </p>
+      <ol className="mt-3 grid list-decimal gap-2 pl-5 text-sm leading-6 text-stone-800">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function TrafficLightBox({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone: "green" | "yellow" | "red";
+  value: string;
+}) {
+  const styles = {
+    green: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    red: "border-red-200 bg-red-50 text-red-700",
+    yellow: "border-amber-200 bg-amber-50 text-amber-700",
+  }[tone];
+
+  return (
+    <div className="rounded-[20px] border border-border bg-white p-5">
+      <div className="flex items-center gap-3">
+        <span className={`h-3 w-3 rounded-full border ${styles}`} />
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          {label}
+        </p>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-stone-800">{value}</p>
     </div>
   );
 }
@@ -486,6 +557,22 @@ function Notice({ children }: { children: string }) {
       <p className="text-sm font-semibold text-red-800">{children}</p>
     </div>
   );
+}
+
+function splitInstructionList(value: string) {
+  const byLine = value
+    .split(/\n+/)
+    .map((item) => item.replace(/^\s*(?:[-•*]|\d+[.)])\s*/, "").trim())
+    .filter(Boolean);
+
+  if (byLine.length > 1) return byLine;
+
+  const bySentence = value
+    .split(/(?<=[.!?])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return bySentence.length ? bySentence : [value];
 }
 
 function getWinner({

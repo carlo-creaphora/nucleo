@@ -1,4 +1,5 @@
 import { get, put } from "@vercel/blob";
+import type { DiagnosisDraft } from "../contracts/diagnosis.js";
 import type { IdeationRecord } from "../contracts/ideation.js";
 import type { PlaybookPhaseRecord } from "../contracts/playbook.js";
 import type { PrototypePhaseRecord } from "../contracts/prototype.js";
@@ -16,6 +17,7 @@ type StoreFile = {
   registrations: RegistrationRecord[];
   diagnosisCycles: StoredDiagnosisCycle[];
   diagnosisVersions: StoredDiagnosisVersion[];
+  diagnosisDrafts: DiagnosisDraft[];
   signalsRuns: StoredSignalsRun[];
   ideationRuns: IdeationRecord[];
   prototypeRuns: PrototypePhaseRecord[];
@@ -29,6 +31,7 @@ const emptyStore: StoreFile = {
   registrations: [],
   diagnosisCycles: [],
   diagnosisVersions: [],
+  diagnosisDrafts: [],
   signalsRuns: [],
   ideationRuns: [],
   prototypeRuns: [],
@@ -41,7 +44,7 @@ const emptyStore: StoreFile = {
 let transientStore: StoreFile = structuredClone(emptyStore);
 
 export class BlobStore implements NucleoStore {
-  constructor(private readonly pathname = "nucleo/demo-store.json") {}
+  constructor(private readonly pathname = "nucleo/store.json") {}
 
   async saveRegistration(registration: RegistrationRecord) {
     const data = await this.read();
@@ -109,6 +112,23 @@ export class BlobStore implements NucleoStore {
     return data.diagnosisVersions
       .filter((item) => item.cycleId === cycleId)
       .sort((left, right) => left.version - right.version);
+  }
+
+  async saveDiagnosisDraft(draft: DiagnosisDraft) {
+    const data = await this.read();
+    const index = data.diagnosisDrafts.findIndex(
+      (item) => item.cycleId === draft.cycleId,
+    );
+
+    if (index >= 0) data.diagnosisDrafts[index] = draft;
+    else data.diagnosisDrafts.push(draft);
+
+    await this.write(data);
+  }
+
+  async getDiagnosisDraft(cycleId: string) {
+    const data = await this.read();
+    return data.diagnosisDrafts.find((item) => item.cycleId === cycleId) ?? null;
   }
 
   async saveSignalsRun(run: StoredSignalsRun) {
@@ -244,6 +264,7 @@ export class BlobStore implements NucleoStore {
         registrations: data.registrations ?? [],
         diagnosisCycles: data.diagnosisCycles ?? [],
         diagnosisVersions: data.diagnosisVersions ?? [],
+        diagnosisDrafts: data.diagnosisDrafts ?? [],
         signalsRuns: data.signalsRuns ?? [],
         ideationRuns: data.ideationRuns ?? [],
         prototypeRuns: data.prototypeRuns ?? [],

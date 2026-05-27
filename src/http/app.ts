@@ -120,6 +120,18 @@ export function createApp() {
     return context.json(result);
   });
 
+  app.get("/api/registration/cycles/:cycleId", async (context) => {
+    const registration = await registrationService.getByCycle(
+      context.req.param("cycleId"),
+    );
+
+    if (!registration) {
+      return context.json({ error: "registration_not_found" }, 404);
+    }
+
+    return context.json({ registration });
+  });
+
   app.get("/api/registration/:registrationId", async (context) => {
     const registration = await registrationService.get(
       context.req.param("registrationId"),
@@ -167,6 +179,21 @@ export function createApp() {
   app.get("/api/diagnosis/cycles/:cycleId/versions", async (context) => {
     const versions = await service.listVersions(context.req.param("cycleId"));
     return context.json({ versions });
+  });
+
+  app.get("/api/diagnosis/cycles/:cycleId/draft", async (context) => {
+    const draft = await service.getDraft(context.req.param("cycleId"));
+    return context.json({ draft });
+  });
+
+  app.put("/api/diagnosis/cycles/:cycleId/draft", async (context) => {
+    const body = await context.req.json();
+    const draft = await service.saveDraft({
+      ...body,
+      cycleId: context.req.param("cycleId"),
+      updatedAt: new Date().toISOString(),
+    });
+    return context.json({ draft });
   });
 
   app.get("/api/diagnosis/cycles/:cycleId/audit", async (context) => {

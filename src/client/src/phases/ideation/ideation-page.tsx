@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertCircle,
   ArrowRight,
-  CheckCircle2,
+  Fullscreen,
   Maximize2,
+  Minimize2,
   Loader2,
   Plus,
   Sparkles,
@@ -17,6 +18,7 @@ import {
   type IdeationRuptureType,
   type IdeationSelection,
   type IdeationSet,
+  type PrototypeIdeaType,
 } from "../../app-state.js";
 import { Button } from "../../components/ui/button.js";
 import { Card, SectionLabel } from "../../components/ui/card.js";
@@ -34,9 +36,23 @@ type CompleteIdeationSelection = {
   insightTitle: string;
 };
 
+type ManualIdeaInput = Pick<
+  IdeationIdea,
+  "idea" | "tipoDeIdea" | "supuestoQueRompe" | "mecanicaConcreta" | "porQueFunciona"
+>;
+
+const prototypeIdeaTypes: PrototypeIdeaType[] = [
+  "Servicio / experiencia",
+  "Producto digital / interfaz",
+  "Proceso / operación",
+  "Modelo comercial / acceso",
+  "Producto físico / tangible",
+];
+
 export function IdeationPage() {
   const {
     cycleId,
+    diagnosis,
     ideationOptions,
     ideationSelection,
     ideationSets,
@@ -182,7 +198,7 @@ export function IdeationPage() {
 
   const addManualIdea = (
     set: IdeationSet | null,
-    manual: Pick<IdeationIdea, "idea" | "supuestoQueRompe" | "mecanicaConcreta">,
+    manual: ManualIdeaInput,
   ) => {
     const targetSet =
       set ??
@@ -209,28 +225,20 @@ export function IdeationPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>Ideación disruptiva</SectionLabel>
-        <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div className="mt-4">
           <div className="max-w-4xl">
-            <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+            <h1 className="phase-title">
               Rutas de ruptura desde gaps e insights.
             </h1>
-            <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+            <p className="phase-summary">
               Elige ruptura, gap e insight. Cada combinación genera un set por
               ruta, una idea IA por vez, máximo 4 ideas IA por ruta. Las ideas
               manuales no tienen límite.
             </p>
           </div>
-          <Button
-            disabled={selectedCount === 0}
-            onClick={() => setActivePhaseId("evaluation")}
-            variant="secondary"
-          >
-            Evaluar ideas seleccionadas ({selectedCount})
-            <ArrowRight className="h-4 w-4" />
-          </Button>
         </div>
       </section>
 
@@ -241,140 +249,27 @@ export function IdeationPage() {
         addManualIdea={addManualIdea}
         completeSelection={completeSelection}
         generatedAiCount={generatedAiCount}
+        recommendedChallenge={diagnosis?.recommendedChallenge ?? "Reto recomendado"}
         ideationOptions={ideationOptions}
         ideationSelection={ideationSelection}
         ideationSets={ideationSets}
         runGeneration={runGeneration}
-        selectedCount={selectedCount}
         selectedSet={selectedSet ?? null}
-        setActivePhaseId={setActivePhaseId}
         status={status}
         updateIdea={updateIdea}
         updateSelection={updateSelection}
       />
 
-      <section className="grid gap-5 xl:grid-cols-3">
-        <ChoiceColumn
-          disabled={!ideationOptions}
-          label="Nivel 1"
-          title="Ruptura"
-          items={(ideationOptions?.ruptureTypes ?? []).map((route) => ({
-            active: ideationSelection.ruptureType === route.id,
-            description: route.description,
-            id: route.id,
-            title: route.title,
-            onClick: () =>
-              updateSelection({
-                gapTitle: null,
-                insightTitle: null,
-                ruptureType: route.id,
-              }),
-          }))}
-        />
-        <ChoiceColumn
-          disabled={!ideationSelection.ruptureType}
-          label="Nivel 2"
-          title="Gap"
-          items={(ideationOptions?.gaps ?? []).map((gap) => ({
-            active: ideationSelection.gapTitle === gap.title,
-            description: gap.implicationForIdeation,
-            id: gap.title,
-            title: gap.title,
-            onClick: () =>
-              updateSelection({ gapTitle: gap.title, insightTitle: null }),
-          }))}
-        />
-        <ChoiceColumn
-          disabled={!ideationSelection.gapTitle}
-          label="Nivel 3"
-          title="Insight"
-          items={(ideationOptions?.insights ?? []).map((insight) => ({
-            active: ideationSelection.insightTitle === insight.title,
-            description: insight.promptParaIdeacion,
-            id: insight.title,
-            title: insight.title,
-            onClick: () => updateSelection({ insightTitle: insight.title }),
-          }))}
-        />
-      </section>
-
-      <Card className="p-7">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <SectionLabel>Ruta seleccionada</SectionLabel>
-            <h2 className="mt-3 text-3xl font-extrabold">
-              {completeSelection
-                ? "Lista para generar idea"
-                : "Completa ruptura, gap e insight"}
-            </h2>
-            <p className="mt-3 text-base leading-7 text-muted-foreground">
-              {selectedSet
-                ? `${generatedAiCount}/4 ideas IA generadas para esta ruta.`
-                : "Aún no hay set creado para esta combinación."}
-            </p>
-          </div>
-          <Button
-            disabled={
-              !completeSelection ||
-              status === "generating" ||
-              Boolean(selectedSet && generatedAiCount >= 4)
-            }
-            onClick={runGeneration}
-          >
-            {status === "generating" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            {selectedSet ? "Generar otra idea" : "Generar idea"}
-          </Button>
-        </div>
-      </Card>
-
-      {status === "loading" ? (
-        <Card className="p-10 text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="mt-4 text-base font-semibold text-muted-foreground">
-            Cargando rutas, gaps e insights...
-          </p>
-        </Card>
-      ) : (
-        <section className="grid gap-5">
-          {completeSelection && !selectedSet && (
-            <Card className="p-7">
-              <SectionLabel>Idea manual</SectionLabel>
-              <h2 className="mt-3 text-3xl font-extrabold">
-                Agregar idea propia sin esperar a la IA
-              </h2>
-              <p className="mt-3 text-base leading-7 text-muted-foreground">
-                Las ideas manuales no tienen límite y también pueden
-                seleccionarse para evaluación.
-              </p>
-              <ManualIdeaForm addManualIdea={(manual) => addManualIdea(null, manual)} />
-            </Card>
-          )}
-          {ideationSets.length ? (
-            ideationSets.map((set) => (
-              <IdeaSetCard
-                addManualIdea={addManualIdea}
-                key={set.id}
-                set={set}
-                updateIdea={updateIdea}
-              />
-            ))
-          ) : (
-            <Card className="p-10 text-center">
-              <Plus className="mx-auto h-8 w-8 text-muted-foreground" />
-              <h2 className="mt-4 text-3xl font-extrabold">
-                Todavía no hay ideas generadas
-              </h2>
-              <p className="mt-3 text-base leading-7 text-muted-foreground">
-                Selecciona una ruta completa y genera la primera idea.
-              </p>
-            </Card>
-          )}
-        </section>
-      )}
+      <div className="flex justify-end">
+        <Button
+          disabled={selectedCount === 0}
+          onClick={() => setActivePhaseId("evaluation")}
+          variant="secondary"
+        >
+          Evaluar ideas seleccionadas ({selectedCount})
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -383,71 +278,163 @@ function IdeationCanvas({
   addManualIdea,
   completeSelection,
   generatedAiCount,
+  recommendedChallenge,
   ideationOptions,
   ideationSelection,
   ideationSets,
   runGeneration,
-  selectedCount,
   selectedSet,
-  setActivePhaseId,
   status,
   updateIdea,
   updateSelection,
 }: {
   addManualIdea: (
     set: IdeationSet | null,
-    manual: Pick<IdeationIdea, "idea" | "supuestoQueRompe" | "mecanicaConcreta">,
+    manual: ManualIdeaInput,
   ) => void;
   completeSelection: boolean;
   generatedAiCount: number;
+  recommendedChallenge: string;
   ideationOptions: IdeationOptions | null;
   ideationSelection: IdeationSelection;
   ideationSets: IdeationSet[];
   runGeneration: () => Promise<void>;
-  selectedCount: number;
   selectedSet: IdeationSet | null;
-  setActivePhaseId: (phaseId: "evaluation") => void;
   status: "idle" | "loading" | "generating";
   updateIdea: (setId: string, ideaId: string, nextIdea: IdeationIdea) => void;
   updateSelection: (patch: Partial<IdeationSelection>) => void;
 }) {
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const initializedRef = useRef(false);
+  const canvasWidth = Math.max(1500, ideationSets.length * 500 + 240);
   const dragRef = useRef({
     dragging: false,
+    moved: false,
     startPanX: 0,
     startPanY: 0,
     startX: 0,
     startY: 0,
   });
-  const [pan, setPan] = useState({ x: 0, y: -90 });
-  const [zoom, setZoom] = useState(0.82);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(0.9);
+  const [autoMoving, setAutoMoving] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const selectedRoute = ideationOptions?.ruptureTypes.find(
     (route) => route.id === ideationSelection.ruptureType,
   );
-  const selectedGap = ideationOptions?.gaps.find(
-    (gap) => gap.title === ideationSelection.gapTitle,
-  );
-  const selectedInsight = ideationOptions?.insights.find(
-    (insight) => insight.title === ideationSelection.insightTitle,
-  );
+  useEffect(() => {
+    if (initializedRef.current) return;
+    const rect = frameRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    initializedRef.current = true;
+    setPan({ x: (rect.width - canvasWidth * zoom) / 2, y: 0 });
+  }, [zoom]);
+
+  const focusNextLevel = () => {
+    const rect = frameRef.current?.getBoundingClientRect();
+    const nextZoom = 0.78;
+    setAutoMoving(true);
+    setZoom(nextZoom);
+    setPan((current) => ({
+      x: rect ? (rect.width - canvasWidth * nextZoom) / 2 : current.x,
+      y: current.y - 120,
+    }));
+    window.setTimeout(() => setAutoMoving(false), 720);
+  };
+
+  const zoomAt = (clientX: number, clientY: number, nextZoom: number) => {
+    const rect = frameRef.current?.getBoundingClientRect();
+    if (!rect) {
+      setZoom(nextZoom);
+      return;
+    }
+    const cursorX = clientX - rect.left;
+    const cursorY = clientY - rect.top;
+    setPan((currentPan) => {
+      const worldX = (cursorX - currentPan.x) / zoom;
+      const worldY = (cursorY - currentPan.y) / zoom;
+      return {
+        x: cursorX - worldX * nextZoom,
+        y: cursorY - worldY * nextZoom,
+      };
+    });
+    setZoom(nextZoom);
+  };
 
   const zoomBy = (delta: number) => {
-    setZoom((current) => clamp(Number((current + delta).toFixed(2)), 0.52, 1.18));
+    const rect = frameRef.current?.getBoundingClientRect();
+    const nextZoom = clamp(Number((zoom + delta).toFixed(2)), 0.48, 1.16);
+    zoomAt(
+      (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
+      (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
+      nextZoom,
+    );
   };
 
   const fitCanvas = () => {
-    setZoom(0.82);
-    setPan({ x: 0, y: -90 });
+    const nextZoom = 0.9;
+    const rect = frameRef.current?.getBoundingClientRect();
+    setAutoMoving(true);
+    setZoom(nextZoom);
+    setPan({ x: rect ? (rect.width - canvasWidth * nextZoom) / 2 : 0, y: 0 });
+    window.setTimeout(() => setAutoMoving(false), 720);
   };
 
+  const toggleFullscreen = async () => {
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    if (document.fullscreenElement === shell) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await shell.requestFullscreen();
+  };
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      zoomAt(
+        event.clientX,
+        event.clientY,
+        clamp(Number((zoom - event.deltaY * 0.0012).toFixed(2)), 0.48, 1.16),
+      );
+    };
+
+    frame.addEventListener("wheel", handleWheel, { passive: false });
+    return () => frame.removeEventListener("wheel", handleWheel);
+  }, [zoom]);
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsFullscreen(document.fullscreenElement === shellRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    return () =>
+      document.removeEventListener("fullscreenchange", syncFullscreenState);
+  }, []);
+
   return (
-    <Card className="overflow-hidden p-0">
+    <div ref={shellRef}>
+    <Card
+      className={cn(
+        "overflow-hidden p-0",
+        isFullscreen && "flex h-screen flex-col rounded-none border-0",
+      )}
+    >
       <div className="flex flex-col gap-4 border-b border-border bg-white px-6 py-5 xl:flex-row xl:items-center xl:justify-between">
         <div>
-          <SectionLabel>Canvas de ideación</SectionLabel>
+          <SectionLabel>Reto recomendado</SectionLabel>
           <h2 className="mt-2 text-2xl font-extrabold">
-            Flujo navegable de ruptura, gap, insight e ideas.
+            {recommendedChallenge}
           </h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -463,23 +450,29 @@ function IdeationCanvas({
           <Button onClick={fitCanvas} size="icon" variant="secondary">
             <Maximize2 className="h-4 w-4" />
           </Button>
-          <Button
-            disabled={selectedCount === 0}
-            onClick={() => setActivePhaseId("evaluation")}
-            variant="secondary"
-          >
-            Evaluar ({selectedCount})
+          <Button onClick={() => void toggleFullscreen()} size="icon" variant="secondary">
+            {isFullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Fullscreen className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
       <div
-        className="relative h-[720px] cursor-grab overflow-hidden bg-[radial-gradient(circle_at_1px_1px,hsl(24_8%_78%/0.45)_1px,transparent_0)] [background-size:28px_28px] active:cursor-grabbing"
+        className={cn(
+          "relative h-[820px] cursor-grab select-none overflow-hidden overscroll-contain bg-[radial-gradient(circle_at_1px_1px,hsl(24_8%_78%/0.45)_1px,transparent_0)] [background-size:28px_28px] active:cursor-grabbing",
+          isFullscreen && "h-auto flex-1",
+        )}
         onPointerDown={(event) => {
-          if ((event.target as HTMLElement).closest("button,input,textarea,label")) {
+          if ((event.target as HTMLElement).closest("button,input,textarea,label,select")) {
             return;
           }
+          event.preventDefault();
+          setAutoMoving(false);
           dragRef.current = {
             dragging: true,
+            moved: false,
             startPanX: pan.x,
             startPanY: pan.y,
             startX: event.clientX,
@@ -489,9 +482,12 @@ function IdeationCanvas({
         }}
         onPointerMove={(event) => {
           if (!dragRef.current.dragging) return;
+          const dx = event.clientX - dragRef.current.startX;
+          const dy = event.clientY - dragRef.current.startY;
+          if (Math.abs(dx) + Math.abs(dy) > 3) dragRef.current.moved = true;
           setPan({
-            x: dragRef.current.startPanX + event.clientX - dragRef.current.startX,
-            y: dragRef.current.startPanY + event.clientY - dragRef.current.startY,
+            x: dragRef.current.startPanX + dx,
+            y: dragRef.current.startPanY + dy,
           });
         }}
         onPointerUp={(event) => {
@@ -502,188 +498,152 @@ function IdeationCanvas({
             // Pointer capture may already be released by the browser.
           }
         }}
-        onWheel={(event) => {
-          event.preventDefault();
-          setZoom((current) =>
-            clamp(Number((current - event.deltaY * 0.001).toFixed(2)), 0.52, 1.18),
-          );
-        }}
         ref={frameRef}
       >
         <div
-          className="absolute left-1/2 top-24 flex origin-top-left items-start gap-8 transition-transform duration-100"
+          className={cn(
+            "absolute left-0 top-10 origin-top-left select-none",
+            autoMoving && "transition-transform duration-700 ease-out",
+          )}
           style={{
-            transform: `translate(${pan.x - 650}px, ${pan.y}px) scale(${zoom})`,
-            width: 1300,
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            width: "max-content",
           }}
         >
-          <CanvasNode
-            complete={Boolean(ideationSelection.ruptureType)}
-            contextLabel="Nivel 1"
-            contextValue="Qué tan lejos debe moverse la solución."
-            title="Ruptura"
+          <div
+            className="flex flex-col items-center gap-10"
+            style={{ width: canvasWidth }}
           >
-            <CanvasChoices
-              items={(ideationOptions?.ruptureTypes ?? []).map((route) => ({
-                active: ideationSelection.ruptureType === route.id,
-                description: route.description,
-                id: route.id,
-                title:
-                  route.title === "Ruptura radical controlada"
-                    ? "Radical controlada"
-                    : route.title,
-                onClick: () => {
-                  updateSelection({
-                    gapTitle: null,
-                    insightTitle: null,
-                    ruptureType: route.id,
-                  });
-                  setPan({ x: 0, y: -90 });
-                  setZoom(0.82);
-                },
-              }))}
-            />
-          </CanvasNode>
-
-          {ideationSelection.ruptureType && (
-            <>
-              <CanvasConnector />
-              <CanvasNode
-                complete={Boolean(ideationSelection.gapTitle)}
-                contextLabel="Nivel 2"
-                contextValue={selectedRoute?.title ?? "Ruptura seleccionada"}
-                title="Gap"
-              >
-                <CanvasChoices
-                  items={(ideationOptions?.gaps ?? []).map((gap) => ({
-                    active: ideationSelection.gapTitle === gap.title,
-                    description: gap.implicationForIdeation,
-                    id: gap.title,
-                    onClick: () =>
-                      updateSelection({ gapTitle: gap.title, insightTitle: null }),
-                    title: gap.title,
-                  }))}
-                />
-              </CanvasNode>
-            </>
-          )}
-
-          {ideationSelection.gapTitle && (
-            <>
-              <CanvasConnector />
-              <CanvasNode
-                complete={Boolean(ideationSelection.insightTitle)}
-                contextLabel="Nivel 3"
-                contextValue={selectedGap?.title ?? "Gap seleccionado"}
-                title="Insight"
-              >
-                <CanvasChoices
-                  items={(ideationOptions?.insights ?? []).map((insight) => ({
-                    active: ideationSelection.insightTitle === insight.title,
-                    description: insight.promptParaIdeacion,
-                    id: insight.title,
-                    onClick: () => updateSelection({ insightTitle: insight.title }),
-                    title: insight.title,
-                  }))}
-                />
-              </CanvasNode>
-            </>
-          )}
-
-          {ideationSelection.insightTitle && (
-            <>
-              <CanvasConnector />
-              <CanvasNode
-                complete={Boolean(selectedSet)}
-                contextLabel="Ruta"
-                contextValue={selectedInsight?.title ?? "Insight seleccionado"}
-                title={selectedSet ? "Set en construcción" : "Generar set"}
-              >
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {selectedSet
-                    ? `${generatedAiCount}/4 ideas IA generadas. Puedes agregar manuales sin límite.`
-                    : "Genera una idea IA o agrega una idea manual para esta combinación."}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button
-                    disabled={
-                      !completeSelection ||
-                      status === "generating" ||
-                      Boolean(selectedSet && generatedAiCount >= 4)
-                    }
-                    onClick={() => void runGeneration()}
-                  >
-                    {status === "generating" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                    {selectedSet ? "Otra idea IA" : "Generar idea"}
-                  </Button>
-                </div>
-                {completeSelection && (
-                  <ManualIdeaForm
-                    addManualIdea={(manual) => addManualIdea(selectedSet, manual)}
-                  />
-                )}
-              </CanvasNode>
-            </>
-          )}
-
-          {ideationSets.length ? (
-            <>
-              <CanvasConnector />
-              <CanvasOutput
-                ideationSets={ideationSets}
-                updateIdea={updateIdea}
+            <CanvasLevel
+              eyebrow="Ruptura"
+              title="Selecciona qué tan lejos debe moverse la solución."
+            >
+              <CanvasChoices
+                variant="large"
+                items={(ideationOptions?.ruptureTypes ?? []).map((route) => ({
+                  active: ideationSelection.ruptureType === route.id,
+                  description: route.description,
+                  id: route.id,
+                  title: route.title,
+                  onClick: () => {
+                    updateSelection({
+                      gapTitle: null,
+                      insightTitle: null,
+                      ruptureType: route.id,
+                    });
+                    focusNextLevel();
+                  },
+                }))}
               />
-            </>
-          ) : null}
+            </CanvasLevel>
+
+            {ideationSelection.ruptureType && (
+              <>
+                <CanvasArrow />
+                <CanvasLevel
+                  eyebrow="Insights"
+                  title="Selecciona la tensión del comprador."
+                >
+                  <CanvasChoices
+                    items={(ideationOptions?.insights ?? []).map((insight) => ({
+                      active: ideationSelection.insightTitle === insight.title,
+                      description: insight.promptParaIdeacion,
+                      id: insight.title,
+                      onClick: () => {
+                        updateSelection({ insightTitle: insight.title });
+                        focusNextLevel();
+                      },
+                      title: insight.title,
+                    }))}
+                  />
+                </CanvasLevel>
+              </>
+            )}
+
+            {ideationSelection.insightTitle && (
+              <>
+                <CanvasArrow />
+                <CanvasLevel eyebrow="Gaps" title="Selecciona la brecha a atacar.">
+                  <CanvasChoices
+                    items={(ideationOptions?.gaps ?? []).map((gap) => ({
+                      active: ideationSelection.gapTitle === gap.title,
+                      description: gap.implicationForIdeation,
+                      id: gap.title,
+                      onClick: () => {
+                        updateSelection({ gapTitle: gap.title });
+                        focusNextLevel();
+                      },
+                      title: gap.title,
+                    }))}
+                  />
+                </CanvasLevel>
+              </>
+            )}
+
+            {completeSelection && (
+              <>
+                <CanvasArrow />
+                <RouteBuilderCard
+                  generatedAiCount={generatedAiCount}
+                  ideationSelection={ideationSelection as CompleteIdeationSelection}
+                  runGeneration={runGeneration}
+                  ruptureTitle={selectedRoute?.title ?? ideationSelection.ruptureType ?? ""}
+                  selectedSet={selectedSet}
+                  status={status}
+                />
+              </>
+            )}
+
+            {ideationSets.length ? (
+              <>
+                <CanvasArrow />
+                <CanvasOutput
+                  addManualIdea={addManualIdea}
+                  ideationSets={ideationSets}
+                  updateIdea={updateIdea}
+                />
+              </>
+            ) : null}
+          </div>
         </div>
       </div>
     </Card>
+    </div>
   );
 }
 
-function CanvasNode({
+function CanvasLevel({
   children,
-  complete,
-  contextLabel,
-  contextValue,
+  eyebrow,
   title,
 }: {
   children: ReactNode;
-  complete: boolean;
-  contextLabel: string;
-  contextValue: string;
+  eyebrow: string;
   title: string;
 }) {
   return (
-    <article className="w-[330px] shrink-0 rounded-[28px] border border-border bg-white p-5 shadow-workspace">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <SectionLabel>{contextLabel}</SectionLabel>
-          <h3 className="mt-2 text-2xl font-extrabold">{title}</h3>
-        </div>
-        <span
-          className={cn(
-            "grid h-9 w-9 place-items-center rounded-full border text-sm font-extrabold",
-            complete
-              ? "border-black bg-black text-white"
-              : "border-border bg-surface-raised text-muted-foreground",
-          )}
-        >
-          {complete ? <CheckCircle2 className="h-4 w-4" /> : "•"}
-        </span>
+    <section className="w-full">
+      <div className="mx-auto mb-8 max-w-5xl select-none text-left">
+        <SectionLabel>{eyebrow}</SectionLabel>
+        <h3 className="mt-3 text-4xl font-semibold leading-tight">{title}</h3>
       </div>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">{contextValue}</p>
-      <div className="mt-5">{children}</div>
-    </article>
+      {children}
+    </section>
+  );
+}
+
+function CanvasArrow() {
+  return (
+    <div className="flex h-12 flex-col items-center justify-center text-stone-300">
+      <div className="h-9 w-px bg-stone-300" />
+      <div className="-mt-2 h-3 w-3 rotate-45 border-b border-r border-stone-300" />
+    </div>
   );
 }
 
 function CanvasChoices({
   items,
+  variant = "normal",
 }: {
   items: Array<{
     active: boolean;
@@ -692,27 +652,29 @@ function CanvasChoices({
     onClick: () => void;
     title: string;
   }>;
+  variant?: "large" | "normal";
 }) {
   return (
-    <div className="grid gap-3">
+    <div className="flex flex-wrap justify-center gap-5">
       {items.map((item) => (
         <button
           className={cn(
-            "rounded-[18px] border p-4 text-left transition",
+            "min-h-[220px] w-[360px] select-none rounded-[26px] border bg-white p-7 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-workspace",
+            variant === "large" && "min-h-[300px] w-[390px]",
             item.active
-              ? "border-black bg-black text-white"
-              : "border-border bg-surface-raised hover:bg-white",
+              ? "border-2 border-black"
+              : "border-border",
           )}
           key={item.id}
           onClick={item.onClick}
           type="button"
         >
-          <span className="block text-sm font-extrabold">{item.title}</span>
+          <span className="block text-2xl font-semibold leading-tight">
+            {item.title}
+          </span>
+          <span className="mt-6 block h-px bg-border" />
           <span
-            className={cn(
-              "mt-2 block text-xs leading-5",
-              item.active ? "text-stone-200" : "text-muted-foreground",
-            )}
+            className="mt-6 block text-lg leading-8 text-stone-600"
           >
             {item.description}
           </span>
@@ -722,45 +684,101 @@ function CanvasChoices({
   );
 }
 
-function CanvasConnector() {
+function RouteBuilderCard({
+  generatedAiCount,
+  ideationSelection,
+  runGeneration,
+  ruptureTitle,
+  selectedSet,
+  status,
+}: {
+  generatedAiCount: number;
+  ideationSelection: CompleteIdeationSelection;
+  runGeneration: () => Promise<void>;
+  ruptureTitle: string;
+  selectedSet: IdeationSet | null;
+  status: "idle" | "loading" | "generating";
+}) {
   return (
-    <div className="mt-36 h-px w-16 shrink-0 bg-stone-300">
-      <div className="ml-auto mt-[-5px] h-3 w-3 rotate-45 border-r border-t border-stone-300" />
-    </div>
+    <article className="w-full max-w-5xl select-none rounded-[26px] border border-border bg-white p-7 shadow-sm">
+      <SectionLabel>Construcción de ruta</SectionLabel>
+      <h3 className="mt-3 text-2xl font-semibold leading-tight">
+        {ruptureTitle} / {ideationSelection.insightTitle} /{" "}
+        {ideationSelection.gapTitle}
+      </h3>
+      <div className="mt-6 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm font-semibold text-muted-foreground">
+          {selectedSet
+            ? `${generatedAiCount}/4 ideas IA generadas para esta ruta.`
+            : "Genera la primera idea IA para esta combinación."}
+        </p>
+        <Button
+          disabled={status === "generating" || Boolean(selectedSet && generatedAiCount >= 4)}
+          onClick={() => void runGeneration()}
+        >
+          {status === "generating" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          {selectedSet ? "Generar otra idea" : "Generar idea"}
+        </Button>
+      </div>
+    </article>
   );
 }
 
 function CanvasOutput({
+  addManualIdea,
   ideationSets,
   updateIdea,
 }: {
+  addManualIdea: (
+    set: IdeationSet,
+    manual: ManualIdeaInput,
+  ) => void;
   ideationSets: IdeationSet[];
   updateIdea: (setId: string, ideaId: string, nextIdea: IdeationIdea) => void;
 }) {
   return (
-    <article className="w-[460px] shrink-0 rounded-[28px] border border-border bg-white p-5 shadow-workspace">
-      <SectionLabel>Ideas generadas</SectionLabel>
-      <h3 className="mt-2 text-2xl font-extrabold">
+    <section className="w-full">
+      <div className="mx-auto mb-8 max-w-5xl select-none">
+        <SectionLabel>Ideas por rutas</SectionLabel>
+        <h3 className="mt-3 text-4xl font-semibold leading-tight">
+          Ideas generadas por combinación.
+        </h3>
+        <p className="mt-3 text-sm font-semibold text-muted-foreground">
         {ideationSets.reduce((count, set) => count + set.ideas.length, 0)} ideas en canvas
-      </h3>
-      <div className="mt-5 grid max-h-[560px] gap-4 overflow-auto pr-2">
-        {ideationSets.map((set) => (
-          <div key={set.id}>
-            <p className="mb-3 text-sm font-extrabold text-stone-700">
-              {set.route.title}
-            </p>
-            <div className="grid gap-3">
-              {set.ideas.map((idea) => (
+        </p>
+      </div>
+      <div
+        className="grid items-start justify-center gap-5"
+        style={{
+          gridTemplateColumns: `repeat(${Math.max(ideationSets.length, 1)}, 460px)`,
+        }}
+      >
+        {ideationSets.map((set, setIndex) => (
+          <article
+            className="w-[460px] select-none rounded-[26px] border border-border bg-white p-6 shadow-sm"
+            key={set.id}
+          >
+            <SectionLabel>Ruta {setIndex + 1}</SectionLabel>
+            <h4 className="mt-3 text-xl font-semibold leading-tight">
+              {ruptureTitleFor(set.selection.ruptureType)} / {set.selection.insightTitle} /{" "}
+              {set.selection.gapTitle}
+            </h4>
+            <div className="mt-5 grid gap-4">
+              {set.ideas.map((idea, index) => (
                 <article
-                  className="rounded-[18px] border border-border bg-surface-raised p-4"
+                  className="rounded-[22px] border border-border bg-surface-raised p-5"
                   key={idea.id}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                        {idea.source === "user" ? "Manual" : "IA"}
+                        Idea {index + 1}: {idea.tipoDeIdea ?? "Tipo por definir"}
                       </p>
-                      <h4 className="mt-1 text-base font-extrabold leading-tight">
+                      <h4 className="mt-2 text-2xl font-semibold leading-tight">
                         {idea.idea}
                       </h4>
                     </div>
@@ -779,16 +797,19 @@ function CanvasOutput({
                       Evaluar
                     </label>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    {idea.mecanicaConcreta}
-                  </p>
+                  <IdeaField label="Supuesto que rompe" value={idea.supuestoQueRompe} />
+                  <IdeaField label="Mecánica" value={idea.mecanicaConcreta} />
+                  {idea.porQueFunciona && (
+                    <IdeaField label="Por qué funciona" value={idea.porQueFunciona} />
+                  )}
                 </article>
               ))}
             </div>
-          </div>
+            <ManualIdeaForm addManualIdea={(manual) => addManualIdea(set, manual)} />
+          </article>
         ))}
       </div>
-    </article>
+    </section>
   );
 }
 
@@ -850,20 +871,20 @@ function IdeaSetCard({
 }: {
   addManualIdea: (
     set: IdeationSet,
-    manual: Pick<IdeationIdea, "idea" | "supuestoQueRompe" | "mecanicaConcreta">,
+    manual: ManualIdeaInput,
   ) => void;
   set: IdeationSet;
   updateIdea: (setId: string, ideaId: string, nextIdea: IdeationIdea) => void;
 }) {
   return (
-    <Card className="p-7">
+    <Card className="p-5">
       <SectionLabel>{set.route.title}</SectionLabel>
       <div className="mt-3 flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <h2 className="text-3xl font-extrabold">
+          <h2 className="text-xl font-semibold">
             {set.ideas.length} idea(s) en esta ruta
           </h2>
-          <p className="mt-2 text-base leading-7 text-muted-foreground">
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
             {set.selection.gapTitle} · {set.selection.insightTitle}
           </p>
         </div>
@@ -902,7 +923,7 @@ function IdeaCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            {idea.source === "user" ? "Manual" : "IA"}
+            {idea.tipoDeIdea ?? "Tipo por definir"}
           </p>
           <h3 className="mt-2 text-2xl font-extrabold leading-tight">
             {idea.idea}
@@ -918,7 +939,7 @@ function IdeaCard({
         </label>
       </div>
       <IdeaField label="Supuesto que rompe" value={idea.supuestoQueRompe} />
-      <IdeaField label="Mecánica concreta" value={idea.mecanicaConcreta} />
+      <IdeaField label="Mecánica" value={idea.mecanicaConcreta} />
       {idea.porQueFunciona && (
         <IdeaField label="Por qué funciona" value={idea.porQueFunciona} />
       )}
@@ -956,12 +977,16 @@ function ManualIdeaForm({
   addManualIdea,
 }: {
   addManualIdea: (
-    manual: Pick<IdeationIdea, "idea" | "supuestoQueRompe" | "mecanicaConcreta">,
+    manual: ManualIdeaInput,
   ) => void;
 }) {
   const [idea, setIdea] = useState("");
+  const [ideaType, setIdeaType] = useState<PrototypeIdeaType>(
+    "Modelo comercial / acceso",
+  );
   const [assumption, setAssumption] = useState("");
   const [mechanism, setMechanism] = useState("");
+  const [whyItWorks, setWhyItWorks] = useState("");
   const [error, setError] = useState("");
 
   return (
@@ -969,39 +994,84 @@ function ManualIdeaForm({
       className="mt-6 rounded-[22px] border border-border bg-white p-5"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!idea.trim() || !assumption.trim() || !mechanism.trim()) {
-          setError("Completa idea, supuesto y mecánica.");
+        if (!idea.trim() || !assumption.trim() || !mechanism.trim() || !whyItWorks.trim()) {
+          setError("Completa idea, supuesto, mecánica y por qué funciona.");
           return;
         }
         addManualIdea({
           idea: idea.trim(),
+          tipoDeIdea: ideaType,
           mecanicaConcreta: mechanism.trim(),
+          porQueFunciona: whyItWorks.trim(),
           supuestoQueRompe: assumption.trim(),
         });
         setIdea("");
         setAssumption("");
         setMechanism("");
+        setWhyItWorks("");
         setError("");
       }}
     >
       <SectionLabel>Idea manual</SectionLabel>
-      <div className="mt-4 grid gap-4 xl:grid-cols-3">
-        <TextInput
-          placeholder="Redacta la idea"
-          value={idea}
-          onChange={(event) => setIdea(event.target.value)}
-        />
-        <TextInput
-          placeholder="Supuesto que rompe"
-          value={assumption}
-          onChange={(event) => setAssumption(event.target.value)}
-        />
-        <TextArea
-          className="min-h-14 xl:col-span-1"
-          placeholder="Mecánica concreta"
-          value={mechanism}
-          onChange={(event) => setMechanism(event.target.value)}
-        />
+      <div className="mt-4 grid gap-4">
+        <label className="grid gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Idea
+          </span>
+          <TextInput
+            placeholder="Describe la idea en una frase"
+            value={idea}
+            onChange={(event) => setIdea(event.target.value)}
+          />
+        </label>
+        <label className="grid gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Tipo de idea
+          </span>
+          <select
+            className="min-h-11 rounded-[14px] border border-border bg-white px-4 text-sm font-semibold text-foreground shadow-sm outline-none transition focus:border-stone-400 focus:ring-4 focus:ring-stone-200"
+            value={ideaType}
+            onChange={(event) => setIdeaType(event.target.value as PrototypeIdeaType)}
+          >
+            {prototypeIdeaTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Supuesto que rompe
+          </span>
+          <TextInput
+            placeholder="Qué creencia cambia esta idea"
+            value={assumption}
+            onChange={(event) => setAssumption(event.target.value)}
+          />
+        </label>
+        <label className="grid gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Mecánica
+          </span>
+          <TextArea
+            className="min-h-24"
+            placeholder="Cómo funcionaría en la práctica"
+            value={mechanism}
+            onChange={(event) => setMechanism(event.target.value)}
+          />
+        </label>
+        <label className="grid gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Por qué funciona
+          </span>
+          <TextArea
+            className="min-h-24"
+            placeholder="Por qué esta mecánica puede cambiar la decisión"
+            value={whyItWorks}
+            onChange={(event) => setWhyItWorks(event.target.value)}
+          />
+        </label>
       </div>
       {error && <p className="mt-3 text-sm font-semibold text-red-700">{error}</p>}
       <div className="mt-4 flex justify-end">
@@ -1035,6 +1105,12 @@ function isSameSelection(
 
 function routeKey(selection: CompleteIdeationSelection) {
   return `${selection.ruptureType}::${selection.gapTitle}::${selection.insightTitle}`;
+}
+
+function ruptureTitleFor(ruptureType: IdeationRuptureType) {
+  if (ruptureType === "RUPTURA_MODERADA") return "Ruptura moderada";
+  if (ruptureType === "RUPTURA_FUERTE") return "Ruptura fuerte";
+  return "Ruptura radical controlada";
 }
 
 function buildManualSet(

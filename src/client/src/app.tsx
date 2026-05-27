@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AppShell } from "./components/app-shell.js";
+import { LandingScreen } from "./components/landing-screen.js";
 import { PhaseWorkspace } from "./components/phase-workspace.js";
 import { AppStateProvider, useAppState } from "./app-state.js";
 import { DiagnosisPage } from "./phases/diagnosis/diagnosis-page.js";
@@ -24,6 +25,7 @@ export function App() {
 
 function WorkspaceApp() {
   const { activePhaseId } = useAppState();
+  const [showLanding, setShowLanding] = useState(true);
   const activePhase = useMemo(
     () =>
       activePhaseId === "registration"
@@ -34,6 +36,10 @@ function WorkspaceApp() {
           sidebarPhases[0]!),
     [activePhaseId],
   );
+
+  if (showLanding) {
+    return <LandingScreen onStart={() => setShowLanding(false)} />;
+  }
 
   return (
     <AppShell activePhase={activePhase}>

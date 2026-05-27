@@ -359,8 +359,8 @@ export class HeuristicSignalsEngine implements SignalsEngine {
         lens: "SOCIAL_LISTENING",
         title: "Voz publica insuficiente para afirmar adopcion",
         observedText:
-          "No se ejecuto busqueda real en modo heuristico; la senal queda como vacio a validar.",
-        sourceLabel: "Modo heuristico local",
+          "No se ejecuto busqueda real en modo local de prueba; la senal queda como vacio a validar.",
+        sourceLabel: "Modo local de prueba",
         frictionType: "vacio de voz publica",
         relationToDiagnosis: "El diagnostico no esta contrastado contra usuarios externos.",
         usefulnessForIdeation: "Evita ideas que asuman demanda ya validada.",
@@ -373,7 +373,7 @@ export class HeuristicSignalsEngine implements SignalsEngine {
         title: `La categoria ${category} exige evidencia antes de prometer cambio`,
         observedText:
           "La tendencia asumida debe tratarse como presion a validar, no como oportunidad automatica.",
-        sourceLabel: "Modo heuristico local",
+        sourceLabel: "Modo local de prueba",
         frictionType: "presion de categoria no validada",
         relationToDiagnosis: "El reto puede depender de una presion externa todavia no demostrada.",
         usefulnessForIdeation: "Obliga a crear ideas que produzcan evidencia temprana.",
@@ -386,7 +386,7 @@ export class HeuristicSignalsEngine implements SignalsEngine {
         title: `Competidor declarado: ${competitor?.name ?? "sin competidor"}`,
         observedText:
           "La promesa visible del competidor debe contrastarse contra friccion publica antes de usarla como insight.",
-        sourceLabel: competitor?.website ?? "Modo heuristico local",
+        sourceLabel: competitor?.website ?? "Modo local de prueba",
         sourceUrl: competitor?.website,
         frictionType: "promesa competitiva sin contraste",
         relationToDiagnosis: "La promesa visible del competidor puede estar ocultando la misma friccion.",
@@ -399,8 +399,8 @@ export class HeuristicSignalsEngine implements SignalsEngine {
         lens: "CUSTOMER_INSIGHT",
         title: "El comprador protege su exposicion ante terceros",
         observedText:
-          "En modo heuristico, el insight se modela como una hipotesis de comprador, no como evidencia real.",
-        sourceLabel: "Modo heuristico local",
+          "En modo local de prueba, el insight se modela como una hipotesis de comprador, no como evidencia real.",
+        sourceLabel: "Modo local de prueba",
         frictionType: "riesgo reputacional del comprador",
         relationToDiagnosis: "La compra depende de reducir exposicion del decisor ante terceros.",
         usefulnessForIdeation: "Obliga a disenar pruebas defendibles para el comprador, no solo mejoras operativas.",
@@ -414,7 +414,7 @@ export class HeuristicSignalsEngine implements SignalsEngine {
       generatedAt: new Date().toISOString(),
       analisisSocialListening: {
         summary:
-          "Modo heuristico: no hay social listening real. Esto debe bloquear conclusiones fuertes sobre voz publica.",
+          "Modo local de prueba: no hay social listening real. Esto debe bloquear conclusiones fuertes sobre voz publica.",
         findings: [evidence[0].observedText],
         evidenceIds: ["sig_1"],
         limitations: ["Configura OPENAI_API_KEY para busqueda web real."],
@@ -443,7 +443,7 @@ export class HeuristicSignalsEngine implements SignalsEngine {
           brecha:
             "El diagnostico puede estar bien formulado internamente, pero aun no esta probado contra mercado.",
           evidenciaMercado:
-            "En modo heuristico no hay evidencia publica real; se marca como base indirecta.",
+            "En modo local de prueba no hay evidencia publica real; se marca como base indirecta.",
           evidenceIds: ["sig_1", "sig_2"],
           evidenceBase: "indirecta",
           implicationForIdeation:
@@ -458,7 +458,7 @@ export class HeuristicSignalsEngine implements SignalsEngine {
           brecha:
             "Copiar claims competitivos puede repetir una promesa que el mercado no valida.",
           evidenciaMercado:
-            "En modo heuristico no hay contraste publico de promesa versus friccion.",
+            "En modo local de prueba no hay contraste publico de promesa versus friccion.",
           evidenceIds: ["sig_3"],
           evidenceBase: "indirecta",
           implicationForIdeation:
@@ -500,7 +500,7 @@ export class HeuristicSignalsEngine implements SignalsEngine {
         fuentesConsultadas: evidence.map((signal) => signal.sourceLabel),
         senalesBase: evidence,
         vaciosDeEvidencia: [
-          "Busqueda web real no ejecutada en modo heuristico.",
+          "Busqueda web real no ejecutada en modo local de prueba.",
         ],
       },
     });
@@ -748,7 +748,8 @@ function unique(items: string[]) {
 }
 
 export function createSignalsEngine() {
-  const useFake = process.env.NUCLEO_FAKE_AI === "true";
+  const useFake =
+    process.env.NODE_ENV === "test" && process.env.NUCLEO_FAKE_AI === "true";
   const apiKey = process.env.OPENAI_API_KEY?.trim();
 
   if (useFake) {

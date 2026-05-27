@@ -23,7 +23,7 @@ export function AppShell({ activePhase, children }: AppShellProps) {
           type="button"
         />
       )}
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[430px_1fr]">
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[340px_1fr]">
         <WorkspaceSidebar
           activePhase={activePhaseId}
           isMobileOpen={mobileSidebarOpen}
@@ -31,7 +31,7 @@ export function AppShell({ activePhase, children }: AppShellProps) {
           onSelectPhase={setActivePhaseId}
           phases={sidebarPhases}
         />
-        <section className="min-w-0 border-l border-border bg-[hsl(35_18%_97%)]">
+        <section className="min-w-0 border-l border-border bg-background">
           <WorkspaceHeader
             activePhase={activePhase}
             onMenuClick={() => setMobileSidebarOpen(true)}

@@ -152,6 +152,22 @@ export default async function handler(
       return sendJson(response, 200, await registrationService.uploadDocuments(body));
     }
 
+    const registrationByCycleMatch = /^\/api\/registration\/cycles\/([^/]+)$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && registrationByCycleMatch) {
+      const registration = await registrationService.getByCycle(
+        decodeURIComponent(registrationByCycleMatch[1]!),
+      );
+
+      if (!registration) {
+        return sendJson(response, 404, { error: "registration_not_found" });
+      }
+
+      return sendJson(response, 200, { registration });
+    }
+
     const registrationMatch = /^\/api\/registration\/([^/]+)$/.exec(
       url.pathname,
     );
@@ -215,6 +231,29 @@ export default async function handler(
       );
 
       return sendJson(response, 200, { versions });
+    }
+
+    const cycleDraftMatch = /^\/api\/diagnosis\/cycles\/([^/]+)\/draft$/.exec(
+      url.pathname,
+    );
+
+    if (method === "GET" && cycleDraftMatch) {
+      const draft = await service.getDraft(
+        decodeURIComponent(cycleDraftMatch[1]!),
+      );
+
+      return sendJson(response, 200, { draft });
+    }
+
+    if (method === "PUT" && cycleDraftMatch) {
+      const body = await readJson(request);
+      const draft = await service.saveDraft({
+        ...body,
+        cycleId: decodeURIComponent(cycleDraftMatch[1]!),
+        updatedAt: new Date().toISOString(),
+      });
+
+      return sendJson(response, 200, { draft });
     }
 
     const cycleAuditMatch = /^\/api\/diagnosis\/cycles\/([^/]+)\/audit$/.exec(

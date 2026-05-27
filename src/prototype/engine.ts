@@ -68,8 +68,12 @@ export class OpenAiPrototypeEngine implements PrototypeEngine {
           content: [
             "Eres un experto en prototipado e innovacion.",
             "Clasifica la idea ganadora en exactamente uno de los tipos disponibles de la matriz de prototipado.",
+            "Además genera la Decisión de evaluación para la idea ganadora.",
             "No uses scores, gates, M0/M1 ni mappings heredados.",
             "Decide por la naturaleza de lo que se debe prototipar: experiencia, interfaz digital, proceso operativo, modelo comercial/acceso o producto tangible.",
+            "evaluationDecision.criticalAssumptions debe explicar los supuestos críticos que la idea necesita validar.",
+            "evaluationDecision.firstThingToTest debe decir qué probar primero, de forma concreta y ejecutable.",
+            "evaluationDecision.risksToWatch debe indicar los riesgos que pueden distorsionar la lectura de la prueba.",
           ].join("\n"),
         },
         {
@@ -96,7 +100,7 @@ export class OpenAiPrototypeEngine implements PrototypeEngine {
 class MissingOpenAiPrototypeEngine implements PrototypeEngine {
   async build(): Promise<PrototypeArtifact> {
     throw new Error(
-      "OPENAI_API_KEY es requerido para Prototipado; no se generan artefactos con motor heuristico.",
+      "OPENAI_API_KEY es requerido para Prototipado; no se generan artefactos sin IA.",
     );
   }
 

@@ -168,7 +168,7 @@ export class HeuristicRegistrationEngine implements RegistrationEngine {
 class MissingOpenAiRegistrationEngine implements RegistrationEngine {
   async prepare(): Promise<RegistrationOutput> {
     throw new Error(
-      "OPENAI_API_KEY es requerido para Registro; el demo y produccion no usan respuestas heuristicas.",
+      "OPENAI_API_KEY es requerido para Registro; no se usan respuestas alternativas sin IA.",
     );
   }
 }

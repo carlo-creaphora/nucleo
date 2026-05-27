@@ -208,6 +208,7 @@ export type IdeationIdea = {
   source: "ai" | "user";
   selectedForEvaluation: boolean;
   idea: string;
+  tipoDeIdea?: PrototypeIdeaType;
   supuestoQueRompe: string;
   mecanicaConcreta: string;
   porQueFunciona?: string;
@@ -246,6 +247,11 @@ export type PrototypeClassification = {
   ideaId?: string;
   ideaType: PrototypeIdeaType;
   rationale: string;
+  evaluationDecision: {
+    criticalAssumptions: string;
+    firstThingToTest: string;
+    risksToWatch: string;
+  };
 };
 
 export type PrototypeEvidenceScope = {
@@ -511,6 +517,7 @@ const AppStateContext = createContext<AppState | null>(null);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [activePhaseId, setActivePhaseId] = useState<PhaseId>("registration");
+  const [cycleId] = useState(createClientCycleId);
   const [diagnosis, setDiagnosis] = useState<DiagnosisOutput | null>(null);
   const [diagnosisMessages, setDiagnosisMessages] = useState<DialogMessage[]>(
     [],
@@ -564,7 +571,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AppState>(
     () => ({
       activePhaseId,
-      cycleId: "cycle-demo-nucleo",
+      cycleId,
       diagnosis,
       diagnosisCorrections,
       diagnosisMessages,
@@ -613,6 +620,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }),
     [
       activePhaseId,
+      cycleId,
       diagnosis,
       diagnosisCorrections,
       diagnosisMessages,
@@ -643,6 +651,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       {children}
     </AppStateContext.Provider>
   );
+}
+
+function createClientCycleId() {
+  const storageKey = "nucleo.currentCycleId";
+  const fallback = `cycle_${crypto.randomUUID()}`;
+
+  try {
+    const existing = window.localStorage.getItem(storageKey);
+
+    if (existing) return existing;
+
+    window.localStorage.setItem(storageKey, fallback);
+  } catch {
+    return fallback;
+  }
+
+  return fallback;
 }
 
 export function useAppState() {

@@ -13,7 +13,7 @@ export function buildRegistrationPayload(
     ? [
         {
           id: `doc_text_${Date.now()}`,
-          name: "Notas internas demo",
+          name: "Notas internas",
           extractionStatus: "TEXT_PROVIDED" as const,
           summary: "Contexto interno cargado desde Registro.",
           extractedText: form.documents.trim(),
@@ -24,7 +24,7 @@ export function buildRegistrationPayload(
   return {
     cycleId,
     profileLicense: {
-      licenseId: "license-demo",
+      licenseId: `license_${slug(form.profileEmail || form.profileName || cycleId)}`,
       name: form.profileName.trim(),
       role: form.profileRole.trim(),
       area: form.profileArea.trim(),
@@ -33,7 +33,7 @@ export function buildRegistrationPayload(
       peopleManaged: numberOrUndefined(form.peopleManaged),
     },
     company: {
-      companyId: slug(form.companyName) || "company-demo",
+      companyId: `company_${slug(form.companyName || cycleId)}`,
       name: form.companyName.trim(),
       sectorCategory: form.sectorCategory.trim(),
       employeeCount: numberOrUndefined(form.employeeCount),

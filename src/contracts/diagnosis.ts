@@ -107,6 +107,15 @@ export const diagnosisQuestionOutputSchema = z.object({
   shouldCloseDiagnosis: z.boolean(),
 });
 
+export const diagnosisDraftSchema = z.object({
+  cycleId: z.string().min(1),
+  dialogMessages: z.array(dialogMessageSchema).default([]),
+  correctedSections: z.array(diagnosisCorrectionSchema).default([]),
+  lastQuestion: diagnosisQuestionOutputSchema.nullable().default(null),
+  composer: z.string().default(""),
+  updatedAt: z.string().datetime(),
+});
+
 export const criticalDiagnosisPieceKeySchema = z.enum([
   "metrica",
   "restriccion",
@@ -145,6 +154,7 @@ export type UploadedDocument = z.infer<typeof uploadedDocumentSchema>;
 export type DiagnosisQuestionOutput = z.infer<
   typeof diagnosisQuestionOutputSchema
 >;
+export type DiagnosisDraft = z.infer<typeof diagnosisDraftSchema>;
 export type CriticalMissingPiece = z.infer<typeof criticalMissingPieceSchema>;
 export type DiagnosisClosureAssessmentOutput = z.infer<
   typeof diagnosisClosureAssessmentOutputSchema

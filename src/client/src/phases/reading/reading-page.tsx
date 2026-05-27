@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Brain, Loader2 } from "lucide-react";
+import { ArrowRight, Brain } from "lucide-react";
 import {
   useAppState,
   type EvidenceReading,
   type MethodologicalOverride,
+  type PrototypeClosedQuestion,
   type PrototypeEvidenceMetric,
   type PrototypeRoute,
 } from "../../app-state.js";
@@ -14,7 +15,6 @@ import { prototypeMatrix } from "../../../../prototype/matrix.js";
 import { getPrototypeState } from "../prototype/prototype-api.js";
 import {
   getResultsState,
-  readEvidence,
   saveResultsState,
 } from "../results/results-api.js";
 
@@ -81,7 +81,6 @@ export function ReadingPage() {
     setPrototypeRouteId,
     setResultsRecords,
   } = useAppState();
-  const [status, setStatus] = useState<"idle" | "reading">("idle");
   const [error, setError] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState("");
 
@@ -159,55 +158,16 @@ export function ReadingPage() {
     selectedRoute &&
     selectedRoute !== evidenceReading.methodologicalRoute;
 
-  const generateReading = async () => {
-    if (!route || !resultsRecords.length) return;
-    setStatus("reading");
-    setError(null);
-    try {
-      const reading = await readEvidence({
-        artifact: prototypeArtifact?.artifact,
-        closedQuestions: route.closedQuestions ?? [],
-        cycleId,
-        idea: winnerIdea,
-        records: resultsRecords,
-        route,
-      });
-      setEvidenceReading(reading);
-      setMethodologicalRoute(reading.methodologicalRoute);
-      setMethodologicalOverride(null);
-      await saveResultsState({
-        cycleId,
-        evidenceReading: reading,
-        methodologicalOverride: null,
-        methodologicalRoute: reading.methodologicalRoute,
-        prototypeRouteId: route.id,
-        records: resultsRecords,
-      });
-    } catch (readError) {
-      setError(
-        readError instanceof Error
-          ? readError.message
-          : "No se pudo leer evidencia.",
-      );
-    } finally {
-      setStatus("idle");
-    }
-  };
-
   const selectRoute = async (routeId: EvidenceReading["methodologicalRoute"]) => {
     if (!route || !evidenceReading) return;
     let nextOverride: MethodologicalOverride | null = null;
     if (routeId !== evidenceReading.methodologicalRoute) {
-      if (overrideReason.trim().length < 20) {
-        setError(
-          "Para cambiar contra la recomendación IA, escribe una razón trazable de al menos 20 caracteres.",
-        );
-        return;
-      }
       nextOverride = {
         changedAt: new Date().toISOString(),
         from: evidenceReading.methodologicalRoute,
-        reason: overrideReason.trim(),
+        reason:
+          overrideReason.trim() ||
+          "Cambio manual seleccionado por el usuario en lectura de evidencia.",
         to: routeId,
       };
     }
@@ -225,30 +185,19 @@ export function ReadingPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-8 py-8 xl:px-12">
-      <section className="rounded-[28px] border border-border bg-surface px-10 py-9 shadow-workspace">
+    <div className="workspace-container">
+      <section className="phase-hero">
         <SectionLabel>Lectura de evidencia</SectionLabel>
-        <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div className="mt-4">
           <div className="max-w-4xl">
-            <h1 className="text-5xl font-extrabold leading-[1.02] tracking-normal">
+            <h1 className="phase-title">
               Interpretar evidencia sin optimismo injustificado.
             </h1>
-            <p className="mt-5 max-w-3xl text-xl leading-8 text-muted-foreground">
+            <p className="phase-summary">
               La IA lee registros cerrados y abiertos contra la matriz, muestra,
               umbrales y riesgos de mala interpretación.
             </p>
           </div>
-          <Button
-            disabled={!route || !resultsRecords.length || status === "reading"}
-            onClick={generateReading}
-          >
-            {status === "reading" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Brain className="h-4 w-4" />
-            )}
-            Leer evidencia
-          </Button>
         </div>
       </section>
 
@@ -256,8 +205,8 @@ export function ReadingPage() {
 
       {!route || !resultsRecords.length ? (
         <Card className="p-10 text-center">
-          <h2 className="text-3xl font-extrabold">Falta evidencia registrada</h2>
-          <p className="mt-3 text-base leading-7 text-muted-foreground">
+          <h2 className="text-xl font-semibold">Falta evidencia registrada</h2>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
             Registra resultados observados antes de pedir una lectura.
           </p>
           <div className="mt-6">
@@ -268,16 +217,21 @@ export function ReadingPage() {
         </Card>
       ) : evidenceReading ? (
         <>
-          <Card className="p-7">
+          <Card className="p-5">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <SectionLabel>{route.artifact}</SectionLabel>
-                <h2 className="mt-3 text-3xl font-extrabold">
-                  Decisión recomendada: {evidenceReading.decision}
-                </h2>
-                <p className="mt-3 max-w-4xl text-base leading-7 text-stone-700">
-                  {evidenceReading.rationale}
-                </p>
+                <div className="mt-4 rounded-[24px] border border-border bg-white p-6 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Decisión recomendada
+                  </p>
+                  <h2 className="mt-3 text-3xl font-extrabold leading-tight">
+                    {evidenceReading.decision}
+                  </h2>
+                  <p className="mt-4 max-w-4xl text-base leading-7 text-stone-700">
+                    {evidenceReading.rationale}
+                  </p>
+                </div>
               </div>
               <div className="grid min-w-72 gap-3">
                 <Kpi
@@ -292,19 +246,16 @@ export function ReadingPage() {
                 />
               </div>
             </div>
-            <TextBox
-              label="Supuesto probado"
-              value={evidenceReading.testedAssumption}
-            />
           </Card>
 
-          <Card className="p-7">
+          <Card className="p-5">
             <SectionLabel>Tablero de señales cerradas</SectionLabel>
-            <div className="mt-5 grid gap-4 xl:grid-cols-3">
-              {route.evidenceMetrics.map((metric) => (
-                <MetricCard
-                  key={metric.questionId}
-                  metric={metric}
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+              {(route.closedQuestions ?? []).map((question) => (
+                <ClosedSignalCard
+                  key={question.id}
+                  metric={metricForQuestion(route, question.id)}
+                  question={question}
                   records={resultsRecords}
                   target={route.evidenceScope.sampleTargetMin}
                 />
@@ -320,26 +271,32 @@ export function ReadingPage() {
             />
           </section>
 
-          <section className="grid gap-5 xl:grid-cols-3">
-            <TextBlock title="Falso positivo posible" value={evidenceReading.falsePositiveRisk} />
-            <TextBlock title="Falso negativo posible" value={evidenceReading.falseNegativeRisk} />
-            <TextBlock
-              title="Cómo evitar mala lectura"
-              value={route.avoidMisread.join(" · ")}
-            />
-          </section>
+          <Card className="p-5">
+            <SectionLabel>Riesgos de sobreinterpretación</SectionLabel>
+            <div className="mt-5 grid gap-5 xl:grid-cols-3">
+              <TextBlock title="Falso positivo posible" value={evidenceReading.falsePositiveRisk} />
+              <TextBlock title="Falso negativo posible" value={evidenceReading.falseNegativeRisk} />
+              <TextBlock
+                title="Cómo evitar mala lectura"
+                value={route.avoidMisread.join(" · ")}
+              />
+            </div>
+          </Card>
 
-          <section className="grid gap-5 xl:grid-cols-2">
-            <TextBlock title="Siguiente acción gerencial" value={evidenceReading.nextStep} />
-            <TextBlock
-              title="Condición para próxima decisión"
-              value={nextDecisionCondition(route, evidenceReading)}
-            />
-          </section>
+          <Card className="p-5">
+            <SectionLabel>Siguiente movimiento</SectionLabel>
+            <div className="mt-5 grid gap-5 xl:grid-cols-2">
+              <TextBlock title="Siguiente acción gerencial" value={evidenceReading.nextStep} />
+              <TextBlock
+                title="Condición para próxima decisión"
+                value={nextDecisionCondition(route, evidenceReading)}
+              />
+            </div>
+          </Card>
 
-          <Card className="p-7">
+          <Card className="p-5">
             <SectionLabel>Rutas metodológicas</SectionLabel>
-            <h2 className="mt-3 text-3xl font-extrabold">
+            <h2 className="mt-3 text-xl font-semibold">
               {selectedRoute
                 ? `Ruta final: ${routeTitle(selectedRoute)}`
                 : "Selecciona una ruta final"}
@@ -401,10 +358,11 @@ export function ReadingPage() {
       ) : (
         <Card className="p-10 text-center">
           <Brain className="mx-auto h-8 w-8 text-muted-foreground" />
-          <h2 className="mt-4 text-3xl font-extrabold">Lectura pendiente</h2>
-          <p className="mt-3 text-base leading-7 text-muted-foreground">
-            Hay {resultsRecords.length} registro(s). Ejecuta la lectura para
-            obtener decisión, confianza, riesgos y ruta recomendada.
+          <h2 className="mt-4 text-xl font-semibold">Lectura pendiente</h2>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            Hay {resultsRecords.length} registro(s). Vuelve a Resultados y usa
+            Leer evidencia para obtener decisión, confianza, riesgos y ruta
+            recomendada.
           </p>
         </Card>
       )}
@@ -412,35 +370,43 @@ export function ReadingPage() {
   );
 }
 
-function MetricCard({
+function ClosedSignalCard({
   metric,
+  question,
   records,
   target,
 }: {
-  metric: PrototypeEvidenceMetric;
+  metric: PrototypeEvidenceMetric | null;
+  question: PrototypeClosedQuestion;
   records: Array<{ closedValues: Record<string, string> }>;
   target: number;
 }) {
+  const positiveValues = metric?.advanceValues?.length
+    ? metric.advanceValues
+    : question.options.slice(0, 1);
   const count = records.filter((record) =>
-    metric.advanceValues.includes(record.closedValues[metric.questionId] ?? ""),
+    positiveValues.includes(record.closedValues[question.id] ?? ""),
   ).length;
   const percent = target ? Math.min(100, Math.round((count / target) * 100)) : 0;
   return (
-    <div className="rounded-[20px] border border-border bg-surface-raised p-5">
+    <div className="rounded-[18px] border border-border bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-        {metric.label}
+        {metric?.label ?? question.evidenceRole}
       </p>
-      <strong className="mt-2 block text-3xl font-extrabold">
+      <strong className="mt-2 block text-lg font-semibold">
         {count}/{target}
       </strong>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Cuenta: {metric.advanceValues.join(" / ")}
+      <p className="mt-2 min-h-10 text-xs leading-5 text-muted-foreground">
+        {question.label}
       </p>
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+      <p className="mt-2 text-xs font-semibold text-muted-foreground">
+        Cuenta: {positiveValues.join(" / ")}
+      </p>
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-black" style={{ width: `${percent}%` }} />
       </div>
       <p className="mt-2 text-xs font-semibold text-muted-foreground">
-        {metric.interpretation}
+        {metric?.interpretation ?? question.evidenceRole}
       </p>
     </div>
   );
@@ -483,7 +449,6 @@ function ListCard({ items, title }: { items: string[]; title: string }) {
 function TextBlock({ title, value }: { title: string; value: string }) {
   return (
     <Card className="p-6">
-      <SectionLabel>Riesgo</SectionLabel>
       <h3 className="mt-3 text-xl font-extrabold">{title}</h3>
       <p className="mt-3 text-sm leading-6 text-stone-700">{value}</p>
     </Card>
@@ -496,7 +461,7 @@ function TextBox({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-3 text-base leading-7 text-stone-800">{value}</p>
+      <p className="mt-3 text-sm leading-6 text-stone-800">{value}</p>
     </div>
   );
 }
@@ -517,4 +482,12 @@ function nextDecisionCondition(route: PrototypeRoute, reading: EvidenceReading) 
 
 function routeTitle(routeId: EvidenceReading["methodologicalRoute"]) {
   return routeOptions.find((option) => option.id === routeId)?.title ?? routeId;
+}
+
+function metricForQuestion(route: PrototypeRoute, questionId: string) {
+  return (
+    route.evidenceMetrics?.find(
+      (metric: PrototypeEvidenceMetric) => metric.questionId === questionId,
+    ) ?? null
+  );
 }
