@@ -1,12 +1,20 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export type ClientAsset = {
   body: Buffer;
   contentType: string;
 };
 
-const clientRoot = path.resolve(process.cwd(), "dist/client");
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const clientRoots = [
+  path.resolve(process.cwd(), "dist/client"),
+  path.resolve(process.cwd(), "../dist/client"),
+  path.resolve(moduleDir, "../../client"),
+  path.resolve(moduleDir, "../../dist/client"),
+  path.resolve(moduleDir, "../../../dist/client"),
+];
 
 const contentTypes: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
@@ -23,37 +31,42 @@ const contentTypes: Record<string, string> = {
 export async function readClientAsset(
   pathname: string,
 ): Promise<ClientAsset | null> {
-  const assetPath = resolveClientAssetPath(pathname);
+  const assetPaths = resolveClientAssetPaths(pathname);
 
-  if (!assetPath) {
-    return null;
+  for (const assetPath of assetPaths) {
+    try {
+      const body = await readFile(assetPath);
+      return {
+        body,
+        contentType:
+          contentTypes[path.extname(assetPath)] ??
+          "application/octet-stream",
+      };
+    } catch {
+      // Try the next candidate root. Vercel can execute functions from a
+      // nested cwd while includeFiles keeps dist/client at the task root.
+    }
   }
 
-  try {
-    const body = await readFile(assetPath);
-    return {
-      body,
-      contentType:
-        contentTypes[path.extname(assetPath)] ??
-        "application/octet-stream",
-    };
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export async function readClientIndex(): Promise<ClientAsset | null> {
   return readClientAsset("/");
 }
 
-function resolveClientAssetPath(pathname: string) {
+function resolveClientAssetPaths(pathname: string) {
   const normalizedPath = pathname === "/" ? "/index.html" : pathname;
   const decodedPath = decodeURIComponent(normalizedPath);
-  const assetPath = path.resolve(clientRoot, `.${decodedPath}`);
+  const assetPaths: string[] = [];
 
-  if (!assetPath.startsWith(`${clientRoot}${path.sep}`)) {
-    return null;
+  for (const clientRoot of clientRoots) {
+    const assetPath = path.resolve(clientRoot, `.${decodedPath}`);
+
+    if (assetPath.startsWith(`${clientRoot}${path.sep}`)) {
+      assetPaths.push(assetPath);
+    }
   }
 
-  return assetPath;
+  return assetPaths;
 }
