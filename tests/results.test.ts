@@ -13,6 +13,7 @@ import { createApp } from "../src/http/app.js";
 import { prototypeMatrix } from "../src/prototype/matrix.js";
 import type { ResultsEngine } from "../src/results/engine.js";
 import { ResultsService } from "../src/results/service.js";
+import { getResultsTemplate, resultsTemplates } from "../src/results/templates.js";
 import { FileStore } from "../src/storage/file-store.js";
 
 let tempDir: string;
@@ -28,6 +29,32 @@ afterEach(async () => {
 });
 
 describe("Registro de resultados", () => {
+  it("mantiene un bloque específico de registro por cada ruta de prototipado", () => {
+    const routeIds = prototypeMatrix.map((route) => route.id).sort();
+    const templateRouteIds = resultsTemplates
+      .map((template) => template.routeId)
+      .sort();
+
+    expect(templateRouteIds).toEqual(routeIds);
+
+    for (const route of prototypeMatrix) {
+      const template = getResultsTemplate(route.id);
+
+      expect(template).toBeTruthy();
+      expect(template?.closedQuestions).toHaveLength(7);
+      expect(template?.closedQuestions.map((question) => question.id)).toEqual([
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+      ]);
+      expect(template?.openFields.length).toBeGreaterThanOrEqual(5);
+    }
+  });
+
   it("usa los campos de registro declarados por cada artefacto de la matriz", () => {
     for (const route of prototypeMatrix) {
       const hydratedRoute = route as typeof route & {
@@ -74,6 +101,36 @@ describe("Registro de resultados", () => {
     });
 
     expect(parsed.records).toEqual([]);
+  });
+
+  it("acepta contexto de unidad observada dentro del registro de evidencia", () => {
+    const parsed = resultsPhaseStateSchema.parse({
+      cycleId: "cycle-results",
+      prototypeRouteId: "commercial_offer",
+      records: [
+        {
+          id: "result-context",
+          closedValues: {
+            asked_next_step: "Sí",
+          },
+          values: {
+            perfil_unidad_observada:
+              "Gerente de compras, cuenta desconocida, videollamada.",
+            duracion_sesion: "32 minutos",
+            quien_modero: "Líder comercial",
+            desviacion_protocolo: "ninguna",
+            que_dijo: "Pidió revisar condiciones con finanzas.",
+          },
+          notes: "Sin incentivo ofrecido.",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    expect(parsed.records[0]?.values.perfil_unidad_observada).toContain(
+      "Gerente de compras",
+    );
+    expect(parsed.records[0]?.values.desviacion_protocolo).toBe("ninguna");
   });
 
   it("persiste registros de evidencia ligados a la ruta prototipada", async () => {

@@ -17,6 +17,10 @@ import { createApp } from "../src/http/app.js";
 import type { PrototypeEngine } from "../src/prototype/engine.js";
 import { prototypeIdeaTypes, prototypeMatrix } from "../src/prototype/matrix.js";
 import { PrototypeService } from "../src/prototype/service.js";
+import {
+  prototypeTemplates,
+  renderPrototypeTemplatesForPrompt,
+} from "../src/prototype/templates.js";
 import { FileStore } from "../src/storage/file-store.js";
 
 let tempDir: string;
@@ -57,6 +61,31 @@ describe("Prototipado", () => {
       expect(parsed.evidenceScope.thresholds.iterate).toContain("Iterar");
       expect(parsed.evidenceScope.thresholds.rethink).toContain("Replantear");
     }
+  });
+
+  it("mantiene una plantilla operativa por cada ruta de prototipado", () => {
+    const routeIds = prototypeMatrix.map((route) => route.id).sort();
+    const templateRouteIds = prototypeTemplates
+      .map((template) => template.routeId)
+      .sort();
+
+    expect(templateRouteIds).toEqual(routeIds);
+
+    for (const template of prototypeTemplates) {
+      expect(template.requiredPieces.length).toBeGreaterThanOrEqual(8);
+      expect(template.guidance.length).toBeGreaterThan(80);
+    }
+  });
+
+  it("inyecta las plantillas de ruta en el prompt de prototipado", () => {
+    const rendered = renderPrototypeTemplatesForPrompt();
+
+    for (const route of prototypeMatrix) {
+      expect(rendered).toContain(`Ruta: ${route.id}`);
+    }
+
+    expect(rendered).toContain("Piezas obligatorias");
+    expect(rendered).toContain("Guia");
   });
 
   it("rechaza rutas con tipos de idea fuera de la matriz", () => {

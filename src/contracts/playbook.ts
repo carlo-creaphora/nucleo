@@ -16,7 +16,7 @@ export const playbookEvidenceChainSchema = z.object({
 export const playbookPlanItemSchema = z.object({
   horizon: z.string().min(3),
   objective: z.string().min(12),
-  actions: z.array(z.string().min(8)).min(2).max(6),
+  actions: z.array(z.string().min(8)).min(2).max(3),
   owner: z.string().min(3),
   decisionMetric: z.string().min(8),
 });
@@ -41,7 +41,7 @@ export const playbookOutputSchema = z.object({
   implementationPlan: z.array(playbookPlanItemSchema).min(3).max(3),
   owners: z.array(z.string().min(3)).min(1).max(6),
   requiredResources: z.array(z.string().min(3)).min(1).max(6),
-  metricsToMonitor: z.array(playbookMetricSchema).min(2).max(6),
+  metricsToMonitor: z.array(playbookMetricSchema).min(2).max(3),
   risksAndControls: z.array(playbookRiskSchema).min(2).max(6),
   reviewCadence: z.string().min(12),
   stopOrIterateConditions: z.array(z.string().min(8)).min(2).max(6),

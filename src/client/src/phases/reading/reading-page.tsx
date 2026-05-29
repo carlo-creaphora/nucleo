@@ -12,6 +12,7 @@ import { Button } from "../../components/ui/button.js";
 import { Card, SectionLabel } from "../../components/ui/card.js";
 import { TextArea } from "../../components/ui/form-field.js";
 import { prototypeMatrix } from "../../../../prototype/matrix.js";
+import { getResultsTemplate } from "../../../../results/templates.js";
 import { getPrototypeState } from "../prototype/prototype-api.js";
 import {
   getResultsState,
@@ -143,6 +144,10 @@ export function ReadingPage() {
       null
     );
   }, [prototypeArtifact?.routeId, prototypeRouteId]);
+  const activeClosedQuestions = useMemo(() => {
+    if (!route) return [];
+    return getResultsTemplate(route.id)?.closedQuestions ?? route.closedQuestions ?? [];
+  }, [route]);
 
   const winnerIdea = useMemo(() => {
     const winnerId = prototypeClassification?.ideaId;
@@ -251,7 +256,7 @@ export function ReadingPage() {
           <Card className="p-5">
             <SectionLabel>Tablero de señales cerradas</SectionLabel>
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-              {(route.closedQuestions ?? []).map((question) => (
+              {activeClosedQuestions.map((question) => (
                 <ClosedSignalCard
                   key={question.id}
                   metric={metricForQuestion(route, question.id)}

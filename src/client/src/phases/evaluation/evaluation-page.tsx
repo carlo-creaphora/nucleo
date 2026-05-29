@@ -319,6 +319,8 @@ export function EvaluationPage() {
           {evaluationConfirmed && winner && (
             <DecisionCard
               evaluationDecision={prototypeClassification?.evaluationDecision}
+              prototypeIdeaType={prototypeClassification?.ideaType}
+              prototypeRationale={prototypeClassification?.rationale}
               runnerUp={runnerUp}
               winner={winner}
             />
@@ -395,6 +397,8 @@ function EvaluationIdeaCard({
 
 function DecisionCard({
   evaluationDecision,
+  prototypeIdeaType,
+  prototypeRationale,
   runnerUp,
   winner,
 }: {
@@ -403,17 +407,20 @@ function DecisionCard({
     firstThingToTest: string;
     risksToWatch: string;
   };
+  prototypeIdeaType?: string;
+  prototypeRationale?: string;
   runnerUp: EvaluationEntry | null;
   winner: EvaluationEntry;
 }) {
   const decision =
     evaluationDecision ?? buildFallbackEvaluationDecision(winner, runnerUp);
+  const warningNotes = buildEvaluationWarningNotes(winner);
 
   return (
     <Card className="p-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <SectionLabel>Decisión de evaluación</SectionLabel>
+          <SectionLabel>Evaluación cerrada</SectionLabel>
           <h2 className="mt-3 text-xl font-semibold">
             {displayIdeaName(winner.idea)}
           </h2>
@@ -422,7 +429,35 @@ function DecisionCard({
           {winner.total} puntos
         </span>
       </div>
-      <div className="mt-6 grid gap-5 xl:grid-cols-3">
+      {warningNotes.length ? (
+        <div className="mt-5 grid gap-3">
+          {warningNotes.map((note) => (
+            <div
+              className="rounded-[18px] border border-amber-200 bg-amber-50 px-5 py-4"
+              key={note}
+            >
+              <p className="text-sm font-semibold leading-6 text-amber-900">
+                {note}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <div className="mt-6 grid gap-5 xl:grid-cols-2">
+        <DecisionBox
+          label="Tipo de prototipo"
+          value={
+            prototypeIdeaType
+              ? `${prototypeIdeaType}. ${prototypeRationale ?? "Clasificación definida por la incertidumbre principal de la idea."}`
+              : "Clasificación pendiente."
+          }
+        />
+        <DecisionBox
+          label="Idea ganadora"
+          value={`Confirmada por puntajes humanos: ${winner.total}/35.`}
+        />
+      </div>
+      <div className="mt-5 grid gap-5 xl:grid-cols-3">
         <DecisionBox
           label="Supuestos críticos de la idea"
           value={decision.criticalAssumptions}
@@ -519,6 +554,64 @@ function buildFallbackEvaluationDecision(
       "Diseñar una prueba acotada con un segmento y una métrica observable.",
     risksToWatch: buildRiskWatchText(winner, runnerUp),
   };
+}
+
+function buildEvaluationWarningNotes(winner: EvaluationEntry) {
+  const notes: string[] = [];
+
+  if (winner.scores.differentiation <= 3 && winner.scores.learning <= 3) {
+    notes.push(
+      `${displayIdeaName(winner.idea)} lidera por puntaje, pero tiene diferenciación y aprendizaje bajos. Es la más ejecutable, pero puede no ser la que más aprende sobre el reto.`,
+    );
+  }
+
+  const conceptualRisk = conceptualRiskForIdea(winner.idea);
+  if (conceptualRisk) {
+    notes.push(
+      `${displayIdeaName(winner.idea)} tiene una condición de riesgo: ${conceptualRisk}. El ciclo avanza, pero es importante tenerlo en cuenta al construir el artefacto.`,
+    );
+  }
+
+  return notes;
+}
+
+function conceptualRiskForIdea(idea: IdeationIdea) {
+  const ideaText = [
+    idea.idea,
+    idea.mecanicaConcreta,
+    idea.primerPasoEjecutable,
+    idea.supuestoQueRompe,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const mechanismText = idea.mecanicaConcreta?.trim() ?? "";
+
+  if (!mechanismText) {
+    return "no declara una mecánica observable";
+  }
+
+  if (
+    /\b(construir|desarrollar|lanzar|crear)\b.*\b(producto final|plataforma completa|app completa|sistema completo)\b/.test(
+      ideaText,
+    )
+  ) {
+    return "el primer piloto parece exigir construir demasiado antes de aprender";
+  }
+
+  const genericContainerPattern =
+    /\b(crear|implementar|desarrollar|diseñar|disenar|lanzar)\b.*\b(sistema|proceso|programa|metodologia|capacitación|capacitacion|dashboard|comunidad|contenido|ia|alianza)\b/;
+  const observableChangePattern =
+    /\b(regla|incentivo|acceso|riesgo|ritual|objeto|decisión|decision|autoridad|precio|garantía|garantia|compromiso|pagador|aprobador|interacción|interaccion)\b/;
+
+  if (
+    genericContainerPattern.test(ideaText) &&
+    !observableChangePattern.test(ideaText)
+  ) {
+    return "describe un contenedor genérico sin cambio observable claro";
+  }
+
+  return null;
 }
 
 function buildRiskWatchText(winner: EvaluationEntry, runnerUp: EvaluationEntry | null) {

@@ -14,13 +14,18 @@ import { Button } from "../../components/ui/button.js";
 import { Card, SectionLabel } from "../../components/ui/card.js";
 import { TextArea } from "../../components/ui/form-field.js";
 import { prototypeMatrix } from "../../../../prototype/matrix.js";
+import { getResultsTemplate } from "../../../../results/templates.js";
 import { getPrototypeState } from "../prototype/prototype-api.js";
-import { getResultsState, saveResultsState } from "./results-api.js";
+import { getResultsState, readEvidence, saveResultsState } from "./results-api.js";
 
 type FormState = {
   closedValues: Record<string, string>;
+  deviation: string;
+  duration: string;
+  moderator: string;
   values: Record<string, string>;
   notes: string;
+  profile: string;
 };
 
 type WinnerEntry = {
@@ -56,9 +61,14 @@ export function ResultsPage() {
     setResultsRecords,
   } = useAppState();
   const [error, setError] = useState<string | null>(null);
+  const [readStatus, setReadStatus] = useState<"idle" | "reading">("idle");
   const [form, setForm] = useState<FormState>({
     closedValues: {},
+    deviation: "",
+    duration: "",
+    moderator: "",
     notes: "",
+    profile: "",
     values: {},
   });
   const [openRecordId, setOpenRecordId] = useState<string | null>(null);
@@ -131,6 +141,18 @@ export function ResultsPage() {
       null
     );
   }, [prototypeArtifact?.routeId, prototypeRouteId]);
+  const resultsTemplate = useMemo(
+    () => (route ? getResultsTemplate(route.id) : null),
+    [route],
+  );
+  const activeClosedQuestions = useMemo(
+    () => resultsTemplate?.closedQuestions ?? route?.closedQuestions ?? [],
+    [resultsTemplate, route],
+  );
+  const activeOpenFields = useMemo(
+    () => resultsTemplate?.openFields ?? (route ? registerFields(route) : []),
+    [resultsTemplate, route],
+  );
 
   const artifact = prototypeArtifact?.artifact ?? null;
   const winner = useMemo(
@@ -158,10 +180,20 @@ export function ResultsPage() {
   const addRecord = async () => {
     if (!route) return;
     const hasClosed = Object.values(form.closedValues).some(Boolean);
+    const hasContext = Boolean(
+      form.profile.trim() ||
+        form.duration.trim() ||
+        form.moderator.trim() ||
+        form.deviation.trim(),
+    );
     const hasOpen = Object.values(form.values).some((value) => value.trim());
     const hasNotes = form.notes.trim().length > 0;
-    if (!hasClosed && !hasOpen && !hasNotes) {
+    if (!hasClosed && !hasOpen && !hasNotes && !hasContext) {
       setError("Registra al menos una evidencia observada.");
+      return;
+    }
+    if (!form.profile.trim()) {
+      setError("Registra el perfil de la unidad observada antes de guardar.");
       return;
     }
     const nextRecord: ResultRecord = {
@@ -169,15 +201,29 @@ export function ResultsPage() {
       createdAt: new Date().toISOString(),
       id: `result-${Date.now()}`,
       notes: form.notes.trim(),
-      values: Object.fromEntries(
-        Object.entries(form.values).map(([key, value]) => [key, value.trim()]),
-      ),
+      values: {
+        perfil_unidad_observada: form.profile.trim(),
+        duracion_sesion: form.duration.trim() || "No registrado",
+        quien_modero: form.moderator.trim() || "No registrado",
+        desviacion_protocolo: form.deviation.trim() || "ninguna",
+        ...Object.fromEntries(
+          Object.entries(form.values).map(([key, value]) => [key, value.trim()]),
+        ),
+      },
     };
     const nextRecords = [nextRecord, ...resultsRecords];
     setResultsRecords(nextRecords);
     setEvidenceReading(null);
     setMethodologicalRoute(null);
-    setForm({ closedValues: {}, notes: "", values: {} });
+    setForm({
+      closedValues: {},
+      deviation: "",
+      duration: "",
+      moderator: "",
+      notes: "",
+      profile: "",
+      values: {},
+    });
     setError(null);
     await persistRecords(nextRecords);
   };
@@ -190,8 +236,8 @@ export function ResultsPage() {
     await persistRecords(nextRecords);
   };
 
-  const goToEvidenceReading = () => {
-    if (!artifact) return;
+  const goToEvidenceReading = async () => {
+    if (!artifact || !route) return;
 
     if (artifact.artifact.length < 4) {
       setError(
@@ -200,8 +246,29 @@ export function ResultsPage() {
       return;
     }
 
+    setReadStatus("reading");
     setError(null);
-    setActivePhaseId("reading");
+    try {
+      const reading = await readEvidence({
+        artifact,
+        closedQuestions: activeClosedQuestions,
+        cycleId,
+        idea: winner?.idea,
+        records: resultsRecords,
+        route,
+      });
+      setEvidenceReading(reading);
+      setMethodologicalRoute(reading.methodologicalRoute);
+      setActivePhaseId("reading");
+    } catch (readError) {
+      setError(
+        readError instanceof Error
+          ? readError.message
+          : "No se pudo leer la evidencia.",
+      );
+    } finally {
+      setReadStatus("idle");
+    }
   };
 
   return (
@@ -262,12 +329,12 @@ export function ResultsPage() {
                 label="Registros"
                 target={sampleTarget(route)}
               />
-              {(route.closedQuestions ?? []).map((question) => {
+              {activeClosedQuestions.map((question) => {
                 const metric = metricForQuestion(route, question.id);
                 const positives =
                   metric?.advanceValues?.length
                     ? metric.advanceValues
-                    : question.options.slice(0, 1);
+                    : ["Sí"];
                 const count = resultsRecords.filter((record) =>
                   positives.includes(record.closedValues[question.id] ?? ""),
                 ).length;
@@ -282,6 +349,11 @@ export function ResultsPage() {
                 );
               })}
             </div>
+            <EvidenceReadiness
+              closedQuestions={activeClosedQuestions}
+              resultsRecords={resultsRecords}
+              route={route}
+            />
           </Card>
 
           <Card className="p-5">
@@ -290,9 +362,64 @@ export function ResultsPage() {
               Señales cerradas y evidencia abierta
             </h2>
             <div className="mt-6 grid gap-5">
-              {route.closedQuestions?.length ? (
+              <div className="grid gap-4 xl:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Perfil de la unidad observada
+                  </span>
+                  <TextArea
+                    className="min-h-24"
+                    onChange={(event) =>
+                      setForm({ ...form, profile: event.target.value })
+                    }
+                    placeholder="Cargo, contexto, relación con el equipo y canal de la prueba. No incluyas nombre completo si hay privacidad."
+                    value={form.profile}
+                  />
+                </label>
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Desviación del protocolo
+                  </span>
+                  <TextArea
+                    className="min-h-24"
+                    onChange={(event) =>
+                      setForm({ ...form, deviation: event.target.value })
+                    }
+                    placeholder='Qué cambió respecto al artefacto. Si nada cambió, escribe "ninguna".'
+                    value={form.deviation}
+                  />
+                </label>
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Duración de la sesión
+                  </span>
+                  <TextArea
+                    className="min-h-16"
+                    onChange={(event) =>
+                      setForm({ ...form, duration: event.target.value })
+                    }
+                    placeholder="Ej. 25 minutos, 1 hora, 2 semanas de piloto."
+                    value={form.duration}
+                  />
+                </label>
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Quién moderó
+                  </span>
+                  <TextArea
+                    className="min-h-16"
+                    onChange={(event) =>
+                      setForm({ ...form, moderator: event.target.value })
+                    }
+                    placeholder="Rol de quien moderó, vendió, operó u observó."
+                    value={form.moderator}
+                  />
+                </label>
+              </div>
+
+              {activeClosedQuestions.length ? (
                 <div className="grid gap-4 xl:grid-cols-2">
-                  {route.closedQuestions.map((question) => (
+                  {activeClosedQuestions.map((question) => (
                     <ClosedQuestionField
                       key={question.id}
                       onChange={(value) =>
@@ -311,7 +438,7 @@ export function ResultsPage() {
                 </div>
               ) : null}
 
-              {registerFields(route).map((label) => {
+              {activeOpenFields.map((label) => {
                 const key = fieldKey(label);
                 return (
                   <label className="grid gap-2" key={key}>
@@ -378,7 +505,8 @@ export function ResultsPage() {
                     }
                     record={record}
                     removeRecord={removeRecord}
-                    route={route}
+                    closedQuestions={activeClosedQuestions}
+                    openFields={activeOpenFields}
                   />
                 ))
               ) : (
@@ -392,11 +520,11 @@ export function ResultsPage() {
 
           <div className="flex justify-end">
             <Button
-              disabled={!route || resultsRecords.length === 0}
-              onClick={goToEvidenceReading}
+              disabled={!route || resultsRecords.length === 0 || readStatus === "reading"}
+              onClick={() => void goToEvidenceReading()}
               variant="secondary"
             >
-              Leer evidencia
+              {readStatus === "reading" ? "Leyendo evidencia" : "Leer evidencia"}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -548,26 +676,124 @@ function MetricCard({
   );
 }
 
+function EvidenceReadiness({
+  closedQuestions,
+  resultsRecords,
+  route,
+}: {
+  closedQuestions: PrototypeClosedQuestion[];
+  resultsRecords: ResultRecord[];
+  route: PrototypeRoute;
+}) {
+  const target = sampleTarget(route);
+  const criticalQuestionIds = closedQuestions.slice(0, 4).map((question) => question.id);
+  const recordsCount = resultsRecords.length;
+  const missing = Math.max(0, target - recordsCount);
+  const hasRecords = recordsCount > 0;
+  const belowMinimum = hasRecords && recordsCount < target;
+  const missingContext = resultsRecords.filter(
+    (record) => !record.values.perfil_unidad_observada,
+  ).length;
+  const recordsMissingCritical = resultsRecords.filter((record) =>
+    criticalQuestionIds.some((questionId) => !record.closedValues[questionId]),
+  ).length;
+  const majority = closedQuestions.reduce<{
+    noOrPartial: string[];
+    yes: string[];
+  }>(
+    (summary, question) => {
+      const yesCount = resultsRecords.filter(
+        (record) => record.closedValues[question.id] === "Sí",
+      ).length;
+      const noOrPartialCount = resultsRecords.filter((record) =>
+        ["No", "Parcial"].includes(record.closedValues[question.id] ?? ""),
+      ).length;
+      if (yesCount > noOrPartialCount && yesCount > 0) {
+        summary.yes.push(question.id);
+      } else if (noOrPartialCount >= yesCount && noOrPartialCount > 0) {
+        summary.noOrPartial.push(question.id);
+      }
+      return summary;
+    },
+    { noOrPartial: [], yes: [] },
+  );
+  const status = !hasRecords
+    ? "No"
+    : belowMinimum || missingContext || recordsMissingCritical
+      ? "Con advertencia"
+      : "Sí";
+  const reason = !hasRecords
+    ? "Todavía no hay registros completos."
+    : missingContext
+      ? "Hay registros sin perfil de unidad observada."
+      : recordsMissingCritical
+        ? "Hay registros con preguntas críticas C1 a C4 sin respuesta."
+      : belowMinimum
+        ? `Hay evidencia inicial, pero faltan ${missing} registro(s) para el mínimo de muestra.`
+        : "La muestra mínima está completa para pedir lectura.";
+
+  return (
+    <div className="mt-5 rounded-[18px] border border-border bg-surface-raised px-5 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        ¿Se puede pasar a Lectura de evidencias?
+      </p>
+      <p className="mt-2 text-base font-extrabold text-stone-900">{status}</p>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{reason}</p>
+      <div className="mt-3 grid gap-1 text-xs font-semibold text-muted-foreground">
+        <p>
+          Mayoría de Sí: {majority.yes.length ? majority.yes.join(", ") : "sin mayoría todavía"}
+        </p>
+        <p>
+          Mayoría de No/Parcial:{" "}
+          {majority.noOrPartial.length
+            ? majority.noOrPartial.join(", ")
+            : "sin mayoría todavía"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function RecordCard({
+  closedQuestions,
   index,
   isOpen,
   onToggle,
+  openFields,
   record,
   removeRecord,
-  route,
 }: {
+  closedQuestions: PrototypeClosedQuestion[];
   index: number;
   isOpen: boolean;
   onToggle: () => void;
+  openFields: string[];
   record: ResultRecord;
   removeRecord: (recordId: string) => void;
-  route: PrototypeRoute;
 }) {
-  const closedRows = (route.closedQuestions ?? []).map((question) => ({
+  const contextRows = [
+    {
+      label: "Perfil de la unidad observada",
+      value: record.values.perfil_unidad_observada || "Sin dato",
+    },
+    {
+      label: "Duración de la sesión",
+      value: record.values.duracion_sesion || "Sin dato",
+    },
+    {
+      label: "Quién moderó",
+      value: record.values.quien_modero || "Sin dato",
+    },
+    {
+      label: "Desviación del protocolo",
+      value: record.values.desviacion_protocolo || "Sin dato",
+    },
+  ];
+  const closedRows = closedQuestions.map((question) => ({
     label: question.label,
     value: record.closedValues[question.id] || "Sin dato",
   }));
-  const openRows = registerFields(route).map((label) => ({
+  const openRows = openFields.map((label) => ({
     label,
     value: record.values[fieldKey(label)] || "Sin dato",
   }));
@@ -595,7 +821,7 @@ function RecordCard({
       </button>
       {isOpen && <div className="border-t border-border px-5 pb-5 pt-4">
         <ul className="grid gap-2 text-sm leading-6 text-stone-700">
-          {[...closedRows, ...openRows].map((row) => (
+          {[...contextRows, ...closedRows, ...openRows].map((row) => (
             <li key={row.label}>
               • {row.label}: {row.value}
             </li>

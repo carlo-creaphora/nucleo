@@ -10,6 +10,10 @@ import {
 } from "../src/contracts/playbook.js";
 import { createApp } from "../src/http/app.js";
 import type { PlaybookEngine } from "../src/playbook/engine.js";
+import {
+  playbookScopeCeilings,
+  renderPlaybookScopeCeilingsForPrompt,
+} from "../src/playbook/scope.js";
 import { PlaybookService } from "../src/playbook/service.js";
 import { buildCycleMemory } from "../src/playbook/service.js";
 import { prototypeMatrix } from "../src/prototype/matrix.js";
@@ -132,6 +136,30 @@ describe("Playbook y memoria de ciclo", () => {
     expect(body.contracts).toContain("masterCycleState");
     expect(serialized).not.toMatch(/sk-/i);
     expect(serialized).not.toContain(process.env.OPENAI_API_KEY ?? "not-a-real-key");
+  });
+
+  it("define techo de alcance de Playbook para todas las rutas de prototipado", () => {
+    const routeIds = prototypeMatrix.map((route) => route.id).sort();
+    const ceilingRouteIds = playbookScopeCeilings
+      .map((ceiling) => ceiling.routeId)
+      .sort();
+
+    expect(ceilingRouteIds).toEqual(routeIds);
+    for (const ceiling of playbookScopeCeilings) {
+      expect(ceiling.ceilingByConfidence.Alta).toContain(".");
+      expect(ceiling.ceilingByConfidence.Media).toContain(".");
+      expect(ceiling.ceilingByConfidence.Baja).toContain(".");
+    }
+  });
+
+  it("renderiza la matriz de alcance en el prompt de Playbook", () => {
+    const rendered = renderPlaybookScopeCeilingsForPrompt();
+
+    expect(rendered).toContain("Ruta: commercial_offer");
+    expect(rendered).toContain("- Alta:");
+    expect(rendered).toContain("- Media:");
+    expect(rendered).toContain("- Baja:");
+    expect(rendered).toContain("no pilotar");
   });
 });
 
