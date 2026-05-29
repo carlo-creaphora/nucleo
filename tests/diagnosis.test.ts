@@ -678,10 +678,13 @@ describe("Diagnostico", () => {
     expect(copyPrompt).toContain("palabras cortadas");
     expect(copyPrompt).toContain("espacios insertados dentro de palabras");
     expect(prompt).toContain("mandatoryCaseScreening");
+    expect(prompt).toContain("EL MECANISMO ES LA IDEA");
     expect(prompt).toContain("Generar exactamente 1 idea");
     expect(prompt).toContain("referencia principal");
     expect(prompt).toContain("Cruzar cada idea contra antipatrones");
     expect(prompt).toContain("No copiar el caso");
+    expect(prompt).toContain("Primero caso, despues idea");
+    expect(prompt).toContain("regla/incentivo/ritual/objeto");
     expect(prompt).not.toContain("prototypeBrief");
     expect(prompt).toContain("translatedCaseReferences");
     expect(prompt).toContain("1. idea:");
@@ -690,6 +693,38 @@ describe("Diagnostico", () => {
     expect(prompt).toContain("mejorar optimiza el juego");
     expect(prompt).toContain("RUPTURA_FUERTE = transformar");
     expect(prompt).toContain("No mezclar rutas");
+  });
+
+  it("bloquea ideas genericas que repiten el diagnostico como sistema sin mecanismo", async () => {
+    const input = buildInput({ cycleId: "cycle-ideation-generic-system" });
+    await registerInput(input);
+    await service.complete(input);
+    const signalsResult = await signalsService.generate(input.cycleId);
+    const selectedGap = signalsResult.signals.output.gaps[0]?.title;
+    const selectedInsight = signalsResult.signals.output.insights[0]?.title;
+    const ideationInput = await ideationService.buildInput(input.cycleId, {
+      ruptureType: "RUPTURA_FUERTE",
+      gapTitle: selectedGap,
+      insightTitle: selectedInsight,
+    });
+    const output = buildIdeationOutputForTest(ideationInput, {
+      idea:
+        "Idea 1. Crear un sistema comercial estructurado que permita convertir la innovacion en ventas predecibles",
+      mecanicaConcreta:
+        "Disenar un proceso comercial claro y documentado que organice desde la generacion de oportunidades hasta el cierre y seguimiento de clientes. El sistema integrara herramientas, metodologias y responsabilidades definidas para que cualquier persona del equipo pueda ejecutar el proceso comercial de forma consistente.",
+      porQueFunciona:
+        "Porque transforma la venta en una capacidad organizacional estructurada, permitiendo generar oportunidades constantes y reducir la dependencia de procesos improvisados.",
+      casoAnalogo:
+        "Caso comercial general. La similitud es ordenar un proceso; la diferencia es que se aplica a ventas.",
+    });
+    const violations = validateIdeationOutput(ideationInput, output);
+
+    expect(
+      violations.some((violation) => violation.type === "GENERIC_MECHANISM"),
+    ).toBe(true);
+    expect(
+      violations.some((violation) => violation.type === "DECORATIVE_CASE"),
+    ).toBe(true);
   });
 
   it("limpia repeticiones y codigos internos de la salida visible de ideas", async () => {
@@ -776,7 +811,7 @@ function buildIdeationOutputForTest(
     porQueFunciona:
       "Funciona porque reduce ambiguedad sin cambiar el modelo de negocio ni pedir una transformacion estructural.",
     casoAnalogo:
-      "IKEA, Cook this Page, 2002, retail/hogar, Suecia. La similitud es convertir una instruccion interpretable en una guia visible; la diferencia es que aqui se aplica a una decision empresarial.",
+      "IKEA, Cook this Page, 2002, retail/hogar, Suecia. Mecanismo transferido: convertir una instruccion interpretable en una guia visible. La similitud es transformar una decision ambigua en una regla fisica; la diferencia es que aqui se aplica a una decision empresarial.",
     metricaQueMueve:
       "Tiempo de decision y variabilidad de ejecucion en el proceso seleccionado.",
     primerPasoEjecutable:

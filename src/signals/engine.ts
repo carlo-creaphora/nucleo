@@ -37,6 +37,13 @@ type BuyerMapMatch = {
   searchTerms: string[];
 };
 
+type DiagnosticFocus = {
+  mecanismoCausal: string;
+  restriccionNoNegociable: string;
+  decisionTrabada: string;
+  preguntaRectora: string;
+};
+
 const BUYER_MAP: BuyerMapEntry[] = [
   {
     id: "building-property-management",
@@ -227,6 +234,7 @@ export class OpenAiSignalsEngine implements SignalsEngine {
   }
 
   private async synthesizeGaps(input: SignalsInput, evidence: SignalEvidence[]) {
+    const diagnosticFocus = buildDiagnosticFocus(input);
     const completion = await this.client.beta.chat.completions.parse({
       model: this.model,
       temperature: 0.15,
@@ -240,10 +248,21 @@ export class OpenAiSignalsEngine implements SignalsEngine {
           content: JSON.stringify(
             {
               instruction:
-                "Analiza solo estas senales base de mercado. Produce exactamente 2 gaps. GAP = diferencia entre estado actual de la empresa y potencial/expectativa/movimiento del mercado.",
+                "Analiza solo estas senales base de mercado. Produce exactamente 2 gaps. GAP = diferencia entre estado actual de la empresa y potencial/expectativa/movimiento del mercado. El reto es el filtro: cada gap debe tensionar el mecanismo causal, la restriccion no negociable o la decision trabada.",
+              diagnosticFocus,
               diagnosis: input.ideationInput.diagnosis,
               registration: input.registration,
               buyer: inferBuyer(input),
+              gapRoute:
+                "Los gaps nacen de social listening, tendencias y competidores. Responden: que esta pasando afuera que la empresa todavia no captura?",
+              qualityGate: [
+                "Que aprendi aqui que no estaba ya en el diagnostico?",
+                "Que evidencia externa sostiene este hallazgo?",
+                "Que tension nueva aparece?",
+                "Que cambia para Ideacion si este hallazgo es cierto?",
+                "Esto abre una direccion distinta o solo confirma una carencia?",
+                "El gap podria aplicar a cualquier empresa del sector sin cambiar una palabra?",
+              ],
               bannedParaphraseSource:
                 "No repitas coordinacion operativa, estandarizacion, falta de personal, diferencias normativas o tensiones internas salvo como estadoActualEmpresa; el valor debe venir del mercado o del cliente.",
               memory: input.ideationInput.memory,
@@ -278,6 +297,7 @@ export class OpenAiSignalsEngine implements SignalsEngine {
       (signal) => signal.lens === "CUSTOMER_INSIGHT",
     );
     const fallbackEvidence = customerEvidence.length ? customerEvidence : evidence;
+    const diagnosticFocus = buildDiagnosticFocus(input);
     const completion = await this.client.beta.chat.completions.parse({
       model: this.model,
       temperature: 0.18,
@@ -291,11 +311,22 @@ export class OpenAiSignalsEngine implements SignalsEngine {
           content: JSON.stringify(
             {
               instruction:
-                "Produce exactamente 2 insights desde evidencia del comprador. No resumas gaps. No repitas mercado, costos ocultos, incumplimiento o desconfianza como insight si ya aparecen en gaps. El insight debe revelar que intenta proteger, conseguir, justificar o evitar el cliente.",
+                "Produce exactamente 2 insights desde evidencia del comprador. No resumas gaps. No repitas mercado, costos ocultos, incumplimiento o desconfianza como insight si ya aparecen en gaps. El insight debe revelar que intenta proteger, conseguir, justificar o evitar el cliente. Antes de cerrar, verifica mentalmente las 4 combinaciones gap x insight y selecciona insights que expliquen por que al menos dos gaps existen o persisten.",
+              diagnosticFocus,
               buyer: inferBuyer(input),
               declaredCustomer: input.registration.contextForDiagnosis.company.sellsTo,
               category: input.registration.contextForDiagnosis.company.sectorCategory,
               gaps,
+              insightRoute:
+                "Los insights nacen de customer insight. Responden: por que el comprador actua asi y que verdad accionable revela ese comportamiento?",
+              qualityGate: [
+                "Que intenta proteger el comprador?",
+                "Que necesita justificar ante otros?",
+                "Que riesgo quiere evitar?",
+                "Que comportamiento observable revela su motivacion real?",
+                "Que tension de decision explica por que compra, rechaza o posterga?",
+                "El insight tiene algo incomodo o solo describe una necesidad generica?",
+              ],
               evidence: fallbackEvidence,
             },
             null,
@@ -519,13 +550,17 @@ function buildSearchSystemPrompt(lens: SignalLens) {
   const shared = [
     "Eres la etapa de busqueda real de Senales de Nucleo.",
     "Debes buscar fuentes publicas reales y devolver solo evidencia textual util para construir 2 gaps y 2 insights.",
+    "Principio obligatorio: el reto es el filtro. Antes de buscar, usa el reto y el diagnostico para leer mecanismo causal, restriccion no negociable y decision trabada.",
+    "Tu pregunta rectora es: que esta pasando afuera que cambia la lectura de este mecanismo, esta restriccion o esta decision?",
     "No busques soporte para el diagnostico interno; busca comportamiento del comprador y potencial del mercado que la empresa no esta capturando.",
     "No inventes datos, fuentes, URLs, competidores ni comportamientos.",
     "Busca primero senales negativas: quejas, fricciones, miedos, reclamos, abandono, ratings bajos, costos ocultos o promesas incumplidas.",
     "No hagas investigacion general ni resumen de mercado.",
+    "No salgas hacia la industria en abstracto. Las consultas deben nacer del mecanismo, la restriccion o la decision, no del nombre de la categoria.",
     "No conviertas hallazgos en ideas. Solo devuelve evidencia publica resumida.",
     "Cada senal debe decir tipoDeFriccion, relacionConDiagnostico y porQueImportaParaIdeacion.",
     "La evidencia debe venir del mercado, clientes, compradores, usuarios, reguladores, competidores o categoria; no de repetir el problema interno.",
+    "Descarta cualquier senal que no agregue algo nuevo frente al diagnostico o que pueda servir igual para cualquier empresa del sector.",
   ];
 
   if (lens === "SOCIAL_LISTENING") {
@@ -535,6 +570,7 @@ function buildSearchSystemPrompt(lens: SignalLens) {
       "Busca resenas, foros, Reddit/Quora, marketplaces, app stores, quejas, reclamos, FAQs y soporte publico.",
       "Prioriza busquedas con palabras como: queja, reclamo, resena baja, no funciona, caro, dificil, demorado, soporte, abandono, promesa incumplida.",
       "Encuentra que temen, evitan o desean los compradores/usuarios declarados.",
+      "Este lente alimenta principalmente gaps: fricciones externas, expectativas recurrentes y lenguaje del mercado.",
     );
   }
 
@@ -544,6 +580,7 @@ function buildSearchSystemPrompt(lens: SignalLens) {
       "Una tendencia positiva no debe presentarse como gap ni oportunidad por si sola.",
       "Busca presiones externas: regulacion, costos crecientes, cambios de comprador, exigencias nuevas, adopcion lenta, riesgo operativo.",
       "Encuentra hacia donde se esta moviendo el mercado y que expectativa nueva crea para el comprador.",
+      "Este lente alimenta gaps: cambios de contexto que vuelven insuficiente el estado actual de la empresa.",
     );
   }
 
@@ -553,6 +590,7 @@ function buildSearchSystemPrompt(lens: SignalLens) {
       "Usa webs declaradas, claims, precios, garantias, casos, FAQs, onboarding y fricciones publicas asociadas.",
       "Busca la contradiccion entre lo que prometen y lo que parece dificil, condicionado, costoso o no probado.",
       "Encuentra potencial de mercado en claims, funcionalidades, casos, garantias, SLA, digitalizacion, trazabilidad o reduccion de riesgo.",
+      "Este lente alimenta gaps: promesas que educan expectativas y espacios que quedan abiertos.",
     );
   }
 
@@ -563,6 +601,7 @@ function buildSearchSystemPrompt(lens: SignalLens) {
       "La evidencia debe explicar que intenta proteger, conseguir, justificar o evitar el comprador declarado.",
       "Busca frases y patrones como: vendor selection criteria, switching provider risk, approval process, tenant complaints, liability, board approval, maintenance reporting, control, accountability.",
       "Para administradores de edificios o centros comerciales, prioriza residentes, arrendatarios, comites, juntas, gerencia, reclamos, continuidad operativa y exposicion del administrador.",
+      "Este lente alimenta insights: motivaciones, miedos, criterios de decision y tensiones del comprador. No lo conviertas en brecha de mercado.",
     );
   }
 
@@ -576,6 +615,7 @@ export function buildSearchUserPromptForTest(input: SignalsInput, lens: SignalLe
 function buildSearchUserPrompt(input: SignalsInput, lens: SignalLens) {
   const context = input.registration.contextForDiagnosis;
   const buyerMap = inferBuyerMap(input);
+  const diagnosticFocus = buildDiagnosticFocus(input);
   const competitors = context.category.competitors
     .map((competitor) => `${competitor.name} ${competitor.website}`)
     .join(" | ");
@@ -590,18 +630,23 @@ function buildSearchUserPrompt(input: SignalsInput, lens: SignalLens) {
     `Competidores declarados: ${competitors || "No informados"}`,
     `Notas categoria: ${context.category.notes ?? "No informadas"}`,
     `Reto diagnosticado: ${input.ideationInput.selectedChallenge}`,
+    `Mecanismo causal a tensionar: ${diagnosticFocus.mecanismoCausal}`,
+    `Restriccion no negociable a respetar: ${diagnosticFocus.restriccionNoNegociable}`,
+    `Decision trabada a destrabar: ${diagnosticFocus.decisionTrabada}`,
+    `Pregunta rectora de busqueda: ${diagnosticFocus.preguntaRectora}`,
     `Causas: ${input.ideationInput.diagnosis.causes.join(" | ")}`,
     `Tensiones: ${input.ideationInput.diagnosis.tensions.join(" | ")}`,
     `Restricciones: ${input.ideationInput.diagnosis.restrictions.join(" | ")}`,
     `No conviene atacar todavia: ${input.ideationInput.diagnosis.notWorthAttackingYet.join(" | ")}`,
     "",
-    "Objetivo: encontrar la diferencia entre el estado actual de la empresa y el potencial del mercado, y descubrir comportamiento/motivacion/deseo del comprador.",
+    "Objetivo: encontrar evidencia externa que cambie la lectura del mecanismo, la restriccion o la decision; no confirmar el diagnostico.",
     "No devuelvas causas internas que ya declaro el perfil como si fueran senales.",
   ];
 
   if (lens === "CUSTOMER_INSIGHT") {
     lines.push(
       "Para este lente, busca solo motivaciones, deseos, verdades ocultas, temores, criterios de decision y riesgos percibidos del comprador.",
+      "La salida debe servir para insights: por que el comprador actua asi y que intenta proteger, conseguir, justificar o evitar.",
       `Actores que presionan al comprador: ${buyerMap.pressureActors.join(", ")}`,
       `Motivaciones a investigar: ${buyerMap.motivations.join(" | ")}`,
       `Disparadores de decision: ${buyerMap.decisionTriggers.join(" | ")}`,
@@ -610,6 +655,7 @@ function buildSearchUserPrompt(input: SignalsInput, lens: SignalLens) {
   } else {
     lines.push(
       "Para este lente, busca potencial de mercado, fricciones externas, promesas competitivas o expectativas nuevas.",
+      "La salida debe servir para gaps: que esta pasando afuera que la empresa todavia no captura.",
     );
   }
 
@@ -623,10 +669,14 @@ function buildGapSynthesisSystemPrompt() {
     "Eres la etapa de analisis de Senales de Nucleo.",
     "Tu trabajo es convertir evidencia publica en exactamente 2 gaps para Ideacion.",
     "No diagnostiques de nuevo y no propongas ideas.",
+    "Principio obligatorio: el reto es el filtro. Cada gap debe tensionar mecanismo causal, restriccion no negociable o decision trabada.",
     "No seas optimista por defecto ni conviertas todo en oportunidad.",
     "Si el mercado contradice al usuario o debilita el diagnostico, dilo.",
     "Un gap debe comparar estadoActualEmpresa contra potencialMercado; no puede ser solo una causa interna.",
+    "Un gap responde: que esta pasando afuera que la empresa todavia no captura?",
+    "La respuesta debe terminar en brecha de mercado, no en motivacion psicologica del comprador.",
     "Si una frase podria salir solo del diagnostico, rechazala y formula desde mercado/cliente.",
+    "Si el gap solo dice que la empresa no tiene lo que el mercado quiere, es debil y debes rehacerlo.",
     "Competidores deben analizar promesa visible versus friccion evidenciada.",
     "Debes entregar exactamente 2 gaps. Si la evidencia es debil, marca evidenceBase como indirecta.",
     "Prioriza: potencial de mercado, expectativa nueva del comprador, friccion negativa, comportamiento de compra/adopcion, promesa competitiva incumplida.",
@@ -639,12 +689,39 @@ function buildInsightSynthesisSystemPrompt() {
     "Eres la etapa de insight de comprador de Nucleo.",
     "Tu trabajo es producir exactamente 2 insights para Ideacion desde evidencia del comprador o cliente declarado.",
     "No produzcas gaps. No describas el mercado. No repitas promesas competitivas ni fricciones externas como insight.",
+    "Principio obligatorio: el reto es el filtro. Cada insight debe explicar una conducta de comprador que tensiona el mecanismo, la restriccion o la decision.",
     "Un insight debe revelar comportamiento, motivacion, miedo, deseo, criterio de compra, costo politico, ritual de decision o tension oculta del comprador.",
     "El insight debe responder que intenta proteger, conseguir, justificar o evitar el comprador.",
+    "La respuesta debe terminar en verdad accionable del comprador, no en brecha de mercado.",
     "Si un gap habla de costos ocultos, incumplimiento o desconfianza, el insight debe ir a una capa distinta: temor reputacional, aprobacion ante terceros, continuidad operativa, aversion al cambio, deseo de control, necesidad de prueba o trazabilidad defendible.",
     "No uses la misma frase, causa o fenomeno central de los gaps. Si se parece al gap, rehazlo desde motivacion del comprador.",
+    "Antes de cerrar, verifica tension gap x insight: el comportamiento del insight debe explicar por que existe o persiste al menos parte de un gap.",
     "Cada insight debe referenciar evidenceIds existentes.",
   ].join(" ");
+}
+
+function buildDiagnosticFocus(input: SignalsInput): DiagnosticFocus {
+  const diagnosis = input.ideationInput.diagnosis;
+  const mecanismoCausal =
+    diagnosis.causes.join(" | ") ||
+    diagnosis.whyThisChallenge ||
+    input.ideationInput.selectedChallenge;
+  const restriccionNoNegociable =
+    diagnosis.restrictions.join(" | ") ||
+    diagnosis.notWorthAttackingYet.join(" | ") ||
+    "Restriccion no explicita; inferir desde contexto, capacidad, mercado y recursos declarados.";
+  const decisionTrabada =
+    diagnosis.assumptionToQuestion ||
+    diagnosis.ideationBrief ||
+    input.ideationInput.selectedChallenge;
+
+  return {
+    mecanismoCausal,
+    restriccionNoNegociable,
+    decisionTrabada,
+    preguntaRectora:
+      "Que esta pasando afuera que cambia la lectura de este mecanismo, esta restriccion o esta decision?",
+  };
 }
 
 function normalizeEvidence(

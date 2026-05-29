@@ -331,6 +331,9 @@ export function createIdeationEngine() {
 export function buildIdeationSystemPrompt() {
   return [
     "Eres la fase Ideacion de Nucleo. Esta fase nace limpia y no hereda logica de ningun proyecto anterior.",
+    "PRINCIPIO FUNDACIONAL: EL MECANISMO ES LA IDEA.",
+    "El beneficio dice que se logra; la mecanica dice como funciona, quien participa, que regla opera, cuando se usa y que cambia en el comportamiento o decision.",
+    "Sin mecanica no hay idea. Si una idea podria aplicar a cualquier empresa, vuelve a empezar.",
     "",
     "PROHIBICIONES ABSOLUTAS",
     "- No traer M0/M1.",
@@ -349,23 +352,29 @@ export function buildIdeationSystemPrompt() {
     "El usuario ya selecciono tres niveles: tipo de ruptura, gap e insight. Solo puedes generar ideas para esa seleccion.",
     "Registro y Diagnostico son contexto invisible: usalos para entender empresa, restricciones, tension y reto recomendado; no los conviertas en secciones visibles.",
     "Recibiras mandatoryCaseScreening. Esa seleccion de casos ya fue hecha antes de idear y es obligatoria: cada idea debe nacer de una referencia distinta de esa lista.",
+    "Antes de idear debes verificar si el comportamiento del insight explica por que existe o persiste el gap. Si la tension es parcial, diseña desde esa friccion parcial; no unas conceptos por yuxtaposicion.",
     "",
     "PROCESO INTERNO OBLIGATORIO",
-    "1. Releer mandatoryCaseScreening antes de escribir cualquier idea.",
-    "2. Usar las referencias seleccionadas como base; la idea final debe nacer de una referencia principal y puede apoyarse en las otras.",
-    "3. Traducir el mecanismo transferible, no copiar el caso ni presentarlo como biblioteca.",
-    "4. Cruzar cada reinterpretacion con supuestos por industria: cada idea debe romper un supuesto explicitamente.",
-    "5. Cruzar cada idea contra antipatrones antes de responder. Si coincide con D3 Solucion antes que problema o D4 Beneficio sin mecanica, esta prohibida.",
-    "6. No basta decir el beneficio: la mecanica concreta debe incluir actor, objeto/ritual/interaccion, regla de uso, frecuencia o momento. El piloto va solo en primerPasoEjecutable.",
-    "7. Usar modelos de negocio raros solo como apoyo cuando mejoren la mecanica; no los presentes como idea abstracta.",
-    "8. Formular exactamente 1 idea prototipable en un piloto acotado para la ruta seleccionada.",
+    "1. Verificar tension causal entre gap e insight seleccionados.",
+    "2. Leer el reto recomendado e identificar el supuesto central que debe romperse; debe conectarse con el mecanismo causal, no con el sintoma.",
+    "3. Releer mandatoryCaseScreening antes de escribir cualquier idea. Primero caso, despues idea.",
+    "4. Usar las referencias seleccionadas como base; la idea final debe nacer de una referencia principal y puede apoyarse en las otras.",
+    "5. Traducir el mecanismo transferible, no copiar el caso ni presentarlo como biblioteca.",
+    "6. Calibrar el nivel de ruptura contra restricciones: restriccion como techo de ejecutabilidad y movimiento de mercado como piso de relevancia.",
+    "7. Cruzar cada reinterpretacion con supuestos por industria: cada idea debe romper un supuesto explicitamente.",
+    "8. Cruzar cada idea contra antipatrones antes de responder. Si coincide con D3 Solucion antes que problema o D4 Beneficio sin mecanica, esta prohibida.",
+    "9. No basta decir el beneficio: la mecanica concreta debe incluir actor, objeto/ritual/interaccion, regla de uso, frecuencia o momento. El piloto va solo en primerPasoEjecutable.",
+    "10. Usar modelos de negocio raros solo como apoyo cuando mejoren la mecanica; no los presentes como idea abstracta.",
+    "11. Formular exactamente 1 idea prototipable en un piloto acotado para la ruta seleccionada.",
     "",
     "CRITERIO PARA USAR CASOS DISRUPTIVOS",
+    "- PRIMERO selecciona el caso. DESPUES formula la idea. Si formulas la idea primero y buscas el caso para respaldarla, el caso queda decorativo y la idea es invalida.",
     "- Preferir transferencia de mecanismo sobre similitud superficial de industria.",
     "- Preferir casos que cambian comportamiento, incentivo, decision, unidad economica, canal sensorial o modelo de cobro.",
     "- Evitar casos que solo inspiran marketing, branding o storytelling si el reto es operativo o de compra.",
     "- Si el caso tiene caveat, adaptar la idea para que el primer paso ejecutable limite ese riesgo.",
     "- No copiar el caso y no listar casos como si fueran la salida. Debes transformar el mecanismo al problema concreto.",
+    "- En casoAnalogo debes declarar Caso, mecanismo transferido, similitud y diferencia. Si falta el mecanismo transferido, la idea no sirve.",
     "",
     "NIVELES DE RUPTURA",
     "La progresion es acumulativa: mejorar optimiza el juego, transformar cambia las reglas del juego, romper supuestos cambia el juego mismo.",
@@ -373,6 +382,7 @@ export function buildIdeationSystemPrompt() {
     "RUPTURA_FUERTE = transformar. Verbo: transformar. Pregunta guia: que pieza del modelo podria funcionar de otra manera? No mejora lo existente: cambia su forma. El producto puede seguir siendo el mismo, pero cambia como se cobra, quien paga, como se entrega, como accede el cliente, que regla decide, que incentivo mueve conducta o quien tiene autoridad para cerrar una decision. Reconfigura el modelo de negocio o el sistema operativo sin necesariamente negar las creencias de la industria. Riesgo medio.",
     "RUPTURA_RADICAL_CONTROLADA = romper. Verbo: romper. Pregunta guia: que cree todo el mundo en este sector que en realidad no es cierto? No mejora ni reconfigura: ataca directamente una creencia que la industria da por obvia. Produce reinvencion y ventaja defendible, pero debe probarse en un perimetro acotado que no comprometa la operacion principal.",
     "No mezclar rutas: una idea moderada no debe cambiar quien paga; una fuerte debe tocar una pieza del modelo, regla, incentivo o forma de decidir; una radical debe negar un supuesto industrial explicito.",
+    "Para RUPTURA_FUERTE no aceptes 'crear un sistema/proceso/programa/metodologia' si no cambia una regla de compra, acceso, cobro, autoridad, incentivo, riesgo o decision.",
     "",
     "FORMATO DE IDEAS",
     "Generar exactamente 1 idea para la ruta seleccionada.",
@@ -381,9 +391,9 @@ export function buildIdeationSystemPrompt() {
     "1. idea: nombre distintivo y descripcion corta de la idea.",
     "2. tipoDeIdea: exactamente uno de los tipos de la matriz de prototipado disponible: Servicio / experiencia, Producto digital / interfaz, Proceso / operación, Modelo comercial / acceso o Producto físico / tangible.",
     "3. supuestoQueRompe: solo el supuesto que rompe, en una frase corta. No empieces con 'Rompe el supuesto de que', no expliques beneficio, no agregues frases como 'Cambia...' o 'Esto permite...'.",
-    "4. mecanicaConcreta: mecanismo concreto en maximo 2 frases, sin piloto y sin explicar beneficios.",
-    "5. porQueFunciona: explicacion breve en maximo 2 frases.",
-    "6. casoAnalogo: contenido de 'Caso analogo:' incluyendo nombre, ano, industria/pais, similitud y diferencia",
+    "4. mecanicaConcreta: mecanismo concreto en maximo 3 frases, sin piloto y sin explicar beneficios. Debe incluir quien participa, que objeto/ritual/interaccion/regla se introduce, cuando se usa y como cambia conducta o decision.",
+    "5. porQueFunciona: explicacion breve en maximo 2 frases. Debe conectar causalmente gap e insight: como la mecanica captura la brecha y usa la motivacion del comprador.",
+    "6. casoAnalogo: contenido de 'Caso analogo:' incluyendo nombre, ano, industria/pais, mecanismo transferido, similitud y diferencia",
     "7. metricaQueMueve: contenido de 'Metrica que mueve:'",
     "8. primerPasoEjecutable: contenido de 'Primer paso ejecutable:'",
     "9. antiPatronesAEvitar: contenido de 'Anti-patrones a evitar al ejecutar:'",
@@ -391,7 +401,9 @@ export function buildIdeationSystemPrompt() {
     "supuestoQueRompe debe ser solo el supuesto, no una mini-explicacion de la idea.",
     "mecanicaConcreta y porQueFunciona deben ser concretos: evita parrafos largos.",
     "La mecanica concreta debe nombrar actores, objetos/rituales/interacciones y regla de uso, pero no debe describir el piloto; el piloto va exclusivamente en primerPasoEjecutable.",
+    "primerPasoEjecutable debe decir que se construye o simula, que conducta/decision se observa, que supuesto critico se prueba y que evidencia permitiria avanzar, iterar o descartar.",
     "antiPatronesAEvitar debe estar escrito para el usuario final, sin codigos internos como D3, D4 o textos entre parentesis tipo '(evitar D4)'.",
+    "No entregues ideas cuyo centro sea 'crear un sistema comercial estructurado', 'documentar un proceso', 'capacitar', 'hacer seguimiento' o 'definir responsabilidades' sin una regla/incentivo/ritual/objeto que fuerce un cambio observable.",
     "",
     "SALIDA INTERNA",
     "En internal.caseScreening.translatedCaseReferences copia las referencias de mandatoryCaseScreening ya reinterpretadas, sin inventar otras nuevas.",
@@ -417,7 +429,7 @@ export function cleanIdeationOutputForDisplay(
           "La mecanica concreta consiste en",
           "La mecánica concreta consiste en",
         ]),
-      ), 2),
+      ), 3),
       porQueFunciona: limitSentences(idea.porQueFunciona, 2),
       antiPatronesAEvitar: idea.antiPatronesAEvitar
         .map(stripInternalAntiPatternCode)
@@ -491,17 +503,20 @@ export function buildCaseScreeningSystemPrompt() {
     "No generes ideas finales. No escribas propuestas al usuario.",
     "",
     "METODO OBLIGATORIO",
-    "1. Lee reto recomendado, gap, insight, restricciones, tensiones y memoria.",
-    "2. Revisa la biblioteca completa de casos disruptivos disponible en el payload.",
-    "3. Selecciona exactamente 3 casos cuyo mecanismo pueda traducirse al problema actual.",
-    "4. Elige por mecanismo transferible, no por parecido superficial de industria.",
-    "5. Cada caso debe habilitar una idea distinta; no aceptes tres variaciones de la misma logica.",
-    "6. Antes de aceptar cada caso, identifica el riesgo de anti-patron que podria producir: D3 solucion antes que problema, D4 beneficio sin mecanica, app generica, plataforma generica, dashboard, capacitacion, contenido, alianza o IA decorativa.",
-    "7. En generationGuardrails escribe reglas concretas para que la siguiente etapa no caiga en esos anti-patrones.",
+    "1. Verifica si el insight explica por que el gap existe o persiste; usa esa tension como motor.",
+    "2. Lee reto recomendado, gap, insight, restricciones, tensiones y memoria.",
+    "3. Identifica el supuesto central que debe romperse, conectado con el mecanismo causal del reto.",
+    "4. Revisa la biblioteca completa de casos disruptivos disponible en el payload.",
+    "5. Selecciona exactamente 3 casos cuyo mecanismo pueda traducirse al problema actual.",
+    "6. Elige por mecanismo transferible, no por parecido superficial de industria.",
+    "7. Cada caso debe habilitar una idea distinta; no aceptes tres variaciones de la misma logica.",
+    "8. Antes de aceptar cada caso, identifica el riesgo de anti-patron que podria producir: D3 solucion antes que problema, D4 beneficio sin mecanica, app generica, plataforma generica, dashboard, capacitacion, contenido, alianza o IA decorativa.",
+    "9. En generationGuardrails escribe reglas concretas para que la siguiente etapa no caiga en esos anti-patrones.",
     "",
     "CRITERIO DE SELECCION",
     "- Prioriza mecanismos que cambian decision, incentivo, unidad economica, interfaz fisica, canal, acceso, pagador, variable optimizada o ritual operativo.",
     "- Rechaza casos que solo inspiran marketing, comunicacion, contenido o tecnologia generica.",
+    "- Rechaza casos que solo llevarian a crear un sistema, proceso, capacitacion o dashboard sin cambiar una regla observable.",
     "- La reinterpretacion debe decir como se convierte el mecanismo en una idea posible para este gap e insight.",
   ].join("\n");
 }
@@ -514,6 +529,9 @@ export function buildConceptReviewSystemPrompt() {
     "CRITERIO",
     "- Una idea falla si su concepto es generico aunque use palabras sofisticadas.",
     "- Una idea pasa si tiene mecanismo concreto, actor, regla de uso, interaccion/ritual/objeto, primer piloto y trazabilidad a un caso disruptivo.",
+    "- Una idea falla si solo propone crear un sistema/proceso/programa/metodologia/capacitacion/seguimiento sin cambiar una regla, incentivo, riesgo, acceso, autoridad o decision observable.",
+    "- Una idea falla si el caso analogo no aporta un mecanismo transferido y solo parece justificar una idea ya formulada.",
+    "- Una idea falla si no explica causalmente como ataca el gap y como usa la motivacion del insight.",
     "- Palabras como app, plataforma, dashboard, IA, comunidad, alianza o capacitacion no son motivo suficiente para fallar. Solo fallan si el modelo de la idea es generico, decorativo o sustituye el problema por una solucion obvia.",
     "- Usa los anti-patrones del payload como criterios conceptuales, no como lista de palabras prohibidas.",
     "- D3 Solucion antes que problema falla cuando la idea parte de una solucion predefinida y no de la tension/gap/insight.",
@@ -533,7 +551,7 @@ export function buildCopyEditSystemPrompt() {
     "- Corrige ortografia, letras faltantes, palabras cortadas y espacios insertados dentro de palabras.",
     "- No cambies el concepto, la ruta, los casos analogos, ids, trace, gap, insight ni campos internos.",
     "- supuestoQueRompe debe ser solo el supuesto, sin prefijos como 'Rompe el supuesto de que'.",
-    "- mecanicaConcreta debe quedar en maximo 2 frases concretas.",
+    "- mecanicaConcreta debe quedar en maximo 3 frases concretas.",
     "- porQueFunciona debe quedar en maximo 2 frases concretas.",
     "- No agregues explicaciones nuevas ni hagas la idea mas optimista.",
     "- Devuelve el mismo numero de ideas recibido.",
@@ -563,6 +581,8 @@ function buildCaseScreeningPayload(input: IdeationGenerationInput) {
       registration: input.diagnosisHandoff.registration,
       gap: selectedGap,
       insight: selectedInsight,
+      tensionVerification: buildTensionVerification(selectedGap, selectedInsight),
+      centralAssumptionToBreak: buildCentralAssumptionToBreak(input),
       evidence: input.signalsHandoff.evidence.filter((evidence) =>
         [...(selectedGap?.evidenceIds ?? []), ...(selectedInsight?.evidenceIds ?? [])].includes(
           evidence.id,
@@ -609,6 +629,8 @@ function buildIdeationUserPayload(
       registration: input.diagnosisHandoff.registration,
       gap: selectedGap,
       insight: selectedInsight,
+      tensionVerification: buildTensionVerification(selectedGap, selectedInsight),
+      centralAssumptionToBreak: buildCentralAssumptionToBreak(input),
       evidence: input.signalsHandoff.evidence.filter((evidence) =>
         [...(selectedGap?.evidenceIds ?? []), ...(selectedInsight?.evidenceIds ?? [])].includes(
           evidence.id,
@@ -646,10 +668,57 @@ function buildConceptReviewPayload(
       insight: input.signalsHandoff.insights.find(
         (insight) => insight.title === input.selection.insightTitle,
       ),
+      tensionVerification: buildTensionVerification(
+        input.signalsHandoff.gaps.find(
+          (gap) => gap.title === input.selection.gapTitle,
+        ),
+        input.signalsHandoff.insights.find(
+          (insight) => insight.title === input.selection.insightTitle,
+        ),
+      ),
+      centralAssumptionToBreak: buildCentralAssumptionToBreak(input),
     },
     mandatoryCaseScreening: caseScreening,
     antiPatterns: input.knowledgePack.antiPatterns,
     outputToReview: output,
+  };
+}
+
+function buildTensionVerification(
+  gap:
+    | IdeationGenerationInput["signalsHandoff"]["gaps"][number]
+    | undefined,
+  insight:
+    | IdeationGenerationInput["signalsHandoff"]["insights"][number]
+    | undefined,
+) {
+  return {
+    question:
+      "El comportamiento que revela el insight explica, al menos en parte, por que existe o persiste el gap?",
+    plausibleConnection:
+      gap && insight
+        ? [
+            `Gap: ${gap.brecha}`,
+            `Motor de mercado: ${gap.potencialMercado}`,
+            `Insight: ${insight.verdadAccionable}`,
+            `Motivacion: ${insight.motivacionODeseo}`,
+          ].join(" | ")
+        : "No hay gap o insight seleccionado disponible; no generar idea hasta completar seleccion.",
+    usage:
+      "La idea debe nacer de esta friccion, no unir gap e insight como temas separados.",
+  };
+}
+
+function buildCentralAssumptionToBreak(input: IdeationGenerationInput) {
+  const diagnosis = input.diagnosisHandoff.diagnosis;
+
+  return {
+    challenge: input.diagnosisHandoff.selectedChallenge,
+    mechanismCausal: diagnosis.causes.join(" | "),
+    restrictions: diagnosis.restrictions.join(" | "),
+    assumptionToQuestion: diagnosis.assumptionToQuestion,
+    instruction:
+      "El supuesto que rompe la idea debe conectarse con el mecanismo causal del reto, no solo con el sintoma visible.",
   };
 }
 
