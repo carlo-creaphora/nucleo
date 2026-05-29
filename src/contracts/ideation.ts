@@ -195,7 +195,7 @@ export const ideationIdeaSchema = z.object({
 export const ideationOutputSchema = z.object({
   generatedAt: z.string().datetime(),
   route: ideationRouteSchema,
-  ideas: z.array(ideationIdeaSchema).min(1).max(4),
+  ideas: z.array(ideationIdeaSchema).min(1),
   internal: z.object({
     caseScreening: z.object({
       translatedCaseReferences: z.array(
@@ -235,5 +235,6 @@ export type IdeationSelection = z.infer<typeof ideationSelectionSchema>;
 export type IdeationGenerationInput = z.infer<
   typeof ideationGenerationInputSchema
 >;
+export type IdeationIdea = z.infer<typeof ideationIdeaSchema>;
 export type IdeationOutput = z.infer<typeof ideationOutputSchema>;
 export type IdeationRecord = z.infer<typeof ideationRecordSchema>;

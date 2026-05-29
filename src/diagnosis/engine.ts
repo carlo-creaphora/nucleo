@@ -117,11 +117,14 @@ export class OpenAiDiagnosisEngine implements DiagnosisEngine {
 
 export class HeuristicDiagnosisEngine implements DiagnosisEngine {
   async generateQuestion(input: DiagnosisInput): Promise<DiagnosisQuestionOutput> {
+    const userTurns = input.dialogMessages.filter(
+      (message) => message.role === "user",
+    ).length;
     const userText = input.dialogMessages
       .filter((message) => message.role === "user")
       .map((message) => message.content)
       .join(" ");
-    const hasMetric = /m[eé]trica|venta|ingreso|margen|tiempo|costo|riesgo|calidad|retenci[oó]n/i.test(
+    const hasImpact = /impact|consecuencia|importa|venta|ingreso|margen|tiempo|costo|riesgo|calidad|retenci[oó]n|demora|perd/i.test(
       userText,
     );
     const hasRestriction = /restric|no podemos|presupuesto|legal|regulaci[oó]n|operaci[oó]n|marca/i.test(
@@ -140,28 +143,15 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
       userText,
     );
 
-    if (!hasMetric) {
+    if (!hasImpact) {
       return {
         question:
-          "Que metrica o senal concreta muestra que este reto realmente importa para la empresa?",
+          "Que consecuencia concreta esta teniendo este problema hoy y por que importa resolverlo ahora?",
         whyItMatters:
-          "Sin una senal prioritaria, el diagnostico puede quedarse en una percepcion general.",
-        suggestedAngles: ["ingresos", "tiempo", "calidad", "riesgo"],
+          "Sin impacto observable, el diagnostico puede quedarse en una percepcion general.",
+        suggestedAngles: ["ingresos", "tiempo", "riesgo", "decision"],
         coveredFacts: [],
-        nextFocus: "metrica prioritaria",
-        shouldCloseDiagnosis: false,
-      };
-    }
-
-    if (!hasRestriction) {
-      return {
-        question:
-          "Que limite no se puede romper al resolver este reto: presupuesto, operacion, marca, tecnologia, talento o regulacion?",
-        whyItMatters:
-          "Las restricciones separan un reto estrategico de una idea que suena bien pero no se puede ejecutar.",
-        suggestedAngles: ["presupuesto", "operacion", "marca", "regulacion"],
-        coveredFacts: ["metrica prioritaria"],
-        nextFocus: "restricciones",
+        nextFocus: "sintoma visible",
         shouldCloseDiagnosis: false,
       };
     }
@@ -169,12 +159,25 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
     if (!hasAttempt) {
       return {
         question:
-          "Que han intentado ya para resolverlo y que aprendieron de eso, incluso si no funciono?",
+          "Que han intentado ya para resolverlo y que revela ese intento sobre por que el problema se sostiene?",
         whyItMatters:
-          "Los intentos previos muestran respuestas obvias que conviene evitar o reinterpretar.",
-        suggestedAngles: ["campanas", "procesos", "capacitacion", "cambios comerciales"],
-        coveredFacts: ["metrica prioritaria", "restricciones"],
-        nextFocus: "intentos previos",
+          "Los intentos previos ayudan a separar sintoma visible de mecanismo causal.",
+        suggestedAngles: ["intentos fallidos", "aprendizajes", "patrones", "bloqueos"],
+        coveredFacts: ["sintoma visible"],
+        nextFocus: "mecanismo causal probable",
+        shouldCloseDiagnosis: false,
+      };
+    }
+
+    if (!hasRestriction) {
+      return {
+        question:
+          "Que restriccion real no pueden ignorar al enfrentar este reto: talento, presupuesto, tiempo, estructura, cultura u operacion?",
+        whyItMatters:
+          "La restriccion no negociable evita formular un reto correcto pero impracticable.",
+        suggestedAngles: ["talento", "presupuesto", "tiempo", "estructura"],
+        coveredFacts: ["sintoma visible", "mecanismo causal probable"],
+        nextFocus: "restriccion no negociable",
         shouldCloseDiagnosis: false,
       };
     }
@@ -186,7 +189,11 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
         whyItMatters:
           "Las tensiones internas ayudan a distinguir el reto real de una solucion superficial.",
         suggestedAngles: ["comercial vs operacion", "rapidez vs calidad", "crecimiento vs margen"],
-        coveredFacts: ["metrica prioritaria", "restricciones", "intentos previos"],
+        coveredFacts: [
+          "sintoma visible",
+          "mecanismo causal probable",
+          "restriccion no negociable",
+        ],
         nextFocus: "tensiones internas",
         shouldCloseDiagnosis: false,
       };
@@ -200,9 +207,9 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
           "El diagnostico debe habilitar una decision, no solo describir el problema.",
         suggestedAngles: ["priorizar inversion", "cambiar oferta", "ajustar canal", "redisenar operacion"],
         coveredFacts: [
-          "metrica prioritaria",
-          "restricciones",
-          "intentos previos",
+          "sintoma visible",
+          "mecanismo causal probable",
+          "restriccion no negociable",
           "tensiones internas",
         ],
         nextFocus: "decision trabada",
@@ -210,33 +217,39 @@ export class HeuristicDiagnosisEngine implements DiagnosisEngine {
       };
     }
 
-    if (!hasExpectedChange) {
+    if (!hasExpectedChange && userTurns < 10) {
       return {
         question:
-          "Si el diagnostico fuera correcto, que deberia cambiar en comportamiento, resultado o decision en las proximas semanas?",
+          "Que cambio observable minimo indicaria que este problema empieza a destrabarse?",
         whyItMatters:
-          "El cambio esperado evita cerrar un diagnostico que no se pueda reconocer en la practica.",
-        suggestedAngles: ["conducta del cliente", "decision del equipo", "senal comercial", "resultado operativo"],
+          "El cambio esperado calibra si el reto recomendado apunta al mecanismo o solo al sintoma.",
+        suggestedAngles: ["conducta", "decision", "senal operativa", "resultado"],
         coveredFacts: [
-          "metrica prioritaria",
-          "restricciones",
-          "intentos previos",
+          "sintoma visible",
+          "mecanismo causal probable",
+          "restriccion no negociable",
           "tensiones internas",
           "decision trabada",
         ],
-        nextFocus: "cambio esperado",
+        nextFocus: "cambio esperado minimo",
         shouldCloseDiagnosis: false,
       };
     }
 
     return {
       question:
-        "Cual es la tension mas incomoda del caso: que necesita cambiar pero hoy el sistema evita tocar?",
+        "El mapa diagnostico ya tiene suficiencia; no deberia requerirse otra pregunta para formular el reto recomendado.",
       whyItMatters:
-        "La tension ayuda a formular el reto real y no quedarse en el sintoma declarado.",
-      suggestedAngles: ["cliente vs operacion", "crecimiento vs margen", "velocidad vs calidad"],
-      coveredFacts: ["metrica prioritaria", "restricciones", "intentos previos"],
-      nextFocus: "tension estrategica",
+        "Cuando una respuesta adicional solo agrega detalle, el diagnostico debe cerrar.",
+      suggestedAngles: ["mecanismo", "tension", "decision", "restriccion"],
+      coveredFacts: [
+        "sintoma visible",
+        "mecanismo causal probable",
+        "tension interna",
+        "decision trabada",
+        "restriccion no negociable",
+      ],
+      nextFocus: "cierre",
       shouldCloseDiagnosis: true,
     };
   }
@@ -353,10 +366,11 @@ function detectLocalTestMissingPieces(input: DiagnosisInput) {
     return [];
   }
 
-  return [
-    {
-      key: "metrica" as const,
-      reason: "Sin metrica o senal, el reto puede quedarse en percepcion.",
-    },
-  ];
+    return [
+      {
+        key: "mecanismo causal probable" as const,
+        reason:
+          "Sin mecanismo causal probable, el reto puede quedarse en sintoma declarado.",
+      },
+    ];
 }

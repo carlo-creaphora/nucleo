@@ -38,6 +38,7 @@ export function MemoryPage() {
     registration,
     setActivePhaseId,
     setPlaybookRecord,
+    startNewCycle,
   } = useAppState();
   const [records, setRecords] = useState<PlaybookPhaseRecord[]>([]);
   const [status, setStatus] = useState<"idle" | "loading">("loading");
@@ -88,7 +89,7 @@ export function MemoryPage() {
               evidencia, aprendizajes, riesgos y siguiente movimiento.
             </p>
           </div>
-          <Button onClick={() => setActivePhaseId("registration")} variant="secondary">
+          <Button onClick={startNewCycle} variant="secondary">
             Nuevo ciclo
             <ArrowRight className="h-4 w-4" />
           </Button>

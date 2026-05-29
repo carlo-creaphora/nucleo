@@ -6,7 +6,10 @@ import * as XLSX from "xlsx";
 import { DiagnosisService } from "../src/diagnosis/service.js";
 import { DiagnosisClosureError } from "../src/diagnosis/service.js";
 import { HeuristicDiagnosisEngine } from "../src/diagnosis/engine.js";
-import { buildDiagnosisSystemPrompt } from "../src/diagnosis/prompt.js";
+import {
+  HARD_MAX_DIAGNOSIS_QUESTIONS,
+  buildDiagnosisSystemPrompt,
+} from "../src/diagnosis/prompt.js";
 import { RegistrationService } from "../src/registration/service.js";
 import { HeuristicRegistrationEngine } from "../src/registration/engine.js";
 import { SignalsService } from "../src/signals/service.js";
@@ -78,7 +81,7 @@ describe("Diagnostico", () => {
     const result = await service.nextQuestion(input);
     const stored = await service.getCycle(input.cycleId);
 
-    expect(result.question?.question).toContain("metrica");
+    expect(result.question?.nextFocus).toBe("mecanismo causal probable");
     expect(result.diagnosis).toBeNull();
     expect(stored?.companyId).toBe(input.company.companyId);
   });
@@ -187,7 +190,7 @@ describe("Diagnostico", () => {
     expect(result.documents[0]?.extractionStatus).toBe("UNSUPPORTED");
   });
 
-  it("sigue preguntando despues de 15 respuestas si falta contexto critico", async () => {
+  it("cierra diagnostico al llegar al techo absoluto de 15 respuestas", async () => {
     const dialogMessages = Array.from({ length: 15 }, (_, index) => ({
       role: "user" as const,
       content: `Respuesta de contexto ${index + 1}`,
@@ -197,9 +200,10 @@ describe("Diagnostico", () => {
     const result = await service.nextQuestion(input);
 
     expect(result.maxQuestionsReached).toBe(true);
-    expect(result.question?.question).toBeTruthy();
-    expect(result.diagnosis).toBeNull();
+    expect(result.question).toBeNull();
+    expect(result.diagnosis?.recommendedChallenge).toBeTruthy();
     expect(result.criticalMissing).toEqual([]);
+    expect(HARD_MAX_DIAGNOSIS_QUESTIONS).toBe(15);
   });
 
   it("cierra diagnostico desde la decision de la IA cuando el contexto es suficiente", async () => {
@@ -212,7 +216,7 @@ describe("Diagnostico", () => {
     expect(result.criticalMissing).toEqual([]);
   });
 
-  it("usa intentos previos, tensiones, decision trabada y cambio esperado como complementos de pregunta", async () => {
+  it("avanza por mapa diagnostico: mecanismo, tension, decision y cambio esperado", async () => {
     const firstInput = buildInput({
       cycleId: "question-1",
       dialogMessages: [
@@ -262,10 +266,10 @@ describe("Diagnostico", () => {
     await registerInput(fourthInput);
     const fourth = await service.nextQuestion(fourthInput);
 
-    expect(first.question?.nextFocus).toBe("intentos previos");
+    expect(first.question?.nextFocus).toBe("mecanismo causal probable");
     expect(second.question?.nextFocus).toBe("tensiones internas");
     expect(third.question?.nextFocus).toBe("decision trabada");
-    expect(fourth.question?.nextFocus).toBe("cambio esperado");
+    expect(fourth.question?.nextFocus).toBe("cambio esperado minimo");
   });
 
   it("reinterpreta una seccion corregida por el usuario", async () => {
@@ -478,6 +482,11 @@ describe("Diagnostico", () => {
     expect(prompt).toContain("verdades incomodas");
     expect(prompt).toContain("Mantener los mismos campos");
     expect(prompt).toContain("Responder breve");
+    expect(prompt).toContain("Techo duro");
+    expect(prompt).toContain("mapa diagnostico activo");
+    expect(prompt).toContain("historial completo");
+    expect(prompt).toContain("preguntas 1 a 3");
+    expect(prompt).toContain("pregunta de diseno");
   });
 
   it("prohibe parches por palabras clave y exige interpretacion semantica", () => {

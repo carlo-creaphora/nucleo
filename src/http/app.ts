@@ -276,6 +276,16 @@ export function createApp() {
     return context.json({ ideation });
   });
 
+  app.put("/api/ideation/cycles/:cycleId", async (context) => {
+    const body = await context.req.json();
+    const result = await ideationService.saveCanvas(
+      context.req.param("cycleId"),
+      body,
+    );
+
+    return context.json(result);
+  });
+
   app.post("/api/prototype/build", async (context) => {
     const body = await context.req.json();
     const input = prototypeBuildInputSchema.parse(body);

@@ -18,6 +18,7 @@ import { Card, SectionLabel } from "../../components/ui/card.js";
 import { TextArea } from "../../components/ui/form-field.js";
 import {
   getDiagnosisAudit,
+  getDiagnosisCycle,
   getDiagnosisDraft,
   getDiagnosisVersions,
   getRegistration,
@@ -142,24 +143,42 @@ export function DiagnosisPage() {
   }, [cycleId, registration, registrationId, setRegistration]);
 
   useEffect(() => {
-    const recoverDraft = async () => {
+    const recoverDiagnosisProgress = async () => {
       try {
-        const draft = await getDiagnosisDraft(cycleId);
+        const [draft, cycle] = await Promise.all([
+          getDiagnosisDraft(cycleId),
+          diagnosis ? Promise.resolve(null) : getDiagnosisCycle(cycleId),
+        ]);
+
+        if (cycle?.diagnosis) {
+          setDiagnosis(cycle.diagnosis);
+        }
+
         if (draft) {
           setDiagnosisMessages(draft.dialogMessages);
           setDiagnosisCorrections(draft.correctedSections);
           setLastQuestion(draft.lastQuestion);
           setComposer(draft.composer);
+        } else if (isStoredDiagnosisInput(cycle?.input)) {
+          setDiagnosisMessages(cycle.input.dialogMessages);
+          setDiagnosisCorrections(cycle.input.correctedSections);
+          setLastQuestion(null);
         }
       } catch {
-        setError("No se pudo recuperar el chat en progreso.");
+        setError("No se pudo recuperar el avance de Diagnóstico.");
       } finally {
         setDraftLoaded(true);
       }
     };
 
-    void recoverDraft();
-  }, [cycleId, setDiagnosisCorrections, setDiagnosisMessages]);
+    void recoverDiagnosisProgress();
+  }, [
+    cycleId,
+    diagnosis,
+    setDiagnosis,
+    setDiagnosisCorrections,
+    setDiagnosisMessages,
+  ]);
 
   useEffect(() => {
     if (!draftLoaded) return;
@@ -625,6 +644,23 @@ function formatDiagnosisItems(items: string[]) {
   const cleanItems = items.map((item) => item.trim()).filter(Boolean);
   if (!cleanItems.length) return "Sin dato declarado.";
   return cleanItems.join(" ");
+}
+
+function isStoredDiagnosisInput(input: unknown): input is {
+  dialogMessages: DialogMessage[];
+  correctedSections: DiagnosisCorrection[];
+} {
+  if (!input || typeof input !== "object") return false;
+
+  const candidate = input as {
+    dialogMessages?: unknown;
+    correctedSections?: unknown;
+  };
+
+  return (
+    Array.isArray(candidate.dialogMessages) &&
+    Array.isArray(candidate.correctedSections)
+  );
 }
 
 function TracePanel({

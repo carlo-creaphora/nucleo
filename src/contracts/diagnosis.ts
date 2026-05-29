@@ -117,12 +117,11 @@ export const diagnosisDraftSchema = z.object({
 });
 
 export const criticalDiagnosisPieceKeySchema = z.enum([
-  "metrica",
-  "restriccion",
-  "intentos previos",
+  "sintoma visible",
+  "mecanismo causal probable",
   "tension interna",
   "decision trabada",
-  "cambio esperado",
+  "restriccion no negociable",
 ]);
 
 export const criticalMissingPieceSchema = z.object({

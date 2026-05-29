@@ -16,25 +16,39 @@ import {
 } from "../../app-state.js";
 import { Button } from "../../components/ui/button.js";
 import { Card, SectionLabel } from "../../components/ui/card.js";
+import { getDiagnosisCycle } from "../diagnosis/diagnosis-api.js";
 import { getSignals, generateSignals } from "./signals-api.js";
 
 export function SignalsPage() {
-  const { cycleId, diagnosis, setActivePhaseId, setSignals, signals } =
-    useAppState();
+  const {
+    cycleId,
+    diagnosis,
+    setActivePhaseId,
+    setDiagnosis,
+    setSignals,
+    signals,
+  } = useAppState();
   const [status, setStatus] = useState<"idle" | "loading">("idle");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadExistingSignals = async () => {
-      if (signals) return;
-      const existing = await getSignals(cycleId);
-      if (existing?.signals.output) {
-        setSignals(existing.signals.output);
+    const loadSavedProgress = async () => {
+      const [existingSignals, existingDiagnosis] = await Promise.all([
+        signals ? Promise.resolve(null) : getSignals(cycleId),
+        diagnosis ? Promise.resolve(null) : getDiagnosisCycle(cycleId),
+      ]);
+
+      if (existingDiagnosis?.diagnosis) {
+        setDiagnosis(existingDiagnosis.diagnosis);
+      }
+
+      if (existingSignals?.signals.output) {
+        setSignals(existingSignals.signals.output);
       }
     };
 
-    void loadExistingSignals();
-  }, [cycleId, setSignals, signals]);
+    void loadSavedProgress();
+  }, [cycleId, diagnosis, setDiagnosis, setSignals, signals]);
 
   const runSignals = async () => {
     setStatus("loading");

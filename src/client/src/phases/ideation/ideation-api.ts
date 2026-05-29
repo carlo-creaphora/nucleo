@@ -103,6 +103,32 @@ export async function generateIdeation(
   return data.ideation.output;
 }
 
+export async function saveIdeationSet(cycleId: string, set: IdeationSet) {
+  const response = await fetch(
+    `/api/ideation/cycles/${encodeURIComponent(cycleId)}`,
+    {
+      body: JSON.stringify({
+        ideas: set.ideas,
+        route: set.route,
+        selection: set.selection,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    },
+  );
+
+  const data = (await response.json().catch(() => null)) as {
+    ideation?: { output: IdeationOutput };
+    message?: string;
+  } | null;
+
+  if (!response.ok || !data?.ideation?.output) {
+    throw new Error(data?.message ?? "No se pudo guardar Ideación.");
+  }
+
+  return data.ideation.output;
+}
+
 function routeKey(selection: CompleteIdeationSelection) {
   return `${selection.ruptureType}::${selection.gapTitle}::${selection.insightTitle}`;
 }

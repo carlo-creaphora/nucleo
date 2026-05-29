@@ -9,6 +9,7 @@ import {
 import { type IdeationInput, ideationInputSchema } from "../contracts/ideation.js";
 import type { DiagnosisEngine } from "./engine.js";
 import {
+  HARD_MAX_DIAGNOSIS_QUESTIONS,
   MAX_DIAGNOSIS_QUESTIONS,
   countUserDiagnosisTurns,
 } from "./prompt.js";
@@ -36,6 +37,18 @@ export class DiagnosisService {
     const input = await this.enrichInput(diagnosisInputSchema.parse(rawInput));
     await this.ensureRegistrationReady(input);
     const userTurns = countUserDiagnosisTurns(input);
+
+    if (userTurns >= HARD_MAX_DIAGNOSIS_QUESTIONS) {
+      const diagnosis = await this.engine.completeDiagnosis(input);
+      await this.persist(input, diagnosis, "max_questions");
+
+      return {
+        maxQuestionsReached: true,
+        question: null,
+        diagnosis,
+        criticalMissing: [],
+      };
+    }
 
     if (userTurns >= MAX_DIAGNOSIS_QUESTIONS) {
       const closure = await this.engine.assessClosure(input);

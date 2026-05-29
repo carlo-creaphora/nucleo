@@ -384,6 +384,16 @@ export default async function handler(
       return sendJson(response, 200, { ideation });
     }
 
+    if (method === "PUT" && ideationMatch) {
+      const body = await readJson(request);
+      const result = await ideationService.saveCanvas(
+        decodeURIComponent(ideationMatch[1]!),
+        body,
+      );
+
+      return sendJson(response, 200, result);
+    }
+
     if (method === "POST" && url.pathname === "/api/prototype/build") {
       const body = await readJson(request);
       const input = prototypeBuildInputSchema.parse(body);

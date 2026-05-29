@@ -28,6 +28,7 @@ import {
   generateIdeation,
   getIdeationOptions,
   getIdeationRun,
+  saveIdeationSet,
 } from "./ideation-api.js";
 
 type CompleteIdeationSelection = {
@@ -163,13 +164,13 @@ export function IdeationPage() {
         route: output.route,
         selection: ideationSelection as CompleteIdeationSelection,
       };
-      setIdeationSets(
-        selectedSet
-          ? ideationSets.map((set) =>
-              set.id === selectedSet.id ? nextSet : set,
-            )
-          : [...ideationSets, nextSet],
-      );
+      const nextSets = selectedSet
+        ? ideationSets.map((set) =>
+            set.id === selectedSet.id ? nextSet : set,
+          )
+        : [...ideationSets, nextSet];
+      setIdeationSets(nextSets);
+      await persistIdeationSet(nextSet);
     } catch (generateError) {
       setError(
         generateError instanceof Error
@@ -181,19 +182,33 @@ export function IdeationPage() {
     }
   };
 
+  const persistIdeationSet = async (set: IdeationSet) => {
+    try {
+      await saveIdeationSet(cycleId, set);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "No se pudo guardar Ideación.",
+      );
+    }
+  };
+
   const updateIdea = (setId: string, ideaId: string, nextIdea: IdeationIdea) => {
-    setIdeationSets(
-      ideationSets.map((set) =>
-        set.id === setId
-          ? {
-              ...set,
-              ideas: set.ideas.map((idea) =>
-                idea.id === ideaId ? nextIdea : idea,
-              ),
-            }
-          : set,
-      ),
+    const nextSets = ideationSets.map((set) =>
+      set.id === setId
+        ? {
+            ...set,
+            ideas: set.ideas.map((idea) =>
+              idea.id === ideaId ? nextIdea : idea,
+            ),
+          }
+        : set,
     );
+    const nextSet = nextSets.find((set) => set.id === setId);
+
+    setIdeationSets(nextSets);
+    if (nextSet) void persistIdeationSet(nextSet);
   };
 
   const addManualIdea = (
@@ -213,15 +228,18 @@ export function IdeationPage() {
       selectedForEvaluation: false,
       source: "user",
     };
-    setIdeationSets(
-      ideationSets.some((item) => item.id === targetSet.id)
-        ? ideationSets.map((item) =>
-            item.id === targetSet.id
-              ? { ...item, ideas: [...item.ideas, nextIdea] }
-              : item,
-          )
-        : [...ideationSets, { ...targetSet, ideas: [nextIdea] }],
-    );
+    const nextSet = {
+      ...targetSet,
+      ideas: [...targetSet.ideas, nextIdea],
+    };
+    const nextSets = ideationSets.some((item) => item.id === targetSet.id)
+      ? ideationSets.map((item) =>
+          item.id === targetSet.id ? nextSet : item,
+        )
+      : [...ideationSets, nextSet];
+
+    setIdeationSets(nextSets);
+    void persistIdeationSet(nextSet);
   };
 
   return (

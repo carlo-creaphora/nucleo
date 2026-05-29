@@ -511,13 +511,16 @@ type AppState = {
   setMethodologicalOverride: (override: MethodologicalOverride | null) => void;
   setResultsRecords: (records: ResultRecord[]) => void;
   setPlaybookRecord: (record: PlaybookPhaseRecord | null) => void;
+  startNewCycle: () => void;
 };
 
 const AppStateContext = createContext<AppState | null>(null);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [activePhaseId, setActivePhaseId] = useState<PhaseId>("registration");
-  const [cycleId] = useState(createClientCycleId);
+  const [activePhaseId, setActivePhaseIdState] = useState<PhaseId>(
+    readStoredActivePhaseId,
+  );
+  const [cycleId, setCycleId] = useState(createClientCycleId);
   const [diagnosis, setDiagnosis] = useState<DiagnosisOutput | null>(null);
   const [diagnosisMessages, setDiagnosisMessages] = useState<DialogMessage[]>(
     [],
@@ -568,6 +571,46 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [playbookRecord, setPlaybookRecord] =
     useState<PlaybookPhaseRecord | null>(null);
 
+  const setActivePhaseId = (phaseId: PhaseId) => {
+    setActivePhaseIdState(phaseId);
+    writeLocalStorage("nucleo.activePhaseId", phaseId);
+  };
+
+  const startNewCycle = () => {
+    const nextCycleId = `cycle_${crypto.randomUUID()}`;
+    writeLocalStorage("nucleo.currentCycleId", nextCycleId);
+    writeLocalStorage("nucleo.activePhaseId", "registration");
+
+    setCycleId(nextCycleId);
+    setActivePhaseIdState("registration");
+    setDiagnosis(null);
+    setDiagnosisMessages([]);
+    setDiagnosisCorrections([]);
+    setRegistrationId(null);
+    setRegistration(null);
+    setSignals(null);
+    setIdeationOptions(null);
+    setIdeationSelection({
+      ruptureType: null,
+      gapTitle: null,
+      insightTitle: null,
+    });
+    setIdeationSets([]);
+    setEvaluationConfirmed(false);
+    setEvaluationScores({});
+    setEvaluationWinnerId(null);
+    setPrototypeClassification(null);
+    setPrototypeIdeaType(null);
+    setPrototypeArtifact(null);
+    setPrototypeBuilderValues({});
+    setPrototypeRouteId(null);
+    setResultsRecords([]);
+    setEvidenceReading(null);
+    setMethodologicalRoute(null);
+    setMethodologicalOverride(null);
+    setPlaybookRecord(null);
+  };
+
   const value = useMemo<AppState>(
     () => ({
       activePhaseId,
@@ -617,6 +660,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setMethodologicalOverride,
       setResultsRecords,
       setPlaybookRecord,
+      startNewCycle,
     }),
     [
       activePhaseId,
@@ -668,6 +712,39 @@ function createClientCycleId() {
   }
 
   return fallback;
+}
+
+function readStoredActivePhaseId(): PhaseId {
+  try {
+    const stored = window.localStorage.getItem("nucleo.activePhaseId");
+
+    return isPhaseId(stored) ? stored : "registration";
+  } catch {
+    return "registration";
+  }
+}
+
+function isPhaseId(value: string | null): value is PhaseId {
+  return [
+    "registration",
+    "diagnosis",
+    "signals",
+    "ideation",
+    "evaluation",
+    "prototype",
+    "results",
+    "reading",
+    "playbook",
+    "memory",
+  ].includes(value ?? "");
+}
+
+function writeLocalStorage(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Persistencia local es una mejora de continuidad, no debe bloquear el flujo.
+  }
 }
 
 export function useAppState() {

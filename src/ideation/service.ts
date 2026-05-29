@@ -1,9 +1,13 @@
 import { randomUUID } from "node:crypto";
 import {
   type IdeationGenerationInput,
+  type IdeationIdea,
+  type IdeationOutput,
   type IdeationSelection,
   type IdeationRecord,
   ideationGenerationInputSchema,
+  ideationIdeaSchema,
+  ideationRouteSchema,
   ideationSelectionSchema,
 } from "../contracts/ideation.js";
 import type { DiagnosisService } from "../diagnosis/service.js";
@@ -63,6 +67,50 @@ export class IdeationService {
 
   get(cycleId: string) {
     return this.store.getIdeationRun(cycleId);
+  }
+
+  async saveCanvas(cycleId: string, rawCanvas: unknown) {
+    const canvas = parseCanvasState(rawCanvas);
+    const existing = await this.store.getIdeationRun(cycleId);
+    const input =
+      existing?.input ?? (await this.buildInput(cycleId, canvas.selection));
+    const now = new Date().toISOString();
+    const output: IdeationOutput = {
+      generatedAt: existing?.output.generatedAt ?? now,
+      internal: existing?.output.internal ?? buildManualInternalState(),
+      ideas: canvas.ideas.map((idea) => hydrateIdeaForPersistence(idea, canvas)),
+      route: canvas.route,
+    };
+    const record: IdeationRecord = {
+      id: existing?.id ?? `idea_${randomUUID()}`,
+      cycleId,
+      companyId: input.diagnosisHandoff.companyId,
+      licenseId: input.diagnosisHandoff.licenseId,
+      input,
+      output,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+
+    await this.store.saveIdeationRun(record);
+    await this.store.saveAuditEvent({
+      id: `aud_${randomUUID()}`,
+      cycleId,
+      companyId: record.companyId,
+      licenseId: record.licenseId,
+      stage: "IDEATION",
+      action: "IDEATION_CANVAS_SAVED",
+      summary: "Ideacion guardo el estado del canvas del ciclo.",
+      metadata: {
+        ideas: output.ideas.length,
+        manualIdeas: output.ideas.filter((idea) => idea.source === "user").length,
+        selectedIdeas: output.ideas.filter((idea) => idea.selectedForEvaluation)
+          .length,
+      },
+      createdAt: now,
+    });
+
+    return { ideation: record };
   }
 
   async buildOptions(cycleId: string) {
@@ -138,6 +186,111 @@ export class IdeationService {
       selection,
     });
   }
+}
+
+function parseCanvasState(rawCanvas: unknown) {
+  const value = rawCanvas as {
+    ideas?: unknown;
+    route?: unknown;
+    selection?: unknown;
+  };
+
+  return {
+    ideas: Array.isArray(value?.ideas) ? value.ideas : [],
+    route: ideationRouteSchema.parse(value?.route),
+    selection: ideationSelectionSchema.parse(value?.selection),
+  };
+}
+
+function hydrateIdeaForPersistence(
+  rawIdea: unknown,
+  canvas: {
+    selection: IdeationSelection;
+    route: IdeationOutput["route"];
+  },
+): IdeationIdea {
+  const idea = rawIdea as Partial<IdeationIdea>;
+
+  return ideationIdeaSchema.parse({
+    antiPatronesAEvitar:
+      idea.antiPatronesAEvitar?.length
+        ? idea.antiPatronesAEvitar
+        : ["No convertir el canvas manual en una idea generica sin mecanismo."],
+    casoAnalogo:
+      idea.casoAnalogo ??
+      "Idea agregada manualmente por el usuario sin caso analogo registrado.",
+    id: idea.id,
+    idea: idea.idea,
+    mecanicaConcreta: ensureMinLength(
+      idea.mecanicaConcreta,
+      "Mecanica manual pendiente de ampliar durante prototipado.",
+      40,
+    ),
+    metricaQueMueve:
+      idea.metricaQueMueve ??
+      "Senal observable definida durante evaluacion o prototipado.",
+    porQueFunciona: ensureMinLength(
+      idea.porQueFunciona,
+      "Razonamiento manual pendiente de ampliar durante evaluacion.",
+      30,
+    ),
+    primerPasoEjecutable:
+      idea.primerPasoEjecutable ??
+      "Convertir la idea en una accion minima verificable.",
+    routeId: idea.routeId ?? canvas.route.id,
+    selectedForEvaluation: Boolean(idea.selectedForEvaluation),
+    source: idea.source ?? "user",
+    supuestoQueRompe: ensureMinLength(
+      idea.supuestoQueRompe,
+      "Supuesto manual pendiente de ampliar durante evaluacion.",
+      20,
+    ),
+    tipoDeIdea: idea.tipoDeIdea,
+    trace: idea.trace ?? {
+      disruptiveCaseName: "Idea manual",
+      evidenceIds: [],
+      gapTitles: [canvas.selection.gapTitle],
+      insightTitles: [canvas.selection.insightTitle],
+    },
+  });
+}
+
+function ensureMinLength(
+  value: string | undefined,
+  fallback: string,
+  minLength: number,
+) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) return fallback;
+  if (trimmed.length >= minLength) return trimmed;
+
+  return `${trimmed}. ${fallback}`.slice(0, Math.max(minLength, fallback.length));
+}
+
+function buildManualInternalState(): IdeationOutput["internal"] {
+  return {
+    caseScreening: {
+      rejectedCaseFamilies: [],
+      translatedCaseReferences: [
+        {
+          caseName: "Idea manual",
+          transferableMechanism:
+            "El usuario agrego la idea directamente al canvas de ideacion.",
+          reinterpretationForThisIdea:
+            "La idea debe evaluarse contra el reto recomendado, gap e insight seleccionados.",
+          caveat: "No fue generada por el motor de casos disruptivos.",
+        },
+      ],
+    },
+    consultedKnowledge: {
+      antiPatterns: 0,
+      assumptionsByIndustry: 0,
+      disruptiveCases: 0,
+      weirdBusinessModels: 0,
+    },
+    rejectedAntiPatternMatches: [],
+  };
 }
 
 function assertSelectionExists(
