@@ -1,13 +1,13 @@
 # Anti-patrones de ideación
 
-Esta es la lista de ideas que la skill DEBE descartar antes de presentárselas al usuario. No son malas en sí mismas — son **predecibles, genéricas o saturadas**, y por lo tanto no aportan valor de consultor experto. Si una idea cabe en cualquiera de estas categorías, debe ser eliminada o profundamente reformulada antes de pasar a desarrollo.
+Esta es una lista de riesgos conceptuales para revisar ideas antes de presentárselas al usuario. Ninguna palabra, formato o tecnología invalida una idea por sí misma. El criterio siempre es el modelo de la idea: qué mecanismo cambia, qué decisión altera, qué incentivo mueve, qué riesgo redistribuye o qué conducta observable produce.
 
 ## Cómo usar este archivo
 
-1. Después de generar ideas en bruto, comparar cada una contra esta lista.
-2. Si una idea coincide con un anti-patrón, marcarla como **descartada** y NO incluirla en el output final.
-3. Si la idea tiene un núcleo válido pero está expresada como anti-patrón, **forzar una reformulación** que rompa el patrón antes de incluirla.
-4. NUNCA presentar al usuario las ideas descartadas — pero sí mencionar de manera breve qué descartaste y por qué (1-2 líneas), para que el usuario sepa que el filtro ocurrió.
+1. Después de generar ideas en bruto, comparar la lógica de cada una contra esta lista.
+2. No descartar por palabras sueltas. Una palabra puede aparecer en una idea válida si existe mecanismo diferencial.
+3. Si una idea tiene núcleo válido pero está expresada de forma genérica, reformularla desde el mecanismo antes de incluirla.
+4. Si la idea no tiene mecanismo, decisión observable ni camino de prueba, marcar el riesgo conceptual y reformular.
 
 ---
 
@@ -15,53 +15,53 @@ Esta es la lista de ideas que la skill DEBE descartar antes de presentárselas a
 
 Aplicables a cualquier reto, en cualquier industria, en cualquier contexto.
 
-### A1. La "app/plataforma genérica"
-**Patrón:** "Crear una app que conecte X con Y" o "una plataforma para Z".
-**Por qué se descarta:** Es la respuesta default de cualquier modelo de IA y de cualquier brainstorm corporativo desde 2010. Sin diferenciación específica, mecánica concreta de adquisición y modelo de retención, "una app" no es una idea — es una intención.
-**Excepción:** Solo pasa si la app tiene un mecanismo poco visto Y un canal de distribución no obvio.
+### A1. Contenedor digital sin mecanismo
+**Riesgo:** La propuesta nombra un formato digital, pero no explica qué decisión, incentivo, acceso, riesgo o conducta cambia.
+**Por qué se reformula:** Sin diferenciación específica, mecánica concreta de adquisición y modelo de retención, el formato es una intención, no una idea.
+**Criterio de aceptación:** Pasa si el formato digital activa un mecanismo poco visto y un canal de distribución no obvio.
 
-### A2. La "IA mágica"
-**Patrón:** "Usar IA para...", "Un agente que...", "Machine learning para...".
-**Por qué se descarta:** En 2026, decir "usar IA" es como decir "usar electricidad" en 1920. No es una idea, es un componente. La idea debe describir el cambio de comportamiento, modelo o experiencia — la IA es un implementation detail.
-**Excepción:** Solo pasa si la idea explica POR QUÉ la IA cambia las economías unitarias o la experiencia de manera no obvia.
+### A2. Tecnología decorativa
+**Riesgo:** La propuesta usa una tecnología como protagonista, pero no explica por qué cambia el comportamiento, modelo o experiencia.
+**Por qué se reformula:** La tecnología es un componente. La idea debe describir el cambio de comportamiento, modelo o experiencia.
+**Criterio de aceptación:** Pasa si explica por qué la tecnología cambia economías unitarias, acceso, riesgo o experiencia de manera no obvia.
 
-### A3. La "gamificación"
-**Patrón:** "Agregar puntos, badges, niveles, leaderboards".
-**Por qué se descarta:** Funciona en muy pocos contextos (fitness, idiomas, finanzas básicas). En la mayoría es lipstick on a pig — no resuelve la falta de motivación intrínseca, solo la enmascara temporalmente. La retención cae después de 30-60 días.
-**Excepción:** Si la mecánica gamificada está atada a un beneficio económico real para el usuario (no solo simbólico).
+### A3. Motivación superficial
+**Riesgo:** La propuesta añade recompensa simbólica sin conectar con una motivación real.
+**Por qué se reformula:** No resuelve la falta de motivación intrínseca, solo la enmascara temporalmente.
+**Criterio de aceptación:** Pasa si la mecánica está atada a un beneficio económico, operativo o reputacional real.
 
-### A4. La "comunidad/marketplace"
-**Patrón:** "Crear una comunidad de X", "un marketplace de Y".
-**Por qué se descarta:** Construir comunidad o marketplace es un problema de chicken-and-egg que requiere 2-5 años y millones en capital o un canal de distribución masivo. Como "idea", es subestimar brutalmente lo que requiere ejecutarla.
-**Excepción:** Si el usuario ya tiene una audiencia/red existente Y un caso de uso claro que la red quiere resolver entre sí.
+### A4. Red sin liquidez inicial
+**Riesgo:** La propuesta depende de una red de participantes sin explicar cómo aparece la primera liquidez o el primer caso de uso.
+**Por qué se reformula:** Subestima el problema de atraer simultáneamente oferta y demanda.
+**Criterio de aceptación:** Pasa si ya existe una audiencia/red y un caso de uso claro que la red quiere resolver entre sí.
 
 ### A5. La "expansión genérica"
-**Patrón:** "Vender en otros países", "abrir una nueva línea de producto", "subir precios".
-**Por qué se descarta:** Son tácticas, no ideas. Cualquier persona en una mesa de juntas las propone. No rompen ningún supuesto.
+**Riesgo:** La propuesta es una táctica de crecimiento sin mecanismo diferencial.
+**Por qué se reformula:** Cualquier persona en una mesa de juntas puede proponerla. No rompe ningún supuesto.
 
 ### A6. La "pivoteada a SaaS"
-**Patrón:** "Convertir [lo que ya hacen] en un SaaS / suscripción".
-**Por qué se descarta:** Suena moderno pero rara vez funciona en negocios donde el valor está en la prestación del servicio, no en el software. Para una consultoría, una panadería o una clínica, "volverlo SaaS" suele significar construir software que nadie pidió.
-**Excepción:** Si hay evidencia de que los clientes actuales ya están comprando el componente repetible y separable del servicio.
+**Riesgo:** La propuesta cambia el formato de cobro o entrega sin demostrar que el valor sea repetible y separable.
+**Por qué se reformula:** Puede sonar moderno, pero rara vez funciona cuando el valor está en la prestación del servicio y no en el componente separable.
+**Criterio de aceptación:** Pasa si hay evidencia de que los clientes actuales ya compran el componente repetible y separable del servicio.
 
 ### A7. El "rebranding/reposicionamiento"
-**Patrón:** "Cambiar el nombre", "rediseñar la marca", "actualizar el logo".
-**Por qué se descarta:** No es una idea de innovación, es un proyecto de marketing. Y rara vez resuelve el problema de fondo.
-**Excepción:** Si el problema de fondo identificado ES de percepción de categoría (caso "consultoría de innovación" → "rescate operacional", por ejemplo).
+**Riesgo:** La propuesta cambia la expresión externa sin tocar el problema de fondo.
+**Por qué se reformula:** Puede ser un proyecto de marketing, pero no necesariamente una idea de innovación.
+**Criterio de aceptación:** Pasa si el problema de fondo identificado es de percepción de categoría y la mecánica cambia decisión de compra.
 
 ### A8. El "contenido/marketing más"
-**Patrón:** "Hacer más LinkedIn", "publicar más en redes", "hacer un podcast", "newsletter".
-**Por qué se descarta:** Si la pregunta es "¿cómo conseguir clientes?", responder "haz más contenido" es defender el status quo. Funciona si ya funciona; si no funciona, hacer más no lo va a arreglar.
+**Riesgo:** La propuesta aumenta actividad de comunicación sin cambiar distribución, segmentación, incentivo o conversión.
+**Por qué se reformula:** Si algo no funciona, hacer más de lo mismo no cambia el mecanismo.
 
 ### A9. El "evento/webinar/workshop"
-**Patrón:** "Organizar un evento", "hacer un webinar gratuito", "talleres".
-**Por qué se descarta:** Saturado al máximo. Las pymes latam reciben 5+ invitaciones a webinars por semana. Como táctica de adquisición tiene retornos decrecientes brutales.
-**Excepción:** Si tiene un formato genuinamente nuevo o un acceso a personas/datos que el público no puede obtener de otra forma.
+**Riesgo:** La propuesta usa una actividad puntual saturada sin acceso, dato o mecanismo de conversión distintivo.
+**Por qué se reformula:** Como táctica de adquisición puede tener retornos decrecientes si no introduce un mecanismo nuevo.
+**Criterio de aceptación:** Pasa si tiene un formato genuinamente nuevo o acceso a personas/datos que el público no puede obtener de otra forma.
 
 ### A10. La "alianza estratégica" sin mecánica
-**Patrón:** "Aliarnos con [empresa grande]".
-**Por qué se descarta:** Sin un quid pro quo concreto, una mecánica de incentivos clara y un caso de uso específico, las "alianzas" son humo. La empresa grande no tiene incentivos para ayudar.
-**Excepción:** Si se nombra el actor específico, qué gana cada parte, y el primer experimento concreto.
+**Riesgo:** La propuesta depende de un tercero sin intercambio claro de valor.
+**Por qué se reformula:** Sin un quid pro quo concreto, incentivos claros y caso de uso específico, la colaboración es humo.
+**Criterio de aceptación:** Pasa si se nombra el actor específico, qué gana cada parte y el primer experimento concreto.
 
 ---
 
@@ -98,7 +98,7 @@ Diseñar para "todas las pymes" o "el cliente típico". El cliente promedio no e
 Una idea brillante sin canal de distribución claro NO es una oportunidad, es un sueño. Distribución > producto en la mayoría de casos.
 
 **B9. La oportunidad por moda**
-"Crypto para X", "metaverso para Y", "Web3 para Z". Si la justificación principal es la tendencia, no la mecánica de valor, descartar.
+Si la justificación principal es la tendencia, no la mecánica de valor, reformular.
 
 ---
 
@@ -122,7 +122,7 @@ Cosas que en general no funcionan en latam (pymes, emprendedores, corporativos),
 "Crear un fondo/aceleradora interna". Capital intensivo, larguísimo time-to-result, requiere expertise de venture que rara vez existe en pymes/corporativos no-financieros.
 
 ### C6. La "transformación digital"
-Cualquier idea cuyo nombre interno contenga las palabras "transformación digital" sin un alcance brutalmente específico. Es código para "proyecto que va a fallar costosamente".
+Cualquier idea que use una etiqueta amplia de modernización sin un alcance brutalmente específico corre el riesgo de convertirse en un proyecto costoso sin aprendizaje claro.
 
 ### C7. El "estilo Silicon Valley"
 "Hagamos como hace [Google/Stripe/Uber]". El contexto latam (pymes con 10-300 empleados, mercados pequeños, capital escaso, rotación alta, informalidad) no se parece a Silicon Valley. Las soluciones que allá funcionan acá fracasan por falta de fit estructural.
@@ -161,10 +161,10 @@ Idea que solo se puede defender con una slide bonita pero no sobrevive a 3 pregu
 
 ## Reglas finales para la skill
 
-1. Si la idea generada es directamente uno de estos anti-patrones → **descartar**.
-2. Si la idea tiene un núcleo interesante pero está expresada como anti-patrón → **reformular forzando concreción**.
-3. Si las 3 ideas finales caen todas en anti-patrones, **declarar fallo del intento** y volver a la fase de encuadre — probablemente faltó información del usuario o el reto está mal planteado.
-4. Mencionar al usuario brevemente qué se descartó y por qué (no la lista entera, solo lo más relevante de su caso). Esto refuerza la percepción de filtro experto.
+1. No descartar por palabras sueltas.
+2. Si la idea tiene un núcleo interesante pero está expresada como anti-patrón, reformular forzando concreción.
+3. Si las ideas finales no logran mecanismo, declarar fallo conceptual del intento y volver a la fase de encuadre.
+4. Mencionar brevemente qué riesgo conceptual se corrigió, sin mostrar listas de palabras prohibidas.
 
 ---
 

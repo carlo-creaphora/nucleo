@@ -576,39 +576,10 @@ function buildEvaluationWarningNotes(winner: EvaluationEntry) {
 }
 
 function conceptualRiskForIdea(idea: IdeationIdea) {
-  const ideaText = [
-    idea.idea,
-    idea.mecanicaConcreta,
-    idea.primerPasoEjecutable,
-    idea.supuestoQueRompe,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
   const mechanismText = idea.mecanicaConcreta?.trim() ?? "";
 
   if (!mechanismText) {
     return "no declara una mecánica observable";
-  }
-
-  if (
-    /\b(construir|desarrollar|lanzar|crear)\b.*\b(producto final|plataforma completa|app completa|sistema completo)\b/.test(
-      ideaText,
-    )
-  ) {
-    return "el primer piloto parece exigir construir demasiado antes de aprender";
-  }
-
-  const genericContainerPattern =
-    /\b(crear|implementar|desarrollar|diseñar|disenar|lanzar)\b.*\b(sistema|proceso|programa|metodologia|capacitación|capacitacion|dashboard|comunidad|contenido|ia|alianza)\b/;
-  const observableChangePattern =
-    /\b(regla|incentivo|acceso|riesgo|ritual|objeto|decisión|decision|autoridad|precio|garantía|garantia|compromiso|pagador|aprobador|interacción|interaccion)\b/;
-
-  if (
-    genericContainerPattern.test(ideaText) &&
-    !observableChangePattern.test(ideaText)
-  ) {
-    return "describe un contenedor genérico sin cambio observable claro";
   }
 
   return null;

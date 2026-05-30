@@ -69,9 +69,10 @@ function parseAntiPatterns(markdown: string) {
     .map((block) => {
       const title = block.heading.replace(/^#{3}\s+/, "").trim();
       const description =
-        extractAfterLabel(block.body, "Por qué se descarta") ||
+        extractAfterLabel(block.body, "Por qué se reformula") ||
         block.body.replace(/\s+/g, " ").trim().slice(0, 500);
       const pattern =
+        extractAfterLabel(block.body, "Riesgo") ||
         extractAfterLabel(block.body, "Patrón") ||
         title.replace(/^[A-Z]\d+\.\s*/, "");
 

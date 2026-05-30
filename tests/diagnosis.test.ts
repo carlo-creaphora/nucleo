@@ -684,7 +684,7 @@ describe("Diagnostico", () => {
     expect(prompt).toContain("Cruzar cada idea contra antipatrones");
     expect(prompt).toContain("No copiar el caso");
     expect(prompt).toContain("Primero caso, despues idea");
-    expect(prompt).toContain("regla/incentivo/ritual/objeto");
+    expect(prompt).toContain("no uses la presencia de palabras especificas como criterio");
     expect(prompt).not.toContain("prototypeBrief");
     expect(prompt).toContain("translatedCaseReferences");
     expect(prompt).toContain("1. idea:");
@@ -723,7 +723,7 @@ describe("Diagnostico", () => {
     expect(violations).toHaveLength(0);
     expect(reviewPrompt).toContain("No bloquees por palabras sueltas");
     expect(reviewPrompt).toContain("modelo de la idea");
-    expect(reviewPrompt).toContain("sistema/proceso/programa/metodologia");
+    expect(reviewPrompt).toContain("no son motivo suficiente para fallar");
   });
 
   it("limpia repeticiones y codigos internos de la salida visible de ideas", async () => {

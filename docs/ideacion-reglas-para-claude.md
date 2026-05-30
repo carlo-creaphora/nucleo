@@ -229,8 +229,8 @@ Una idea debil:
 - Solo promete un beneficio.
 - No explica como funciona.
 - Podria aplicar a cualquier empresa.
-- Propone crear un sistema, proceso, programa, metodologia, capacitacion o seguimiento sin cambiar una regla observable.
-- Es una app, plataforma, dashboard, comunidad, contenido, capacitacion, alianza o IA sin mecanismo diferencial.
+- Ordena actividades existentes sin cambiar una regla observable.
+- Usa una tecnologia, canal, formato o actividad como sustituto de una mecanica diferencial.
 - Repite el diagnostico como solucion.
 - No cambia comportamiento, decision, incentivo ni riesgo.
 - Depende de que el cliente entienda mejor sin cambiar la propuesta.
@@ -257,17 +257,11 @@ No debe incluir:
 
 El piloto va en `primerPasoEjecutable`, no en `mecanicaConcreta`.
 
-Una mecanica no puede limitarse a:
+Una mecanica no puede limitarse a una actividad de ordenamiento, documentacion, comunicacion o coordinacion si no altera una decision observable.
 
-- Disenar un proceso claro.
-- Documentar una metodologia.
-- Asignar responsabilidades.
-- Capacitar al equipo.
-- Crear una herramienta.
-- Hacer seguimiento.
-- Ordenar etapas desde generacion de oportunidades hasta cierre.
+El criterio no es la palabra usada, sino el funcionamiento real de la idea.
 
-Estas acciones solo pueden ser parte de una idea si existe una regla, incentivo, ritual, objeto, contrato, condicion o cambio de autoridad que altere una decision observable.
+Cualquier formato puede ser valido si existe una regla, incentivo, ritual, objeto, contrato, condicion o cambio de autoridad que altere una decision observable.
 
 ## 11. Supuesto que rompe
 
@@ -287,22 +281,18 @@ No debe ser:
 - Una frase motivacional.
 - Una declaracion generica.
 
-## 12. Anti-patrones prohibidos
+## 12. Anti-patrones conceptuales
 
-No generar:
+La IA no debe bloquear por palabras. Ninguna palabra esta prohibida por si misma.
+
+Debe evaluar el modelo completo de la idea y reformularla si cae conceptualmente en:
 
 - Solucion antes que problema.
 - Beneficio sin mecanica.
-- Sistema, proceso, programa o metodologia como respuesta automatica.
-- App generica.
-- Plataforma generica.
-- Dashboard generico.
-- IA decorativa.
-- Capacitacion como respuesta automatica.
-- Contenido como respuesta automatica.
-- Comunidad como respuesta automatica.
-- Alianza sin mecanismo.
-- Mejor comunicacion sin cambio de sistema.
+- Contenedor de trabajo sin regla observable.
+- Tecnologia, canal o actividad usada como decoracion.
+- Coordinacion sin cambio de decision, incentivo, riesgo, acceso o autoridad.
+- Comunicacion sin cambio de comportamiento.
 - Copia de competidor.
 - Copia literal de caso disruptivo.
 - Caso analogo decorativo sin mecanismo transferido.
@@ -310,7 +300,7 @@ No generar:
 - Idea que ignora restricciones.
 - Idea que no puede probarse.
 
-Una palabra no invalida por si sola. El problema es el modelo de la idea. Una app puede pasar si la mecanica rompe un supuesto y cambia una regla real; falla si solo digitaliza una solucion obvia.
+Una palabra no invalida por si sola. El problema es el modelo de la idea. Cualquier formato puede pasar si la mecanica rompe un supuesto y cambia una regla real; falla si solo nombra una solucion obvia sin mecanismo.
 
 ## 13. Formato de salida de idea
 
