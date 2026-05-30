@@ -695,7 +695,7 @@ describe("Diagnostico", () => {
     expect(prompt).toContain("No mezclar rutas");
   });
 
-  it("bloquea ideas genericas que repiten el diagnostico como sistema sin mecanismo", async () => {
+  it("no bloquea por palabras ideas que mencionan sistema o proceso", async () => {
     const input = buildInput({ cycleId: "cycle-ideation-generic-system" });
     await registerInput(input);
     await service.complete(input);
@@ -718,13 +718,12 @@ describe("Diagnostico", () => {
         "Caso comercial general. La similitud es ordenar un proceso; la diferencia es que se aplica a ventas.",
     });
     const violations = validateIdeationOutput(ideationInput, output);
+    const reviewPrompt = buildConceptReviewSystemPrompt();
 
-    expect(
-      violations.some((violation) => violation.type === "GENERIC_MECHANISM"),
-    ).toBe(true);
-    expect(
-      violations.some((violation) => violation.type === "DECORATIVE_CASE"),
-    ).toBe(true);
+    expect(violations).toHaveLength(0);
+    expect(reviewPrompt).toContain("No bloquees por palabras sueltas");
+    expect(reviewPrompt).toContain("modelo de la idea");
+    expect(reviewPrompt).toContain("sistema/proceso/programa/metodologia");
   });
 
   it("limpia repeticiones y codigos internos de la salida visible de ideas", async () => {
