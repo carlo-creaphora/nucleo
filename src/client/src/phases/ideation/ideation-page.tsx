@@ -820,6 +820,9 @@ function CanvasOutput({
                   {idea.porQueFunciona && (
                     <IdeaField label="Por qué funciona" value={idea.porQueFunciona} />
                   )}
+                  {idea.metricaQueMueve && (
+                    <IdeaField label="Métrica que mueve" value={idea.metricaQueMueve} />
+                  )}
                 </article>
               ))}
             </div>
